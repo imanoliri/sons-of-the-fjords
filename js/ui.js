@@ -211,6 +211,72 @@ export function initUIBindings() {
     }
     setScreen('world');
   });
+
+  // Keyboard Arrow Movement
+  window.addEventListener('keydown', (e) => {
+    // Check if player is on World Map screen
+    if (STATE.activeScreen === 'world') {
+      let dx = 0;
+      let dy = 0;
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') dy = -1;
+      else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') dy = 1;
+      else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') dx = -1;
+      else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') dx = 1;
+      else if (e.key === 'Enter') {
+        const hasLocation = STATE.worldMap.locations[`${STATE.party.worldX},${STATE.party.worldY}`];
+        if (hasLocation) {
+          enterLocation(hasLocation);
+        }
+        return;
+      }
+      
+      if (dx !== 0 || dy !== 0) {
+        e.preventDefault();
+        const targetX = STATE.party.worldX + dx;
+        const targetY = STATE.party.worldY + dy;
+        const adjacents = getAdjacentCoords(STATE.party.worldX, STATE.party.worldY);
+        const isValidMove = adjacents.some(a => a.x === targetX && a.y === targetY);
+        if (isValidMove) {
+          movePartyOnWorld(targetX, targetY);
+        }
+      }
+    } 
+    // Check if player is on Location map screen
+    else if (STATE.activeScreen === 'location') {
+      let dx = 0;
+      let dy = 0;
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') dy = -1;
+      else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') dy = 1;
+      else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') dx = -1;
+      else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') dx = 1;
+      
+      if (dx !== 0 || dy !== 0) {
+        e.preventDefault();
+        const targetX = STATE.party.localX + dx;
+        const targetY = STATE.party.localY + dy;
+        const locState = STATE.locations[STATE.party.currentLocationId];
+        if (locState) {
+          const coordKey = `${targetX},${targetY}`;
+          const tile = locState.placedTiles[coordKey];
+          // Move if adjacent tile is already placed
+          if (tile) {
+            STATE.party.localX = targetX;
+            STATE.party.localY = targetY;
+            notify('STATE_UPDATED');
+          } 
+          // If unplaced but adjacent, auto-discover it!
+          else {
+            const isNeighborToPlayer = Math.abs(targetX - STATE.party.localX) + Math.abs(targetY - STATE.party.localY) === 1;
+            const adjacentUnplaced = getAdjacentUnplacedSlots(locState.placedTiles);
+            if (isNeighborToPlayer && adjacentUnplaced.includes(coordKey)) {
+              discoverTile(STATE.party.currentLocationId, targetX, targetY);
+              notify('STATE_UPDATED');
+            }
+          }
+        }
+      }
+    }
+  });
 }
 
 // Bind simple click callback if element exists
