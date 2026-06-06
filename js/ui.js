@@ -478,12 +478,196 @@ export function initUIBindings() {
   initTooltipEvents();
 }
 
+// ── God lore for quest tooltips ──────────────────────────────────────────────
+const GOD_LORE = {
+  odin: {
+    title: 'Odin — The Allfather',
+    icon: '🔮',
+    color: 'var(--color-odin)',
+    relic: 'Shard of Gungnir',
+    favorSteps: [
+      '1. Explore Raid Sites on the world map',
+      '2. Find a 🏆 Dolmen shrine tile — walk onto it to auto-collect the <b>Shard of Gungnir</b>',
+      '3. Sail to any 🏘️ Town on the world map',
+      '4. Open the Town screen → Temple section → click <b>Appease Odin</b>',
+      '5. Repeat: each sacrifice grants +1 Favor toward the next milestone'
+    ],
+    opposites: ['Freya', 'Hel'],
+    buff: 'Champion Buff: All Huntsmen gain +2 Attack Range & +1 DMG per turn.',
+    wrath: 'Wrath (favor < 0): Random unit loses 1 HP every 3 world steps.',
+    milestones: [
+      'Favor 1 — Odin watches. Fog of war reveals 1 extra tile on each move.',
+      'Favor 2 — Odin blesses sight. Your scouts reveal 2-tile radius instead of 1.',
+      'Favor 3 — Odin sharpens minds. All Huntsmen gain +1 Attack Range.',
+      'Favor 4 — Wisdom of the Runes. Berserkers gain +1 DMG per combat tick.',
+      'Favor 5 — ASCENSION. Odin’s eternal champion. Select buff to activate.'
+    ]
+  },
+  thor: {
+    title: 'Thor — The Thunderer',
+    icon: '⚡',
+    color: 'var(--color-thor)',
+    relic: "Mjolnir's Core",
+    favorSteps: [
+      '1. Explore Raid Sites on the world map',
+      '2. Find a 🏆 Dolmen shrine tile — walk onto it to auto-collect <b>Mjolnir\'s Core</b>',
+      '3. Sail to any 🏘️ Town on the world map',
+      '4. Open the Town screen → Temple section → click <b>Appease Thor</b>',
+      '5. Repeat: each sacrifice grants +1 Favor toward the next milestone'
+    ],
+    opposites: ['Hel', 'Loki'],
+    buff: 'Champion Buff: All Berserkers gain +3 DMG and +1 Speed.',
+    wrath: 'Wrath (favor < 0): Storms during land travel cost +1 extra Food per step.',
+    milestones: [
+      'Favor 1 — Thor stirs. Berserkers gain +1 DMG in combat.',
+      'Favor 2 — Thunder in veins. Berserkers move +1 Speed per tick.',
+      'Favor 3 — War drums. Enemy spawn rate slowed by 10%.',
+      'Favor 4 — Storm Caller. All units gain +1 max HP.',
+      'Favor 5 — ASCENSION. Thor’s eternal champion. Select buff to activate.'
+    ]
+  },
+  freya: {
+    title: 'Freya — Goddess of Love & Life',
+    icon: '🌸',
+    color: 'var(--color-freya)',
+    relic: "Freya's Amber Tear",
+    favorSteps: [
+      '1. Explore Raid Sites on the world map',
+      '2. Find a 🏆 Dolmen shrine tile — walk onto it to auto-collect <b>Freya\'s Amber Tear</b>',
+      '3. Sail to any 🏘️ Town on the world map',
+      '4. Open the Town screen → Temple section → click <b>Appease Freya</b>',
+      '5. Repeat: each sacrifice grants +1 Favor toward the next milestone'
+    ],
+    opposites: ['Loki', 'Odin'],
+    buff: 'Champion Buff: Shieldmaidens heal 2 HP per combat tick when not in melee.',
+    wrath: 'Wrath (favor < 0): Recruited units start with -10 max HP.',
+    milestones: [
+      'Favor 1 — Freya smiles. Shieldmaidens gain +5 max HP.',
+      'Favor 2 — Life aura. Any unit below 25% HP heals 1 HP/tick.',
+      'Favor 3 — Seiðr magic. Shieldmaidens gain +2 DMG.',
+      'Favor 4 — Shield of Asgard. Shieldmaidens block 1 DMG per hit.',
+      'Favor 5 — ASCENSION. Freya’s eternal champion. Select buff to activate.'
+    ]
+  },
+  hel: {
+    title: 'Hel — Goddess of the Underworld',
+    icon: '💀',
+    color: 'var(--color-hel)',
+    relic: "Hel's Urn of Ash",
+    favorSteps: [
+      '1a. <b>Dolmen path:</b> Find a 🏆 Dolmen shrine in a Raid Site → auto-collect <b>Hel\'s Urn of Ash</b>',
+      '1b. <b>Burial path:</b> Find a 🪦 Burial Mound in a Raid Site → choose <b>Sacrifice Sheep</b> (costs 1 🐑)',
+      '2. Sail to any 🏘️ Town on the world map',
+      '3. Open the Town screen → Temple section → click <b>Appease Hel</b>',
+      '4. Repeat: each sacrifice grants +1 Favor toward the next milestone'
+    ],
+    opposites: ['Odin', 'Thor'],
+    buff: 'Champion Buff: Fallen enemies have a 20% chance to rise as allied undead for 3 ticks.',
+    wrath: 'Wrath (favor < 0): Dead band members cannot be replaced for 5 turns.',
+    milestones: [
+      'Favor 1 — Hel stirs. Enemies deal -1 DMG.',
+      'Favor 2 — Veil of death. Player units survive lethal hits once with 1 HP (once per battle).',
+      'Favor 3 — Reaper’s mark. Slain enemies drop +1 extra Gold.',
+      'Favor 4 — Death bargain. Gold cost to recruit is reduced by 1.',
+      'Favor 5 — ASCENSION. Hel’s eternal champion. Select buff to activate.'
+    ]
+  },
+  loki: {
+    title: 'Loki — The Trickster',
+    icon: '🎭',
+    color: 'var(--color-loki)',
+    relic: "Loki's Trickster Coin",
+    favorSteps: [
+      '1a. <b>Dolmen path:</b> Find a 🏆 Dolmen shrine in a Raid Site → auto-collect <b>Loki\'s Trickster Coin</b>',
+      '1b. <b>Plunder path:</b> Find a 🪦 Burial Mound in a Raid Site → choose <b>Plunder Mound</b> (+10 Gold, also pleases Loki)',
+      '2. Sail to any 🏘️ Town on the world map',
+      '3. Open the Town screen → Temple section → click <b>Appease Loki</b>',
+      '4. Repeat: each sacrifice grants +1 Favor toward the next milestone'
+    ],
+    opposites: ['Thor', 'Freya'],
+    buff: 'Champion Buff: Once per battle, your weakest unit swaps position with a random enemy.',
+    wrath: 'Wrath (favor < 0): Random event triggers each world move (ambush, resource loss, or unit injury).',
+    milestones: [
+      'Favor 1 — Loki watches. Chest loot gives +1 extra Gold.',
+      'Favor 2 — Mischief afoot. Enemy attack speed reduced by 10%.',
+      'Favor 3 — Shapeshifter. One enemy per wave spawns confused (fights allies for 2 ticks).',
+      'Favor 4 — Silver tongue. Town prices reduced by 1 Gold each.',
+      'Favor 5 — ASCENSION. Loki’s eternal champion. Select buff to activate.'
+    ]
+  }
+};
+
 // Global tooltip delegation
 function initTooltipEvents() {
+  // ── God quest / .has-tooltip elements ──
+  document.body.addEventListener('mouseover', (e) => {
+    const godTarget = e.target.closest('[data-god-tooltip]');
+    if (godTarget) {
+      const gKey = godTarget.dataset.godTooltip;
+      const section = godTarget.dataset.tooltipSection;
+      const lore = GOD_LORE[gKey];
+      if (!lore) return;
+
+      let header = '';
+      let content = '';
+
+      if (section === 'identity') {
+        const favor = STATE.godFavor[gKey];
+        const favorBar = favor >= 0
+          ? `<span style="color:${lore.color}">+${favor} ▲</span>`
+          : `<span style="color:var(--color-danger)">${favor} ▼</span>`;
+        const isChampion = STATE.godQuests[gKey].every(x => x === true);
+        header = `${lore.icon} ${lore.title}`;
+        const stepsHtml = lore.favorSteps.map(s => `<li style="margin:2px 0">${s}</li>`).join('');
+        content = [
+          `<b style="color:${lore.color}">Current Favor:</b> ${favorBar}`,
+          `<hr style="border-color:rgba(255,255,255,0.08);margin:4px 0">`,
+          `<b style="color:var(--text-accent)">📋 How to gain Favor:</b>`,
+          `<ol style="margin:4px 0 4px 16px;padding:0">${stepsHtml}</ol>`,
+          `<hr style="border-color:rgba(255,255,255,0.08);margin:4px 0">`,
+          `<b>Opposes:</b> ${lore.opposites.join(' & ')} — pleasing ${lore.icon} drains their favor`,
+          `<b style="color:var(--color-success)">✨ ${lore.buff}</b>`,
+          `<b style="color:var(--color-danger)">⚠️ ${lore.wrath}</b>`,
+          isChampion ? `<b style="color:${lore.color}">✅ Champion unlocked! Open buff selector.</b>` : `<i>Reach 5/5 milestones to ascend.</i>`
+        ].join('<br>');
+      } else if (section === 'milestone') {
+        const idx = parseInt(godTarget.dataset.milestoneIdx);
+        const achieved = STATE.godQuests[gKey][idx];
+        header = `${lore.icon} Milestone ${idx + 1}/5`;
+        content = [
+          `<b style="color:${lore.color}">${lore.milestones[idx]}</b>`,
+          achieved
+            ? `<span style="color:var(--color-success)">✅ Completed!</span>`
+            : `<span style="color:var(--text-muted)">🔒 Not yet reached. Sacrifice <b>${lore.relic}</b> at a Town temple to gain favor.</span>`
+        ].join('<br>');
+      } else if (section === 'champion') {
+        header = `${lore.icon} Champion Buff`;
+        content = [
+          `<b style="color:${lore.color}">${lore.buff}</b>`,
+          `Activate by clicking <b>Select Buff</b> in the Quest Log.`,
+          `Only one god's buff can be active at a time.`
+        ].join('<br>');
+      }
+
+      elTooltip.innerHTML = `
+        <div class="game-tooltip-header">
+          <span>${header}</span>
+        </div>
+        <div class="game-tooltip-contents">${content}</div>
+      `;
+      elTooltip.style.borderLeftColor = lore.color;
+      elTooltip.style.display = 'flex';
+      return;
+    }
+  });
+
   document.body.addEventListener('mouseover', (e) => {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
     if (!tile) {
-      elTooltip.style.display = 'none';
+      // Only hide if not hovering a god tooltip target
+      if (!e.target.closest('[data-god-tooltip]')) {
+        elTooltip.style.display = 'none';
+      }
       return;
     }
     
@@ -607,7 +791,11 @@ function initTooltipEvents() {
 
   document.body.addEventListener('mouseout', (e) => {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
+    const godTarget = e.target.closest('[data-god-tooltip]');
     if (tile && !e.relatedTarget?.closest('.world-tile, .location-tile, .combat-cell')) {
+      elTooltip.style.display = 'none';
+    }
+    if (godTarget && !e.relatedTarget?.closest('[data-god-tooltip]')) {
       elTooltip.style.display = 'none';
     }
   });
@@ -1429,50 +1617,64 @@ function renderQuestsScreen() {
   elQuestsList.innerHTML = '';
 
   const gods = ['odin', 'thor', 'freya', 'hel', 'loki'];
-  const titles = { odin: 'Odin (Allfather)', thor: 'Thor (Thunderer)', freya: 'Freya (Love/Life)', hel: 'Hel (Underworld)', loki: 'Loki (Trickster)' };
   
   gods.forEach(gKey => {
+    const lore = GOD_LORE[gKey];
     const row = document.createElement('div');
     row.classList.add('god-row');
     
-    // God Identity column
+    // ── God Identity column (hover = full god info tooltip) ──
     const idCol = document.createElement('div');
     idCol.classList.add('god-identity');
+    idCol.dataset.godTooltip = gKey;
+    idCol.dataset.tooltipSection = 'identity';
+    idCol.style.cursor = 'help';
     
+    const favor = STATE.godFavor[gKey];
+    const favorColor = favor > 0 ? 'var(--color-success)' : favor < 0 ? 'var(--color-danger)' : 'var(--text-muted)';
+    const favorSign = favor > 0 ? '+' : '';
+
     const name = document.createElement('span');
     name.classList.add('god-name');
-    name.innerText = titles[gKey];
+    name.innerHTML = `${lore.icon} ${lore.title.split('—')[0].trim()}`;
     name.style.color = `var(--color-${gKey})`;
     
-    const favor = document.createElement('span');
-    favor.classList.add('god-favor-score');
-    favor.innerText = `Favor: ${STATE.godFavor[gKey]}`;
+    const favorEl = document.createElement('span');
+    favorEl.classList.add('god-favor-score');
+    favorEl.innerHTML = `Favor: <b style="color:${favorColor}">${favorSign}${favor}</b> / 5`;
+
+    // Relic hint under the name
+    const relicHint = document.createElement('span');
+    relicHint.style.cssText = 'font-size:0.7rem;color:var(--text-muted);margin-top:2px;';
+    relicHint.innerHTML = `🏺 ${lore.relic}`;
     
     idCol.appendChild(name);
-    idCol.appendChild(favor);
+    idCol.appendChild(favorEl);
+    idCol.appendChild(relicHint);
     row.appendChild(idCol);
 
-    // Milestones track column
+    // ── Milestones track column (each rune = tooltip for that milestone) ──
     const trackCol = document.createElement('div');
     trackCol.classList.add('god-progress-bar', `deity-${gKey}`);
     
     const track = STATE.godQuests[gKey];
-    const runes = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ']; // Futhark runes for milestones
+    const runes = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ'];
     for (let i = 0; i < 5; i++) {
       const step = document.createElement('div');
       step.classList.add('milestone-step');
       step.innerText = runes[i];
+      step.dataset.godTooltip = gKey;
+      step.dataset.tooltipSection = 'milestone';
+      step.dataset.milestoneIdx = i;
+      step.style.cursor = 'help';
       if (track[i]) {
         step.classList.add('achieved');
-        step.title = `Milestone ${i+1} completed!`;
-      } else {
-        step.title = `Milestone ${i+1} locked. Increase favor to unlock.`;
       }
       trackCol.appendChild(step);
     }
     row.appendChild(trackCol);
 
-    // Active Champion toggle column
+    // ── Champion toggle column (hover = buff tooltip) ──
     const toggleCol = document.createElement('div');
     toggleCol.classList.add('champion-selector-cell');
     
@@ -1480,9 +1682,11 @@ function renderQuestsScreen() {
     if (isChampion) {
       const btn = document.createElement('button');
       btn.classList.add('btn', 'btn-sm');
+      btn.dataset.godTooltip = gKey;
+      btn.dataset.tooltipSection = 'champion';
       
       if (STATE.activeBlessing === gKey) {
-        btn.innerText = 'Active';
+        btn.innerText = 'Active ✨';
         btn.classList.add('btn-primary');
       } else {
         btn.innerText = 'Select Buff';
@@ -1493,7 +1697,13 @@ function renderQuestsScreen() {
       }
       toggleCol.appendChild(btn);
     } else {
-      toggleCol.innerHTML = `<span style="font-size:0.8rem;color:var(--text-muted)">Locked</span>`;
+      // Show a locked hint that also has a tooltip explaining how to unlock
+      const locked = document.createElement('span');
+      locked.style.cssText = 'font-size:0.8rem;color:var(--text-muted);cursor:help;';
+      locked.innerText = '🔒 Locked';
+      locked.dataset.godTooltip = gKey;
+      locked.dataset.tooltipSection = 'champion';
+      toggleCol.appendChild(locked);
     }
     
     row.appendChild(toggleCol);

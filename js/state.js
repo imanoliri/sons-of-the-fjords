@@ -6,7 +6,7 @@
 const listeners = [];
 
 export const STATE = {
-  activeScreen: 'world', // 'menu' | 'world' | 'town' | 'location' | 'combat'
+  activeScreen: 'menu', // 'menu' | 'world' | 'town' | 'location' | 'combat'
   
   resources: {
     gold: 15,
@@ -217,6 +217,7 @@ export function triggerStarvationDamage() {
 
 // Reset entire State for new game
 export function resetGame() {
+  STATE.activeScreen = 'menu';
   STATE.resources = { gold: 15, food: 30, wood: 5, sheep: 2 };
   STATE.band = [
     { id: 1, name: 'Sigrid', type: 'shieldmaiden', hp: 60, maxHp: 60, dmg: 4, speed: 2, range: 1 },
