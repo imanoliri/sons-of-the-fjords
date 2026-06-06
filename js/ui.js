@@ -71,18 +71,25 @@ export function initUIBindings() {
     setScreen('world');
   });
 
+  // Helper: figure out where to return after a quest/overlay — towns go to world, raids go to location
+  function screenAfterOverlay() {
+    const locId = STATE.party.currentLocationId;
+    if (!locId) return 'world';
+    const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
+    return (locData && locData.type === 'town') ? 'world' : 'location';
+  }
+
   // Toggle Quest Screen
   document.getElementById('btn-toggle-quests').addEventListener('click', () => {
     if (STATE.activeScreen === 'quests') {
-      // Toggle back to previous screen
-      setScreen(STATE.party.currentLocationId ? 'location' : 'world');
+      setScreen(screenAfterOverlay());
     } else {
       setScreen('quests');
     }
   });
 
   document.getElementById('btn-close-quests').addEventListener('click', () => {
-    setScreen(STATE.party.currentLocationId ? 'location' : 'world');
+    setScreen(screenAfterOverlay());
   });
 
   // Town leave button
@@ -1638,7 +1645,11 @@ export function handleStateNotification(event, data) {
       delete STATE.party.pendingLocalY;
     }
     
-    setScreen(STATE.party.currentLocationId ? 'location' : 'world');
+    {
+      const locId = STATE.party.currentLocationId;
+      const locData = locId ? Object.values(STATE.worldMap.locations).find(l => l.id === locId) : null;
+      setScreen(locData && locData.type !== 'town' ? 'location' : 'world');
+    }
   }
   else if (event === 'COMBAT_DEFEAT') {
     logWorld('DEFEAT! All your Viking soldiers perished on the battlefield.', 'combat-message');
