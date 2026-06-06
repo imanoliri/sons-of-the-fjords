@@ -25,18 +25,22 @@ graph TD
 ## 2. World Map Mechanics (15x15 Grid)
 
 The world map represents the coastal fjords, islands, and harsh northern seas.
-*   **Movement**: Grid-based navigation (ortho/diagonal or hex-style, though standard grid is simplest for a 15x15 map).
-*   **Fog of War**: Initially covered in fog, revealed as your Drakkar (longship) or party sails/walks.
+*   **Movement**: Grid-based navigation on a 15x15 map.
+*   **Fog of War**: Covered in fog, revealed as you sail or walk.
+*   **Sailing vs. Land Travel**:
+    *   `Sea/Water Travel`: Navigation by Drakkar (longship). Very fast, low resource cost (minimal food consumed), and completely safe from random combat encounters (unless under a god's curse).
+    *   `Land Travel` (Plains, Rivers, Forests, Snow, Mountains): Traveling on foot. Slower, incurs a higher food cost, and triggers random combat encounters against monsters.
+    *   `Seamless Boarding`: Transitioning between ship and foot is seamless. You can land on shore tiles or board the Drakkar at any point; you do not need to keep track of where a physical ship is parked.
 *   **Tile Types**:
-    *   `Sea/Water`: Navigation lane for your Drakkar (longship).
-    *   `Plains`: Flat lands, easy walking, standard movement speed.
-    *   `Rivers`: Natural bottlenecks, requires crossing points or slows travel.
-    *   `Forests`: Densely wooded regions with high ambush risks.
-    *   `Snow`: Freezing tundras, slowing movement speed.
-    *   `Mountains`: Hard terrain containing mines and dangerous caves.
+    *   `Sea/Water`: Fast, safe sailing.
+    *   `Plains`: Flat lands, standard walking speed.
+    *   `Rivers`: Barriers that slow movement or require crossing points.
+    *   `Forests`: Wooded areas with high ambush risk.
+    *   `Snow`: Frost lands, slow travel.
+    *   `Mountains`: Hard terrain containing caverns and caves.
 *   **Locations**:
-    *   **Towns (Friendly)**: Trade loot, buy supplies (rations, wood, iron), and hire soldiers (Shieldmaidens, Berserkers, Archers).
-    *   **Raid Sites (Hostile)**: Monasteries, enemy camps, burial mounds, and caves.
+    *   **Towns (Friendly)**: Trade resources, buy equipment, and recruit soldiers.
+    *   **Raid Sites (Hostile)**: Dungeons, tombs, and monster dens.
 
 ---
 
@@ -60,25 +64,35 @@ When entering a location, you zoom in from the World Map to a 10x10 sub-grid.
     *   **Cave Entrance**: Leads into cave grids containing monsters and minerals.
     *   **Burial Mound**: Tomb chambers containing ancient bones, undead, or ancient Norse relics.
     *   **Dolmen / Druid Sanctuary**: Sacred standing stones. Interacting with them often rewards the player with ancient **Magic Objects** needed to please the Gods.
+*   **Leaving a Location**:
+    *   You do not need to walk back to the starting tile to exit a location map. You can exit directly via a menu option at any time, returning to the World Map.
+*   **Combat Defeat**:
+    *   If all your deployed soldiers and those remaining in your deployment pool die, you lose the combat. 
+    *   Losing combat forces your party out of the battle and back to the location map. The player is not forced to return to town immediately, but having lost their entire army, they must travel back to a friendly town to recruit new soldiers.
 
 ---
 
 ## 4. Tactical Lane-Based Combat (10x8 Arena)
 
-A tactical chess-like or lane-defense-like combat sub-map.
-*   **Layout**: 10 columns by 8 rows.
-*   **Lanes**: 8 horizontal lanes.
-*   **Starting Positions**:
-    *   Your Viking party deploys on the far-left (Columns 1–2).
-    *   Enemies deploy on the far-right (Columns 9–10).
-*   **Combat Flow**:
-    *   **Turn-Based Grid Tactics**: Units have Speed, Attack Range, Health, and Attack Power.
-    *   **Lane Actions**: Units advance along lanes, block enemies, or shoot projectiles across lanes (archers/casters).
-    *   **Class Archetypes**:
-        *   *Shieldmaidens*: High defense, can shield units in adjacent lanes.
-        *   *Berserkers*: High damage, gain power when low on health, advance rapidly.
-        *   *Huntsmen (Archers)*: Range 4-5 lanes, low health.
-        *   *Seidr Casters*: Cast buffs/debuffs or lightning strikes across lanes.
+A tactical, automated lane-defense combat sub-map.
+*   **Layout**: 10 columns by 8 rows (8 horizontal lanes).
+*   **Auto-Advance**: Units automatically advance forward along their lanes. When opposing units meet, they stop and battle.
+*   **Deployment Pool**: 
+    *   You maintain a pool (or hand) of soldiers at all times. You do not have to deploy all units at the beginning of combat.
+    *   You can deploy a unit from your pool into any lane at any time by pressing a deployment button.
+    *   Deploying units **pauses the combat phase**, allowing you to carefully select the lane and place the soldier.
+*   **Combat Victory (Reaching the Far Right)**:
+    *   If one of your soldiers successfully reaches the far right (column 10, the enemy end), you gain **+1 gold**.
+    *   The unit is removed from the board and returned to your deployment pool, ready to be redeployed.
+*   **Combat Breach (Enemy Reaching the Far Left)**:
+    *   If an enemy unit successfully reaches the far left (column 1, your side), they breach your line.
+    *   You lose a random selection of resources (Gold, Food, Wood, or Sheep).
+*   **Permadeath**:
+    *   If a soldier's HP drops to 0 in combat, they die permanently. They are removed from the board and your party roster forever.
+*   **Roster Classes (Prototype)**:
+    *   *Shieldmaidens*: High defense, can shield units in adjacent lanes.
+    *   *Berserkers*: High damage, gain power when low on health, advance rapidly.
+    *   *Huntsmen (Archers)*: Range 4-5 lanes, low health.
 
 ---
 
@@ -86,11 +100,16 @@ A tactical chess-like or lane-defense-like combat sub-map.
 
 Rather than selecting a single god at the start, the player's alignment is fluid. You navigate the world and complete quests/actions, which dynamically shifts your standing. 
 
+### Universal Quest Progression
+*   **Global Milestones**: Quests are universal and not tied to physical locations.
+*   **5-Step Progress Track**: Each God has a progression track of **5 milestones** (moving left-to-right).
+*   **Advancement**: Fulfilling a god's milestone conditions (such as turning in their specific magic objects or resolving event decisions in their favor) advances your progress bar for that deity and grants favor levels.
+
 ### Dynamic Favor Mechanics
-*   **Favor Levels**: Each of the 5 gods has a favor tracker (e.g., from -5 to +5 or a numeric scale).
+*   **Favor Levels**: Each of the 5 gods has a favor tracker (from -5 to +5).
 *   **Fluid Allegiance**: You can complete quests for Odin, earn some buffs, and then pivot to Loki. You keep the buffs from Odin's unlocked tiers, but starting to please Loki will shift the balance.
 *   **Opposing Shift**: The gods exist in a pentagram of alignment. Gaining favor with one god automatically drains favor from the **two gods on the opposite side** of the wheel (antagonization).
-*   **Permanent Debuffs**: If a god's favor drops into negative tiers, you suffer active debuffs/penalties from that god's wrath, which persist until you work to appease them.
+*   **Milder Debuffs**: If a god's favor drops into negative tiers, you suffer active debuffs/penalties from that god's wrath, which are milder nuisances compared to the powerful positive alignment buffs.
 
 ```
        [Odin]
