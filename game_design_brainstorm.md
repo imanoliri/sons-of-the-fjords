@@ -223,8 +223,107 @@ interface GlobalState {
 
 ---
 
-## Brainstorming Questions & Next Steps:
-1. **Multiple Parties**: Since we support multiple party states, do they play concurrently (e.g., hotseat multiplayer or toggleable squads) or does it represent separate campaign saves?
-2. **Quest Integration**: Should quests be assigned dynamically by NPCs in towns, discovered on tiles during raids, or do they exist as a global list of achievements/milestones for each God?
-3. **Tech Stack & Setup**: Are you ready to initialize the project codebase? (We can run `npx create-vite-app` or write pure static files based on your preference).
+## 9. Game Database Specs & Content Dictionary
+
+Here is a proposed content dictionary defining the core entities and states within the game.
+
+### A. World Map Location Classes
+Locations on the 15x15 map fall into two primary categories:
+
+1. **Friendly Towns (Kaufang)**
+   - **Trade Outpost**: High selection of basic resources (rations, wood, iron). Sells common equipment.
+   - **Great Hall**: Tavern to recruit elite warriors (Berserkers, Huscarls) and restore party morale.
+   - **Seidr Sanctuary**: Shrine to cleanse curses, purchase potions, and recruit support mages.
+   - **Shipyard**: Upgrade/repair Drakkar stats (movement speed, cargo size, hull health).
+
+2. **Raid Sites (Hostile)**
+   - **Monastery**: Rich silver and relic loot, guarded by weak Monks and Guards. Pleases Loki/Odin, angers Freya.
+   - **Coastal Village**: High supplies and leather, guarded by local Milita. Pleases Loki/Thor, angers Freya.
+   - **Burial Mound (Draugr Tomb)**: Ancient weapons and runes, guarded by undead Draugr. Pleases Hel, angers Thor/Odin.
+   - **Mountain Cave**: Abundant iron/raw ore, guarded by Cave Trolls. Pleases Thor, angers Loki.
+   - **Ruin Keep**: Mythic items and traps, guarded by Frost Giants or Outlaw Vikings. Pleases Odin, angers Loki.
+
+---
+
+### B. Location Map Terrains (10x10 Carcassonne Cells)
+These are drawn procedural tiles:
+- **Sea / Shore**: Drakkar landing zones. Restricts movement unless starting from a ship.
+- **Meadow / Plain**: Basic terrain. Normal movement cost. Low defense values in combat.
+- **Deep Forest**: High defense (cover). Obstructs ranged lines of sight. Ambush danger.
+- **Rocky Pathway**: Narrow lane bottlenecks.
+- **Cave Passage**: Reduced visibility (fog of war only reveals adjacent 1-tile radius instead of 2).
+- **Ice Field / Glacier**: Slippery movement (units slip or slide), slow terrain traversal.
+- **Fortified Gate**: Obstacle requiring siege or a lockpick check (Loki favor / tools).
+
+---
+
+### C. Soldier Types (Roster Classes)
+Soldiers possess stats: Class, Max HP, Current HP, Damage, Range, Speed, and Abilities.
+- **Shieldmaiden**: Tank. *Ability*: Shield Wall (absorbs damage for adjacent lanes). High Armor.
+- **Berserker**: Shock Trooper. *Ability*: Frenzy (gains attack damage proportional to missing HP). Fast movement.
+- **Huntsman**: Ranged Physical. *Ability*: Poison Arrow (deals damage over time across lanes). Low Armor.
+- **Seidr Weaver**: Support Mage. *Ability*: Fate Weaver (heals units or applies shielding runes).
+- **Huskarl**: Heavy Melee. *Ability*: Shield-Breaker (shreds opponent defense/shields).
+- **Scout / Pathfinder**: Utility. *Ability*: Farsight (reveals adjacent Carcassonne tiles from 2 spaces away).
+
+---
+
+### D. Enemies
+Enemies spawn based on the location type:
+- **Saxon Monk / Peasant**: Very low HP, weak melee, flees when morale drops.
+- **Saxon Shield-Guard**: High armor, blocks lanes.
+- **Undead Draugr**: Medium health, rises once after defeat with 25% HP (unless slain by Seidr magic).
+- **Fenrir Pack Wolf**: High speed, leaps across lanes to attack weak backline units.
+- **Cave Troll**: Boss class. Massive HP, slow, deals area damage sweeping multiple lanes.
+- **Frost Giant (Jotunn)**: Boss class. Deals frost damage that slows attack speed and freezes units.
+
+---
+
+### E. Resources
+- **Silver (Viking wealth)**: Used for trade, hiring recruits, and town services.
+- **Rations**: Consumed automatically during World Map travel. If zero, party takes starvation damage and morale drops.
+- **Raw Iron**: Used by smithies to upgrade soldier equipment.
+- **Timber (Wood)**: Used to repair the Drakkar and construct base shelters.
+
+---
+
+### F. Objects & Artifacts (Inventory System)
+Items fit into three distinct sub-types:
+1. **Gear (Equippable)**:
+   - *Saxon Broadsword*: (+Attack)
+   - *Iron Chainmail*: (+Armor)
+   - *Longbow*: (+Range)
+2. **Consumables (Single-use)**:
+   - *Mead Horn*: Boosts combat morale / damage for 1 battle.
+   - *Valkyrie Herb*: Revives a fallen soldier post-battle.
+3. **Deity Artifacts (Legendary Passive items)**:
+   - *Shard of Gungnir*: Odin's favor. Attacks never miss and pierce armor.
+   - *Mjolnir's Core*: Thor's favor. Attacks have a 25% chance to trigger chain lightning.
+   - *Freya's Amber Tear*: Automatically revives a fallen soldier during battle once.
+   - *Hel's Urn of Ash*: Defeated enemies occasionally rise as friendly Draugr.
+   - *Loki's Trickster Coin*: Allows re-rolling a failed event skill check.
+
+---
+
+### G. God Alignment Quest Lines & Favor Tiers
+Favor is tracked on a numeric spectrum from **-5 to +5**:
+
+| Tier | Status | Effect State |
+| :--- | :--- | :--- |
+| **+5** | *Chosen Champion* | Legendary Artifact Unlock + Ultimate Passive (e.g., Thor: All hits deal +5 lightning damage). |
+| **+3 to +4** | *Blessed* | Major Passive Buffs (e.g., Freya: Double healing effectiveness in camps). |
+| **+1 to +2** | *Favored* | Minor Buffs (e.g., Odin: Reveal all town locations on the world map). |
+| **0** | *Neutral* | Standard baseline. |
+| **-1 to -2** | *Disliked* | Minor Debuffs (e.g., Hel: Rations rot 10% faster). |
+| **-3 to -4** | *Angered* | Major Debuffs / Divine Hazards (e.g., Thor: Random lightning strikes in ship travel). |
+| **-5** | *Cursed* | Divine Curse active (e.g., Loki: Units randomly attack allies due to illusions). |
+
+#### Quest Generation Mechanics
+Quests are linked to dynamic event milestones. For instance:
+- **Odin's Quest (The Wisdom Quest)**: Retrieve Runic Tablets hidden in Tomb Ruins. (Requires choosing wisdom/sacrifice options in events).
+- **Thor's Quest (The Giant Slayer)**: Slay a Jotunn in a Cave Dungeon.
+- **Freya's Quest (The Peace Weaver)**: Secure trade agreements with 3 towns and free captive slaves from raids.
+- **Hel's Quest (The Gravekeeper)**: Sacrifice silver at a burial mound and leave fallen soldiers behind.
+- **Loki's Quest (The Mischief Quest)**: Steal relics from Monasteries without triggering combat (using stealth options).
+
 
