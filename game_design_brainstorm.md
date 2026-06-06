@@ -50,7 +50,7 @@ When entering a location, you zoom in from the World Map to a 10x10 sub-grid.
     *   *Rules for placement*: Drawn tiles must match adjacent terrain edges (e.g., a path connects to a path, water to water, forest to forest). This creates a unique procedural layout every time.
 *   **Deck Composition**:
     *   The tile stack is generated based on the world map tile type.
-    *   *Example*: A location in a Forest tile on the World Map will have a location deck composed mostly of Forest, Grass, and River/Water tiles. A cave location in a Mountain tile will consist primarily of Rock, Cave, and Mountain tiles.
+    *   *Example*: A location in a Forest tile on the World Map will have a location deck composed mostly of Forest, Grass, and River/Water tiles. A cave location in a Mountain tile will consist primarily of Rock, Cave, Mountain, and Chasm tiles.
 *   **Tile Contents**:
     *   **Empty**: Safe travel.
     *   **Treasure**: Gold, weapons, artifacts.
@@ -253,9 +253,10 @@ These are drawn procedural tiles:
 - **Rock**: Rugged boulder clusters, impassable except through pathways.
 - **Cave**: Pitch dark passages, reduces local vision distance to 1 tile.
 - **Mountain**: Massive stone cliffs, creates high-altitude vantage points or blocks paths.
+- **Chasm**: A deep, yawning rift in the ground. Blocks all movement, acting as a visual contrast to mountains.
 - **Water / Shore**: Requires bridges or drakkar landings.
 
-*(Note: Glacier is removed as an option; Mountain is used instead).*
+*(Note: Glacier is removed as an option; Mountain and Chasm serve as primary terrain blockers).*
 
 ---
 
