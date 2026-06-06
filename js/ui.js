@@ -225,6 +225,43 @@ export function initUIBindings() {
 
   // Keyboard Arrow Movement
   window.addEventListener('keydown', (e) => {
+    // 0. Handle modal overlay shortcuts if an overlay is open
+    const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
+    if (visibleOverlay) {
+      const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'));
+      if (buttons.length > 0) {
+        // Number keys (1 to buttons.length)
+        const keyNum = parseInt(e.key);
+        if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= buttons.length) {
+          e.preventDefault();
+          buttons[keyNum - 1].click();
+          return;
+        }
+
+        // Arrow keys to navigate options
+        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          activeModalFocusIndex = (activeModalFocusIndex + 1) % buttons.length;
+          updateModalKeyboardNavigation();
+          return;
+        }
+        else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+          e.preventDefault();
+          activeModalFocusIndex = (activeModalFocusIndex - 1 + buttons.length) % buttons.length;
+          updateModalKeyboardNavigation();
+          return;
+        }
+
+        // Enter to confirm selected option
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          buttons[activeModalFocusIndex].click();
+          return;
+        }
+      }
+      return; // Block other navigation while modal is active
+    }
+
     // Check if player is on World Map screen
     if (STATE.activeScreen === 'world') {
       let dx = 0;
@@ -1279,12 +1316,49 @@ export function showToast(msg, icon = '✨') {
   container.appendChild(card);
 }
 
+let activeModalFocusIndex = 0;
+
+function updateModalKeyboardNavigation() {
+  const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
+  if (!visibleOverlay) {
+    activeModalFocusIndex = 0;
+    return;
+  }
+
+  const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'));
+  if (buttons.length === 0) return;
+
+  if (activeModalFocusIndex >= buttons.length) {
+    activeModalFocusIndex = 0;
+  }
+
+  buttons.forEach((btn, idx) => {
+    let cleanText = btn.dataset.cleanText || btn.innerText;
+    if (!btn.dataset.cleanText) {
+      btn.dataset.cleanText = cleanText;
+    }
+    
+    // Prefix numbers e.g. "1. Plunder Mound"
+    btn.innerText = `${idx + 1}. ${cleanText}`;
+
+    // Apply focus indicator
+    if (idx === activeModalFocusIndex) {
+      btn.classList.add('focused-option');
+    } else {
+      btn.classList.remove('focused-option');
+    }
+  });
+}
+
 function showOverlay(el) {
   el.classList.remove('hidden');
+  activeModalFocusIndex = 0;
+  updateModalKeyboardNavigation();
 }
 
 function hideOverlay(el) {
   el.classList.add('hidden');
+  updateModalKeyboardNavigation();
 }
 
 // Listen to key actions triggered by state

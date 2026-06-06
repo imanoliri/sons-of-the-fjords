@@ -972,6 +972,14 @@ body {
   100% { transform: translateX(0); }
 }
 
+/* Focused Option Keyboard Highlighter */
+.btn.focused-option {
+  outline: 2px solid var(--color-thor) !important;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4) !important;
+  background: rgba(255, 215, 0, 0.15) !important;
+  color: var(--color-thor) !important;
+}
+
 /* Custom Toast Notifications */
 .toast-container {
   position: fixed;
