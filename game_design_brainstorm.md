@@ -110,6 +110,10 @@ Rather than selecting a single god at the start, the player's alignment is fluid
 *   **Fluid Allegiance**: You can complete quests for Odin, earn some buffs, and then pivot to Loki. You keep the buffs from Odin's unlocked tiers, but starting to please Loki will shift the balance.
 *   **Opposing Shift**: The gods exist in a pentagram of alignment. Gaining favor with one god automatically drains favor from the **two gods on the opposite side** of the wheel (antagonization).
 *   **Milder Debuffs**: If a god's favor drops into negative tiers, you suffer active debuffs/penalties from that god's wrath, which are milder nuisances compared to the powerful positive alignment buffs.
+*   **Permanent Favor (5/5 Milestones)**:
+    *   Once you fully complete a god's quest track (reaching 5/5 milestones), you secure their favor **permanently**. You can never lose their favor or suffer their debuffs/wrath again.
+    *   If you reach 5/5 favor with **multiple gods**, you can only have the positive blessings/buffs of **one** god active at any time. You must choose which god's active buffs to keep.
+    *   However, the debuffs/antagonizations from *all* gods where you reached 5/5 remain permanently deactivated (they no longer seek vengeance against you).
 
 ```
        [Odin]
