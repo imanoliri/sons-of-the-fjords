@@ -1457,8 +1457,8 @@ function updateModalKeyboardNavigation() {
       btn.dataset.cleanText = cleanText;
     }
     
-    // Prefix numbers e.g. "1. Plunder Mound"
-    btn.innerText = `${idx + 1}. ${cleanText}`;
+    // Prefix numbers e.g. "[1] Plunder Mound"
+    btn.innerText = `[${idx + 1}] ${cleanText}`;
 
     // Apply focus indicator
     if (idx === activeModalFocusIndex) {
