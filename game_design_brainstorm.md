@@ -328,7 +328,7 @@ Combat focuses on mythical monsters for the initial prototype.
 
 ### E. Resources
 - **Gold**: The primary currency. Used to recruit soldiers, buy goods, repair the Drakkar, and pay for town services.
-- **Food**: Vital supplies. Consumed automatically during travel on the World Map. If depleted, your band takes starvation damage and morale plummets.
+- **Food**: Vital supplies. Consumed automatically during travel on the World Map. If Food is depleted (0) and you continue traveling, you enter starvation; moving 1 tile on the World Map while starving kills 1 random soldier from your band.
 - **Wood**: Building material. Used to repair your Drakkar (longship) and build camps.
 - **Sheep**: Livestock. Acts as a valuable trading commodity, emergency food source, or sacrificial offerings to satisfy specific gods.
 
@@ -391,5 +391,34 @@ Favor is tracked on a numeric spectrum from **-5 to +5**.
 5. **Loki's Quest: "The Theft of Idunn's Apples" (Theme: Giants & Trickery)**
    - *Story*: Loki is forced to help the giant Thjazi steal the apples of youth. You must complete location events using stealth, steal items from ruins without combat, and trick boss monsters.
    - *Milestones*: Unlocks stealth options, high critical strike chances, and culminates in *Loki's Trickster Coin*.
+
+---
+
+## 10. Victory & Game Over Conditions
+
+### A. Victory (The Ascension Choice)
+*   **Trigger**: Reaching **5/5 milestones** with any of the 5 Norse Gods.
+*   **Resolution**: The player is presented with a story window detail representing their god's ultimate favor.
+*   **The Choice**:
+    1.  **Ascend**: Accept your place in the halls of the gods, ending the game in victory.
+    2.  **Continue**: Stay on the world map as a mortal champion of that deity. You keep the locked permanent favor and active buffs but can continue raiding, trading, and trying to complete quests/milestones for other gods.
+
+### B. Game Over
+*   **Trigger**: Your active soldier roster (band + deployment pool) is completely empty (all units are dead) **AND** your Gold resource drops to **0**.
+*   **Result**: The campaign ends. You have no warriors left and no silver to recruit new mercenaries.
+
+---
+
+## 11. Initial Starting State
+
+When a new campaign begins, the party initializes with the following configuration:
+*   **Band (Roster)**: 3 starting units (1 Shieldmaiden, 1 Berserker, 1 Huntsman) placed in the deployment pool.
+*   **Resources**:
+    *   **Gold**: 15
+    *   **Food**: 30
+    *   **Wood**: 5
+    *   **Sheep**: 2
+*   **Location**: Drakkar starts positioned in the water tiles adjacent to the first friendly town.
+
 
 
