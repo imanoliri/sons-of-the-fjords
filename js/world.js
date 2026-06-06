@@ -46,9 +46,8 @@ export function initializeWorld() {
 
       row.push(terrain);
       
-      // Reveal initial starting zone (around 7,7 which is water Fjord inlet)
-      const dist = Math.abs(x - 7) + Math.abs(y - 7);
-      fogRow.push(dist > 2);
+      // Always fully revealed (no fog of war on world map)
+      fogRow.push(false);
     }
     tiles.push(row);
     revealed.push(fogRow);
