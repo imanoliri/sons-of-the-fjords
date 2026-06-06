@@ -200,12 +200,12 @@ interface PartyState {
     };
     resources: {
       gold: number;
-      rations: number;
+      food: number;
       wood: number;
-      iron: number;
+      sheep: number;
     };
-    soldiers: Soldier[];
-    inventory: Item[];
+    band: Soldier[];           // Roster of hired soldiers/army
+    inventory: Item[];         // List of items, objects, and artifacts collected
     godFavor: {               // Favor score for each deity (-5 to +5)
       odin: number;
       thor: number;
@@ -304,10 +304,10 @@ Combat focuses on mythical monsters for the initial prototype.
 ---
 
 ### E. Resources
-- **Silver (Viking wealth)**: Used for trade, hiring recruits, and town services.
-- **Rations**: Consumed automatically during World Map travel. If zero, party takes starvation damage and morale drops.
-- **Raw Iron**: Used by smithies to upgrade soldier equipment.
-- **Timber (Wood)**: Used to repair the Drakkar and construct base shelters.
+- **Gold**: The primary currency. Used to recruit soldiers, buy goods, repair the Drakkar, and pay for town services.
+- **Food**: Vital supplies. Consumed automatically during travel on the World Map. If depleted, your band takes starvation damage and morale plummets.
+- **Wood**: Building material. Used to repair your Drakkar (longship) and build camps.
+- **Sheep**: Livestock. Acts as a valuable trading commodity, emergency food source, or sacrificial offerings to satisfy specific gods.
 
 ---
 
