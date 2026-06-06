@@ -7,12 +7,14 @@ import { STATE, notify, adjustResource } from './state.js';
 let combatTimer = null;
 
 // Initialize combat map grid & pool
+// Initialize combat map grid & pool
 export function startCombat(locationId, coordKey, enemyData) {
   STATE.combat.active = true;
   STATE.combat.paused = true; // Start paused to let player deploy
   STATE.combat.locationId = locationId;
   STATE.combat.entityCoordKey = coordKey;
   STATE.combat.selectedPoolIndex = null;
+  STATE.combat.fleeMode = false;
   
   // 1. Initialize 10x8 Grid of cells
   const grid = [];
@@ -100,8 +102,8 @@ function combatTick() {
     // Check if unit is still alive (could have died earlier in the tick)
     if (unit.hp <= 0) continue;
 
-    // Scan the unit's lane for opposing targets
-    const target = findTargetInLane(unit);
+    // Scan the unit's lane for opposing targets (only if not fleeing)
+    const target = unit.isFleeing ? null : findTargetInLane(unit);
     if (target) {
       // Deal damage
       target.hp -= unit.dmg;
@@ -119,7 +121,8 @@ function combatTick() {
       }
     } else {
       // No target: Advance along lane
-      const dir = unit.alliance === 'player' ? 1 : -1;
+      // If player unit is fleeing, reverse direction to move left (-1)
+      const dir = (unit.alliance === 'player' && !unit.isFleeing) ? 1 : -1;
       const nextCol = unit.col + dir;
 
       // Check if next column is within bounds
@@ -131,9 +134,22 @@ function combatTick() {
           grid[unit.row][nextCol] = unit;
         }
       } else {
-        // Reached the end: Handle success/breach
+        // Reached the end: Handle success/breach or fleeing exit
         grid[unit.row][unit.col] = null;
-        handleUnitReachEnd(unit);
+        if (unit.isFleeing && unit.alliance === 'player') {
+          // Put back in deployment pool
+          const poolUnit = {
+            ...unit,
+            hp: unit.hp,
+            row: undefined,
+            col: undefined,
+            isFleeing: false
+          };
+          STATE.combat.pool.push(poolUnit);
+          notify('COMBAT_UPDATE');
+        } else {
+          handleUnitReachEnd(unit);
+        }
       }
     }
   }
@@ -245,6 +261,25 @@ export function deployUnit(poolIndex, row, col) {
   // Remove from pool
   STATE.combat.pool.splice(poolIndex, 1);
   STATE.combat.selectedPoolIndex = null;
+
+  notify('COMBAT_UPDATE');
+}
+
+// Return unit from grid back to deployment pool
+export function undeployUnit(row, col) {
+  row = Number(row);
+  col = Number(col);
+
+  const unit = STATE.combat.grid[row][col];
+  if (!unit || unit.alliance !== 'player') return;
+
+  // Clear cell
+  STATE.combat.grid[row][col] = null;
+  unit.row = undefined;
+  unit.col = undefined;
+
+  // Push back into pool
+  STATE.combat.pool.push(unit);
 
   notify('COMBAT_UPDATE');
 }

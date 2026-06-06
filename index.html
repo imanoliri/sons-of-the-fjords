@@ -185,7 +185,10 @@
           <div class="combat-grid-wrapper glass-panel">
             <div class="combat-ticker-header">
               <span id="combat-phase-badge">BATTLE ACTIVE</span>
-              <button class="btn btn-sm btn-warning" id="btn-combat-pause">Pause / Deploy</button>
+              <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-sm btn-warning" id="btn-combat-pause">Pause / Deploy</button>
+                <button class="btn btn-sm btn-danger" id="btn-combat-flee">Flee Mode: OFF</button>
+              </div>
             </div>
             
             <!-- 10x8 COMBAT ARENA -->
@@ -257,6 +260,9 @@
         </div>
       </div>
     </div>
+    
+    <!-- Floating Custom Tooltip -->
+    <div id="game-tooltip" class="game-tooltip"></div>
 
   </div>
 

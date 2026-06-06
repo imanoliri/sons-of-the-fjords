@@ -2,10 +2,10 @@
    UI MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage } from './state.js';
+import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify } from './state.js';
 import { getAdjacentCoords } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
-import { togglePause, deployUnit, startCombat } from './combat.js';
+import { togglePause, deployUnit, undeployUnit, startCombat } from './combat.js';
 
 // DOM Selectors
 const elHeader = document.getElementById('game-header');
@@ -15,6 +15,7 @@ const elWood = document.getElementById('res-wood').querySelector('.val');
 const elSheep = document.getElementById('res-sheep').querySelector('.val');
 const elBand = document.getElementById('res-band').querySelector('.val');
 const elBlessing = document.getElementById('active-blessing-display');
+const elTooltip = document.getElementById('game-tooltip');
 
 // Screens
 const screens = {
@@ -46,6 +47,7 @@ const elLocLog = document.getElementById('location-event-log');
 const elCombatGrid = document.getElementById('combat-grid');
 const elCombatPoolList = document.getElementById('deploy-pool-list');
 const elCombatPauseBtn = document.getElementById('btn-combat-pause');
+const elCombatFleeBtn = document.getElementById('btn-combat-flee');
 
 // Quests elements
 const elQuestsList = document.getElementById('gods-tracks-list');
@@ -188,10 +190,18 @@ export function initUIBindings() {
     togglePause();
   });
 
+  bindButton('btn-combat-flee', () => {
+    STATE.combat.fleeMode = !STATE.combat.fleeMode;
+    if (STATE.combat.fleeMode) {
+      STATE.combat.selectedPoolIndex = null;
+    }
+    notify('COMBAT_UPDATE');
+  });
+
   // Game over restart
   bindButton('btn-restart-game', () => {
     hideOverlay(elModalGameOver);
-    STATE.activeScreen = 'menu';
+    STATE.activeScreen = 'world';
     notify('RESET_GAME');
   });
 
@@ -254,29 +264,232 @@ export function initUIBindings() {
         e.preventDefault();
         const targetX = STATE.party.localX + dx;
         const targetY = STATE.party.localY + dy;
-        const locState = STATE.locations[STATE.party.currentLocationId];
-        if (locState) {
-          const coordKey = `${targetX},${targetY}`;
-          const tile = locState.placedTiles[coordKey];
-          // Move if adjacent tile is already placed
-          if (tile) {
-            STATE.party.localX = targetX;
-            STATE.party.localY = targetY;
-            notify('STATE_UPDATED');
-          } 
-          // If unplaced but adjacent, auto-discover it!
-          else {
-            const isNeighborToPlayer = Math.abs(targetX - STATE.party.localX) + Math.abs(targetY - STATE.party.localY) === 1;
-            const adjacentUnplaced = getAdjacentUnplacedSlots(locState.placedTiles);
-            if (isNeighborToPlayer && adjacentUnplaced.includes(coordKey)) {
-              discoverTile(STATE.party.currentLocationId, targetX, targetY);
-              notify('STATE_UPDATED');
-            }
-          }
-        }
+        attemptLocalMove(targetX, targetY);
       }
     }
   });
+
+  // Start tooltip tracking
+  initTooltipEvents();
+}
+
+// Global tooltip delegation
+function initTooltipEvents() {
+  document.body.addEventListener('mouseover', (e) => {
+    const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
+    if (!tile) {
+      elTooltip.style.display = 'none';
+      return;
+    }
+    
+    if (tile.classList.contains('fog')) {
+      elTooltip.style.display = 'none';
+      return;
+    }
+
+    let headerText = '';
+    let coordsText = '';
+    let contentsText = '';
+    let borderAccent = 'var(--text-accent)';
+
+    if (tile.classList.contains('world-tile')) {
+      const x = tile.dataset.x;
+      const y = tile.dataset.y;
+      const terrain = tile.dataset.terrain;
+      const locationName = tile.dataset.locationName;
+      const locationType = tile.dataset.locationType;
+      const hasPlayer = tile.dataset.hasPlayer === 'true';
+
+      headerText = `${terrain ? terrain.charAt(0).toUpperCase() + terrain.slice(1) : 'Terrain'}`;
+      coordsText = `X: ${x}, Y: ${y}`;
+      
+      let contents = [];
+      if (hasPlayer) {
+        contents.push('🚢 Drakkar Longship');
+      }
+      if (locationName) {
+        const typeLabel = locationType === 'town' ? 'Town' : 'Raid Site';
+        contents.push(`🏘️ ${locationName} (${typeLabel})`);
+      }
+      
+      if (contents.length === 0) {
+        if (terrain === 'water') {
+          contents.push('Open water. Safe sailing, costs 1 Food per step.');
+        } else if (terrain === 'river') {
+          contents.push('River stream. Fast sailing, costs 1 Food per step.');
+        } else {
+          contents.push('Rugged land. Slow travel, costs 3 Food per step. Dangerous creature attacks!');
+        }
+      }
+      contentsText = contents.join('<br>');
+
+      if (terrain === 'water') borderAccent = 'var(--tile-water)';
+      else if (terrain === 'river') borderAccent = 'var(--tile-river)';
+      else if (terrain === 'plains') borderAccent = 'var(--tile-plains)';
+      else if (terrain === 'forest') borderAccent = 'var(--tile-forest)';
+      else if (terrain === 'snow') borderAccent = 'var(--tile-snow)';
+      else if (terrain === 'mountain') borderAccent = 'var(--tile-mountain)';
+
+    } else if (tile.classList.contains('location-tile')) {
+      const x = tile.dataset.x;
+      const y = tile.dataset.y;
+      const terrain = tile.dataset.terrain;
+      const hasPlayer = tile.dataset.hasPlayer === 'true';
+      const entityType = tile.dataset.entityType;
+      const entityState = tile.dataset.entityState;
+
+      headerText = `${terrain ? terrain.charAt(0).toUpperCase() + terrain.slice(1) : 'Tile'}`;
+      coordsText = `X: ${x}, Y: ${y}`;
+
+      let contents = [];
+      if (hasPlayer) {
+        contents.push('⚔️ Viking Expedition Band');
+      }
+      if (entityState) {
+        contents.push(entityState);
+      }
+
+      if (contents.length === 0) {
+        if (tile.classList.contains('discovery-edge')) {
+          headerText = 'Unexplored Boundary';
+          contents.push('Step here to draw and discover a new tile from the deck.');
+        } else {
+          contents.push('Empty ground. Safe to cross.');
+        }
+      }
+      contentsText = contents.join('<br>');
+    } else if (tile.classList.contains('combat-cell')) {
+      const r = tile.dataset.row;
+      const c = tile.dataset.col;
+      headerText = `Combat Grid Lane ${Number(r)+1}`;
+      coordsText = `Col: ${c}`;
+      
+      const unitEl = tile.querySelector('.combat-unit');
+      if (unitEl) {
+        contentsText = unitEl.title || 'Combat unit/monster.';
+      } else {
+        contentsText = c <= 1 ? 'Deployable Zone' : 'Empty lane battlefield.';
+      }
+    }
+
+    if (!headerText) {
+      elTooltip.style.display = 'none';
+      return;
+    }
+
+    elTooltip.innerHTML = `
+      <div class="game-tooltip-header">
+        <span>${headerText}</span>
+        <span class="game-tooltip-coords">${coordsText}</span>
+      </div>
+      <div class="game-tooltip-contents">${contentsText}</div>
+    `;
+    elTooltip.style.borderLeftColor = borderAccent;
+    elTooltip.style.display = 'flex';
+  });
+
+  document.body.addEventListener('mousemove', (e) => {
+    if (elTooltip.style.display === 'flex') {
+      elTooltip.style.left = (e.clientX + 15) + 'px';
+      elTooltip.style.top = (e.clientY + 15) + 'px';
+    }
+  });
+
+  document.body.addEventListener('mouseout', (e) => {
+    const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
+    if (tile && !e.relatedTarget?.closest('.world-tile, .location-tile, .combat-cell')) {
+      elTooltip.style.display = 'none';
+    }
+  });
+}
+
+// Automatically discover/draw tiles in 4 cardinal directions from player
+function autoDiscoverAdjacent(locId) {
+  const locState = STATE.locations[locId];
+  if (!locState) return;
+
+  const px = STATE.party.localX;
+  const py = STATE.party.localY;
+  
+  const neighbors = [
+    { x: px + 1, y: py },
+    { x: px - 1, y: py },
+    { x: px, y: py + 1 },
+    { x: px, y: py - 1 }
+  ];
+
+  neighbors.forEach(n => {
+    if (n.x >= 0 && n.x < 10 && n.y >= 0 && n.y < 10) {
+      const coordKey = `${n.x},${n.y}`;
+      if (!locState.placedTiles[coordKey]) {
+        discoverTile(locId, n.x, n.y);
+      }
+    }
+  });
+}
+
+// Attempt to move player locally, auto-discovering tiles and gathering contents or triggering combat
+function attemptLocalMove(targetX, targetY) {
+  const locId = STATE.party.currentLocationId;
+  const locState = STATE.locations[locId];
+  if (!locState) return;
+
+  const coordKey = `${targetX},${targetY}`;
+  let tile = locState.placedTiles[coordKey];
+
+  // If tile is unplaced but adjacent, auto-discover it
+  if (!tile) {
+    const isAdjacent = Math.abs(targetX - STATE.party.localX) + Math.abs(targetY - STATE.party.localY) === 1;
+    const adjacentUnplaced = getAdjacentUnplacedSlots(locState.placedTiles);
+    if (isAdjacent && adjacentUnplaced.includes(coordKey)) {
+      discoverTile(locId, targetX, targetY);
+      tile = locState.placedTiles[coordKey];
+    }
+  }
+
+  if (!tile) return;
+
+  // Impassable terrain block
+  if (tile.terrainType === 'chasm' || tile.terrainType === 'mountain') {
+    logLocation(`The rugged ${tile.terrainType} is impassable!`, 'warn-message');
+    return;
+  }
+
+  // Check tile entities
+  if (tile.entity) {
+    const ent = tile.entity;
+    
+    if (ent.type === 'enemy_army' && !ent.isDefeated) {
+      // Set pending coordinates, trigger combat, but do NOT move yet
+      STATE.party.pendingLocalX = targetX;
+      STATE.party.pendingLocalY = targetY;
+      triggerCombatTransition(coordKey, ent);
+      return;
+    }
+
+    // Move player first for non-combat entities
+    STATE.party.localX = targetX;
+    STATE.party.localY = targetY;
+    autoDiscoverAdjacent(locId);
+    notify('STATE_UPDATED');
+
+    // Automatically trigger interactions
+    if (ent.type === 'treasure' && !ent.isLooted) {
+      triggerEncounterEvent(coordKey, ent);
+    } else if (ent.type === 'burial_mound' && !ent.isExplored) {
+      triggerEncounterEvent(coordKey, ent);
+    } else if (ent.type === 'dolmen' && !ent.isVisited) {
+      triggerEncounterEvent(coordKey, ent);
+    } else if (ent.type === 'cave_entrance') {
+      triggerEnterCavePortal(coordKey, ent);
+    }
+  } else {
+    // Normal empty tile movement
+    STATE.party.localX = targetX;
+    STATE.party.localY = targetY;
+    autoDiscoverAdjacent(locId);
+    notify('STATE_UPDATED');
+  }
 }
 
 // Bind simple click callback if element exists
@@ -349,6 +562,8 @@ function renderWorldMap() {
     for (let x = 0; x < 15; x++) {
       const elCell = document.createElement('div');
       elCell.classList.add('world-tile');
+      elCell.dataset.x = x;
+      elCell.dataset.y = y;
       
       const isFog = revealed[y][x];
       const hasLocation = locations[`${x},${y}`];
@@ -358,7 +573,11 @@ function renderWorldMap() {
       } else {
         const terrain = tiles[y][x];
         elCell.classList.add(`terrain-${terrain}`);
-        elCell.title = `Terrain: ${terrain.toUpperCase()}${hasLocation ? `\nLocation: ${hasLocation.name}` : ''}`;
+        elCell.dataset.terrain = terrain;
+        if (hasLocation) {
+          elCell.dataset.locationName = hasLocation.name;
+          elCell.dataset.locationType = hasLocation.type;
+        }
 
         if (hasLocation) {
           const loc = hasLocation;
@@ -366,11 +585,9 @@ function renderWorldMap() {
           if (loc.type === 'town') {
             marker.innerText = '🏘️';
             marker.classList.add('town-marker');
-            marker.title = loc.name;
           } else {
             marker.innerText = '⚔️';
             marker.classList.add('raid-marker');
-            marker.title = `${loc.name} (Raid)`;
           }
           elCell.appendChild(marker);
         }
@@ -381,7 +598,7 @@ function renderWorldMap() {
         const drakkar = document.createElement('div');
         drakkar.classList.add('player-marker');
         drakkar.innerText = '🚢';
-        drakkar.title = 'Drakkar Longship';
+        elCell.dataset.hasPlayer = 'true';
         elCell.appendChild(drakkar);
       }
 
@@ -415,8 +632,8 @@ function movePartyOnWorld(x, y) {
   const targetTerrain = STATE.worldMap.tiles[y][x];
   
   // Verify costs
-  let cost = 1; // Sea cost
-  if (targetTerrain !== 'water') {
+  let cost = 1; // Sea/River cost
+  if (targetTerrain !== 'water' && targetTerrain !== 'river') {
     cost = 3; // Land cost
   }
 
@@ -436,11 +653,6 @@ function movePartyOnWorld(x, y) {
   // Reveal fog in a 2-tile radius around player
   revealWorldFog(x, y);
 
-  // Land random combat checks (20% chance on land, 0% on water)
-  if (targetTerrain !== 'water' && Math.random() < 0.20 && STATE.band.length > 0) {
-    triggerRandomLandCombat();
-  }
-
   notify('STATE_UPDATED');
 }
 
@@ -455,21 +667,6 @@ function revealWorldFog(px, py) {
       }
     }
   }
-}
-
-// Random Land Combat Wave setup
-function triggerRandomLandCombat() {
-  logWorld('Ambushed! A wild creature leaps from the brush!', 'combat-message');
-  
-  const monsters = ['Giant Brood-Spider', 'Fenrir Pack Wolf'];
-  const monster = monsters[Math.floor(Math.random() * monsters.length)];
-  
-  setTimeout(() => {
-    setScreen('combat');
-    startCombat('world_random', 'world_coord', {
-      monsters: [{ monsterClass: monster, count: 1 }]
-    });
-  }, 800);
 }
 
 // Enter Town or Dungeon
@@ -487,6 +684,8 @@ function enterLocation(locData) {
     // Start player at local coordinates 5,5 (start tile)
     STATE.party.localX = 5;
     STATE.party.localY = 5;
+    
+    autoDiscoverAdjacent(locData.id);
     
     setScreen('location');
     logWorld(`Entering raid coordinates: ${locData.name}.`);
@@ -567,6 +766,8 @@ function renderLocationMap() {
     for (let x = 0; x < 10; x++) {
       const elCell = document.createElement('div');
       elCell.classList.add('location-tile');
+      elCell.dataset.x = x;
+      elCell.dataset.y = y;
       
       const coordKey = `${x},${y}`;
       const tile = placed[coordKey];
@@ -574,17 +775,22 @@ function renderLocationMap() {
       if (tile) {
         // Render terrain
         elCell.classList.add(`terrain-${tile.terrainType}`);
+        elCell.dataset.terrain = tile.terrainType;
         
         let entityDesc = '';
         if (tile.entity) {
           const ent = tile.entity;
-          if (ent.type === 'treasure' && !ent.isLooted) entityDesc = `\nContains: Treasure Chest (Gold/Items)`;
-          else if (ent.type === 'enemy_army' && !ent.isDefeated) entityDesc = `\nContains: Monster Nest (${ent.monsters[0].monsterClass})`;
-          else if (ent.type === 'burial_mound' && !ent.isExplored) entityDesc = `\nContains: Ancient Grave Mound`;
-          else if (ent.type === 'dolmen' && !ent.isVisited) entityDesc = `\nContains: Sacred Dolmen Stone`;
-          else if (ent.type === 'cave_entrance') entityDesc = `\nContains: Sub-Cave Tunnel Entrance`;
+          if (ent.type === 'treasure' && !ent.isLooted) entityDesc = '🪙 Treasure Chest (Loot Gold)';
+          else if (ent.type === 'enemy_army' && !ent.isDefeated) entityDesc = `👹 Monster Nest (${ent.monsters[0].monsterClass})`;
+          else if (ent.type === 'burial_mound' && !ent.isExplored) entityDesc = '🪦 Ancient Burial Mound';
+          else if (ent.type === 'dolmen' && !ent.isVisited) entityDesc = `🗿 Sacred Dolmen Stone (Appease ${ent.godName.toUpperCase()})`;
+          else if (ent.type === 'cave_entrance') entityDesc = '🕳️ Cave Sub-Dungeon Portal';
+          
+          if (entityDesc) {
+            elCell.dataset.entityType = ent.type;
+            elCell.dataset.entityState = entityDesc;
+          }
         }
-        elCell.title = `Terrain: ${tile.terrainType.toUpperCase()}${entityDesc}`;
         
         // Show interactive entity if present
         if (tile.entity) {
@@ -594,27 +800,22 @@ function renderLocationMap() {
 
           if (ent.type === 'treasure' && !ent.isLooted) {
             badge.innerText = '🪙';
-            badge.title = 'Treasure Chest';
             badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
           } 
           else if (ent.type === 'enemy_army' && !ent.isDefeated) {
             badge.innerText = '👹';
-            badge.title = `${ent.monsters[0].monsterClass} nest`;
             badge.addEventListener('click', () => triggerCombatTransition(coordKey, ent));
           } 
           else if (ent.type === 'burial_mound' && !ent.isExplored) {
             badge.innerText = '🪦';
-            badge.title = 'Ancient Burial Mound';
             badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
           } 
           else if (ent.type === 'dolmen' && !ent.isVisited) {
             badge.innerText = '🗿';
-            badge.title = 'Sacred Druid Dolmen';
             badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
           }
           else if (ent.type === 'cave_entrance') {
             badge.innerText = '🕳️';
-            badge.title = 'Cave Sub-Dungeon';
             badge.addEventListener('click', () => triggerEnterCavePortal(coordKey, ent));
           }
 
@@ -626,6 +827,7 @@ function renderLocationMap() {
           const marker = document.createElement('div');
           marker.classList.add('player-marker');
           marker.innerText = '⚔️';
+          elCell.dataset.hasPlayer = 'true';
           elCell.appendChild(marker);
         }
 
@@ -634,9 +836,7 @@ function renderLocationMap() {
         if (isNeighbor) {
           elCell.classList.add('tile-border-highlight');
           elCell.addEventListener('click', () => {
-            STATE.party.localX = x;
-            STATE.party.localY = y;
-            notify('STATE_UPDATED');
+            attemptLocalMove(x, y);
           });
         }
 
@@ -647,8 +847,7 @@ function renderLocationMap() {
         if (isNeighborToPlayer) {
           elCell.classList.add('discovery-edge');
           elCell.addEventListener('click', () => {
-            discoverTile(locId, x, y);
-            notify('STATE_UPDATED');
+            attemptLocalMove(x, y);
           });
         } else {
           elCell.classList.add('fog');
@@ -827,19 +1026,42 @@ function renderCombatGrid() {
           elUnit.classList.add('attacking');
         }
 
-        // Emoji display based on soldier/monster class type
-        const avatars = {
-          shieldmaiden: '🛡️',
-          berserker: '🪓',
-          huntsman: '🏹',
-          'Giant Brood-Spider': '🕷️',
-          'Fenrir Pack Wolf': '🐺',
-          'Draugr Warrior': '🧟',
-          'Cave Troll': '👹',
-          'Frost Giant (Jotunn)': '❄️',
-          'Lindwurm': '🐉'
-        };
-        elUnit.innerText = avatars[unit.type] || '👾';
+        // Allow removing unit from deployment grid if paused, OR fleeing if fleeMode is active
+        if (unit.alliance === 'player') {
+          if (STATE.combat.fleeMode) {
+            elUnit.classList.add('fleeing-target');
+            elUnit.addEventListener('click', (e) => {
+              e.stopPropagation();
+              unit.isFleeing = true;
+              notify('COMBAT_UPDATE');
+            });
+          } else if (STATE.combat.paused) {
+            elUnit.classList.add('removable-unit');
+            elUnit.addEventListener('click', (e) => {
+              e.stopPropagation();
+              undeployUnit(r, c);
+            });
+          }
+        }
+
+        // Emoji display based on soldier/monster class type or fleeing state
+        if (unit.isFleeing) {
+          elUnit.classList.add('fleeing');
+          elUnit.innerText = '🏃‍♂️';
+        } else {
+          const avatars = {
+            shieldmaiden: '🛡️',
+            berserker: '🪓',
+            huntsman: '🏹',
+            'Giant Brood-Spider': '🕷️',
+            'Fenrir Pack Wolf': '🐺',
+            'Draugr Warrior': '🧟',
+            'Cave Troll': '👹',
+            'Frost Giant (Jotunn)': '❄️',
+            'Lindwurm': '🐉'
+          };
+          elUnit.innerText = avatars[unit.type] || '👾';
+        }
         elUnit.title = `${unit.name} (${unit.hp}/${unit.maxHp} HP)`;
 
         // Healthbar rendering
@@ -872,6 +1094,19 @@ function renderCombatGrid() {
     elCombatPauseBtn.classList.remove('btn-primary');
     elCombatPauseBtn.classList.add('btn-warning');
     elCombatGrid.classList.remove('paused-deploying');
+  }
+
+  // Toggle Flee button label
+  if (elCombatFleeBtn) {
+    if (STATE.combat.fleeMode) {
+      elCombatFleeBtn.innerText = 'Flee Mode: ON';
+      elCombatFleeBtn.classList.remove('btn-danger');
+      elCombatFleeBtn.classList.add('btn-primary');
+    } else {
+      elCombatFleeBtn.innerText = 'Flee Mode: OFF';
+      elCombatFleeBtn.classList.remove('btn-primary');
+      elCombatFleeBtn.classList.add('btn-danger');
+    }
   }
 
   // Render Deployment Pool Hand cards
@@ -1013,7 +1248,7 @@ export function handleStateNotification(event, data) {
   else if (event === 'COMBAT_START') {
     render();
   }
-  else if (event === 'COMBAT_UPDATE') {
+  else if (event === 'COMBAT_UPDATE' || event === 'COMBAT_PAUSED') {
     if (STATE.activeScreen === 'combat') renderCombatGrid();
   }
   else if (event === 'COMBAT_DAMAGE') {
@@ -1031,6 +1266,27 @@ export function handleStateNotification(event, data) {
   else if (event === 'COMBAT_VICTORY') {
     logWorld('VICTORY! The lane has been cleared of monsters.', 'gain-message');
     alert('Victory! You cleared the monsters.');
+    
+    // Auto-resolve pending move on victory
+    if (STATE.party.pendingLocalX !== undefined && STATE.party.pendingLocalY !== undefined) {
+      STATE.party.localX = STATE.party.pendingLocalX;
+      STATE.party.localY = STATE.party.pendingLocalY;
+      
+      const locId = STATE.party.currentLocationId;
+      autoDiscoverAdjacent(locId);
+      
+      const locState = STATE.locations[locId];
+      if (locState) {
+        const coordKey = `${STATE.party.localX},${STATE.party.localY}`;
+        const tile = locState.placedTiles[coordKey];
+        if (tile && tile.entity && tile.entity.type === 'enemy_army') {
+          tile.entity.isDefeated = true;
+        }
+      }
+      delete STATE.party.pendingLocalX;
+      delete STATE.party.pendingLocalY;
+    }
+    
     setScreen(STATE.party.currentLocationId ? 'location' : 'world');
   }
   else if (event === 'COMBAT_DEFEAT') {

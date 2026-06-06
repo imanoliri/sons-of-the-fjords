@@ -23,8 +23,8 @@ export function generateLocationMap(locationId, worldTileTerrain) {
 
   const pool = terrainPools[worldTileTerrain] || terrainPools.plains;
   
-  // Create a deck of 35 tiles
-  for (let i = 0; i < 35; i++) {
+  // Create a deck of 120 tiles (large enough to cover the 10x10 grid exploration)
+  for (let i = 0; i < 120; i++) {
     const randomTerrain = pool[Math.floor(Math.random() * pool.length)];
     deck.push(randomTerrain);
   }
@@ -61,9 +61,10 @@ export function discoverTile(locationId, x, y) {
 
   const terrain = locState.tileStack.pop();
   
-  // Decide entity spawn (30% chance)
+  // Decide entity spawn (35% chance) - only on traversable terrains (not chasm or mountain)
   let entity = null;
-  if (Math.random() < 0.35) {
+  const isTraversable = terrain !== 'chasm' && terrain !== 'mountain';
+  if (isTraversable && Math.random() < 0.35) {
     entity = generateRandomEntity(locationId, terrain);
   }
 

@@ -58,11 +58,11 @@ export function initializeWorld() {
 
   // 2. Spawn Static Locations (Coordinates, Names, Types)
   STATE.worldMap.locations = {
-    "2,7": { id: "town_1", name: "Fjordgard Kaufang", type: "town", terrain: "water" },
+    "3,6": { id: "town_1", name: "Fjordgard Kaufang", type: "town", terrain: "plains" },
     "8,4": { id: "town_2", name: "Heimdall Sogn", type: "town", terrain: "plains" },
     "12,11": { id: "town_3", name: "Ullsgard Outpost", type: "town", terrain: "plains" },
     "4,3": { id: "raid_1", name: "St. Alban Monastery", type: "raid", terrain: "forest" },
-    "1,9": { id: "raid_2", name: "Lindisfarne Shore", type: "raid", terrain: "water" },
+    "3,9": { id: "raid_2", name: "Lindisfarne Shore", type: "raid", terrain: "plains" },
     "10,1": { id: "raid_3", name: "Barrow Mound of Balder", type: "raid", terrain: "snow" },
     "13,12": { id: "raid_4", name: "Jotunn Crag Cave", type: "raid", terrain: "mountain" },
     "8,12": { id: "raid_5", name: "Thjazi Keep Ruins", type: "raid", terrain: "forest" }

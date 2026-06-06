@@ -6,7 +6,7 @@
 const listeners = [];
 
 export const STATE = {
-  activeScreen: 'menu', // 'menu' | 'world' | 'town' | 'location' | 'combat'
+  activeScreen: 'world', // 'menu' | 'world' | 'town' | 'location' | 'combat'
   
   resources: {
     gold: 15,
