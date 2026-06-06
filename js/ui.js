@@ -305,6 +305,42 @@ export function initUIBindings() {
         attemptLocalMove(targetX, targetY);
       }
     }
+    // Check if player is on Town screen
+    else if (STATE.activeScreen === 'town') {
+      const key = e.key.toLowerCase();
+      
+      // Resources shortcuts: f (food), g (gold from selling sheep), w (wood), s (sheep)
+      if (key === 'f') {
+        e.preventDefault();
+        document.getElementById('btn-buy-food')?.click();
+      }
+      else if (key === 'g') {
+        e.preventDefault();
+        document.getElementById('btn-sell-sheep')?.click();
+      }
+      else if (key === 'w') {
+        e.preventDefault();
+        document.getElementById('btn-buy-wood')?.click();
+      }
+      else if (key === 's') {
+        e.preventDefault();
+        document.getElementById('btn-buy-sheep')?.click();
+      }
+      
+      // Soldiers recruitment shortcuts: 1 (Shieldmaiden), 2 (Berserker), 3 (Huntsman)
+      else if (key === '1') {
+        e.preventDefault();
+        document.getElementById('btn-recruit-shieldmaiden')?.click();
+      }
+      else if (key === '2') {
+        e.preventDefault();
+        document.getElementById('btn-recruit-berserker')?.click();
+      }
+      else if (key === '3') {
+        e.preventDefault();
+        document.getElementById('btn-recruit-huntsman')?.click();
+      }
+    }
   });
 
   // Start tooltip tracking
