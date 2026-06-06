@@ -53,10 +53,13 @@ When entering a location, you zoom in from the World Map to a 10x10 sub-grid.
     *   The tile stack is generated based on the world map tile type.
     *   *Example*: A location in a Forest tile on the World Map will have a location deck composed mostly of Forest, Grass, and River/Water tiles. A cave location in a Mountain tile will consist primarily of Rock, Cave, Mountain, and Chasm tiles.
 *   **Tile Contents**:
-    *   **Empty**: Safe travel.
-    *   **Treasure**: Gold, weapons, artifacts.
-    *   **Event**: Text-based decisions with skill checks (e.g., solving a dispute, repairing a bridge).
-    *   **Enemies**: Blocks path, forces transition to the Combat Map.
+    Tiles can contain interactable entities on top of their base terrain:
+    *   **Empty / Clear**: Safe passage.
+    *   **Enemy Army**: A pack of specific monsters blocking the path. Defeating them transitions back to the map.
+    *   **Treasure**: Chests yielding Silver, materials, or equipment.
+    *   **Cave Entrance**: Leads into cave grids containing monsters and minerals.
+    *   **Burial Mound**: Tomb chambers containing ancient bones, undead, or ancient Norse relics.
+    *   **Dolmen / Druid Sanctuary**: Sacred standing stones. Interacting with them often rewards the player with ancient **Magic Objects** needed to please the Gods.
 
 ---
 
@@ -166,12 +169,20 @@ interface LocationMapState {
       [coordKey: string]: {    // e.g., "x,y"
         terrainType: string;
         revealed: boolean;
-        entity?: Entity;       // Enemy, Chest, Event details
+        entity?: MapEntity;    // Placed interactables
       }
     };
     tileStack: string[];       // Array of terrain names remaining to be drawn
   }
 }
+
+type MapEntity =
+  | { type: 'enemy_army'; monsters: { monsterClass: string; count: number }[]; isDefeated: boolean }
+  | { type: 'treasure'; silver: number; items: string[]; isLooted: boolean }
+  | { type: 'cave_entrance'; targetLocationId: string }
+  | { type: 'burial_mound'; relicItemName: string; isExplored: boolean }
+  | { type: 'dolmen'; magicObjectId: string; isVisited: boolean };
+```
 ```
 
 ### C. Party State
@@ -309,12 +320,15 @@ Items fit into three distinct sub-types:
 2. **Consumables (Single-use)**:
    - *Mead Horn*: Boosts combat morale / damage for 1 battle.
    - *Valkyrie Herb*: Revives a fallen soldier post-battle.
-3. **Deity Artifacts (Legendary Passive items)**:
-   - *Shard of Gungnir*: Odin's favor. Attacks never miss and pierce armor.
-   - *Mjolnir's Core*: Thor's favor. Attacks have a 25% chance to trigger chain lightning.
-   - *Freya's Amber Tear*: Automatically revives a fallen soldier during battle once.
-   - *Hel's Urn of Ash*: Defeated enemies occasionally rise as friendly Draugr.
-   - *Loki's Trickster Coin*: Allows re-rolling a failed event skill check.
+3. **Deity Artifacts & Magic Objects (Quest Focus)**:
+   > [!IMPORTANT]
+   > *Magic Objects do not grant direct buffs/stats to your soldiers.* Instead, their sole function is to be collected and dedicated/traded to the respective Norse Gods. By sacrificing these objects, you increase that god's favor, which indirectly unlocks passive divine buffs.
+
+   - *Shard of Gungnir*: Dedicated to Odin. (Unlocks Odin favor).
+   - *Mjolnir's Core*: Dedicated to Thor. (Unlocks Thor favor).
+   - *Freya's Amber Tear*: Dedicated to Freya. (Unlocks Freya favor).
+   - *Hel's Urn of Ash*: Dedicated to Hel. (Unlocks Hel favor).
+   - *Loki's Trickster Coin*: Dedicated to Loki. (Unlocks Loki favor).
 
 ---
 
