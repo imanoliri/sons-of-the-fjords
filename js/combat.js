@@ -225,6 +225,10 @@ export function togglePause() {
 
 // Place selected pool unit onto grid
 export function deployUnit(poolIndex, row, col) {
+  poolIndex = Number(poolIndex);
+  row = Number(row);
+  col = Number(col);
+
   if (col > 1) return; // Can only deploy on player home rows (col 0 and 1)
   if (STATE.combat.grid[row][col]) return; // Cell occupied
 

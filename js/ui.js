@@ -358,6 +358,7 @@ function renderWorldMap() {
       } else {
         const terrain = tiles[y][x];
         elCell.classList.add(`terrain-${terrain}`);
+        elCell.title = `Terrain: ${terrain.toUpperCase()}${hasLocation ? `\nLocation: ${hasLocation.name}` : ''}`;
 
         if (hasLocation) {
           const loc = hasLocation;
@@ -407,6 +408,9 @@ function renderWorldMap() {
 
 // World Move State Processing
 function movePartyOnWorld(x, y) {
+  x = Number(x);
+  y = Number(y);
+  
   const previousTerrain = STATE.worldMap.tiles[STATE.party.worldY][STATE.party.worldX];
   const targetTerrain = STATE.worldMap.tiles[y][x];
   
@@ -570,6 +574,17 @@ function renderLocationMap() {
       if (tile) {
         // Render terrain
         elCell.classList.add(`terrain-${tile.terrainType}`);
+        
+        let entityDesc = '';
+        if (tile.entity) {
+          const ent = tile.entity;
+          if (ent.type === 'treasure' && !ent.isLooted) entityDesc = `\nContains: Treasure Chest (Gold/Items)`;
+          else if (ent.type === 'enemy_army' && !ent.isDefeated) entityDesc = `\nContains: Monster Nest (${ent.monsters[0].monsterClass})`;
+          else if (ent.type === 'burial_mound' && !ent.isExplored) entityDesc = `\nContains: Ancient Grave Mound`;
+          else if (ent.type === 'dolmen' && !ent.isVisited) entityDesc = `\nContains: Sacred Dolmen Stone`;
+          else if (ent.type === 'cave_entrance') entityDesc = `\nContains: Sub-Cave Tunnel Entrance`;
+        }
+        elCell.title = `Terrain: ${tile.terrainType.toUpperCase()}${entityDesc}`;
         
         // Show interactive entity if present
         if (tile.entity) {
