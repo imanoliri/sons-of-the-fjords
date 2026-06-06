@@ -225,7 +225,20 @@ export function initUIBindings() {
 
   // Keyboard Arrow Movement
   window.addEventListener('keydown', (e) => {
-    // 0. Handle modal overlay shortcuts if an overlay is open
+    // 0. Handle Escape key to leave Location (Raid or Town)
+    if (e.key === 'Escape') {
+      if (STATE.activeScreen === 'location') {
+        e.preventDefault();
+        document.getElementById('btn-leave-location')?.click();
+        return;
+      } else if (STATE.activeScreen === 'town') {
+        e.preventDefault();
+        document.getElementById('btn-leave-town')?.click();
+        return;
+      }
+    }
+
+    // 1. Handle modal overlay shortcuts if an overlay is open
     const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
     if (visibleOverlay) {
       const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'));
