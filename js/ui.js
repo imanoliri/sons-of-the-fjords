@@ -2,9 +2,9 @@
    UI MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor } from './state.js';
+import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage } from './state.js';
 import { getAdjacentCoords } from './world.js';
-import { discoverTile } from './location.js';
+import { discoverTile, generateLocationMap } from './location.js';
 import { togglePause, deployUnit, startCombat } from './combat.js';
 
 // DOM Selectors
@@ -421,7 +421,7 @@ function movePartyOnWorld(x, y) {
     adjustResource('food', -cost);
   } else {
     // Starving: moving kills a random soldier
-    STATE.triggerStarvationDamage();
+    triggerStarvationDamage();
     logWorld('STARVING! Starvation claimed a member of your band.', 'warn-message');
   }
 
@@ -478,17 +478,14 @@ function enterLocation(locData) {
     // Generate/Load Location Sub-Grid
     STATE.party.currentLocationId = locData.id;
     
-    // Instantiate 10x10 Carcassonne stack
-    import('./location.js').then(mod => {
-      mod.generateLocationMap(locData.id, locData.terrain);
-      
-      // Start player at local coordinates 5,5 (start tile)
-      STATE.party.localX = 5;
-      STATE.party.localY = 5;
-      
-      setScreen('location');
-      logWorld(`Entering raid coordinates: ${locData.name}.`);
-    });
+    generateLocationMap(locData.id, locData.terrain);
+    
+    // Start player at local coordinates 5,5 (start tile)
+    STATE.party.localX = 5;
+    STATE.party.localY = 5;
+    
+    setScreen('location');
+    logWorld(`Entering raid coordinates: ${locData.name}.`);
   }
 }
 
@@ -681,13 +678,11 @@ function getAdjacentUnplacedSlots(placed) {
 // Enter Cave Sub-Dungeon Portal
 function triggerEnterCavePortal(coordKey, entity) {
   STATE.party.currentLocationId = entity.targetLocationId;
-  import('./location.js').then(mod => {
-    mod.generateLocationMap(entity.targetLocationId, 'mountain');
-    STATE.party.localX = 5;
-    STATE.party.localY = 5;
-    notify('STATE_UPDATED');
-    logLocation('Stepped down into the deep Jotunn Crag Cave chambers.');
-  });
+  generateLocationMap(entity.targetLocationId, 'mountain');
+  STATE.party.localX = 5;
+  STATE.party.localY = 5;
+  notify('STATE_UPDATED');
+  logLocation('Stepped down into the deep Jotunn Crag Cave chambers.');
 }
 
 // Renders choice dialogs for location interactions
