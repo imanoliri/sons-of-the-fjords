@@ -281,6 +281,15 @@ body {
   height: 100%;
 }
 
+/* Sidebar panel must be a flex column so the event-log can grow and scroll within it */
+.sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 1rem;
+}
+
+
 .map-view-wrapper {
   display: flex;
   align-items: center;
