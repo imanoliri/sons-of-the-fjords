@@ -622,6 +622,20 @@ function renderWorldMap() {
       elWorldMap.appendChild(elCell);
     }
   }
+
+  // Center player scroll view
+  setTimeout(() => {
+    const playerMarker = elWorldMap.querySelector('.player-marker');
+    if (playerMarker) {
+      const wrapper = elWorldMap.parentElement;
+      if (wrapper) {
+        const scrollX = playerMarker.offsetLeft - (wrapper.clientWidth / 2) + (playerMarker.clientWidth / 2);
+        const scrollY = playerMarker.offsetTop - (wrapper.clientHeight / 2) + (playerMarker.clientHeight / 2);
+        wrapper.scrollTo({ left: scrollX, top: scrollY });
+      }
+    }
+  }, 10);
+}
 }
 
 // World Move State Processing
@@ -861,6 +875,20 @@ function renderLocationMap() {
       elLocMap.appendChild(elCell);
     }
   }
+
+  // Center player scroll view
+  setTimeout(() => {
+    const playerMarker = elLocMap.querySelector('.player-marker');
+    if (playerMarker) {
+      const wrapper = elLocMap.parentElement;
+      if (wrapper) {
+        const scrollX = playerMarker.offsetLeft - (wrapper.clientWidth / 2) + (playerMarker.clientWidth / 2);
+        const scrollY = playerMarker.offsetTop - (wrapper.clientHeight / 2) + (playerMarker.clientHeight / 2);
+        wrapper.scrollTo({ left: scrollX, top: scrollY });
+      }
+    }
+  }, 10);
+}
 }
 
 // Find unplaced tiles sharing an edge with any placed tile
