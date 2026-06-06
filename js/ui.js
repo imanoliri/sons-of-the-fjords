@@ -928,88 +928,24 @@ function triggerEnterCavePortal(coordKey, entity) {
 
 // Renders choice dialogs for location interactions
 function triggerEncounterEvent(coordKey, entity) {
-  showOverlay(elModalEvent);
-  elModalEventChoices.innerHTML = '';
-
   if (entity.type === 'treasure') {
-    elModalEventTitle.innerText = 'Treasure Loot';
-    elModalEventBody.innerText = `You uncovered a locked chest buried in the sand! It contains: ${entity.silver} Silver Gold Coins.`;
-    
-    const btn = document.createElement('button');
-    btn.classList.add('btn', 'btn-primary');
-    btn.innerText = 'Loot Gold';
-    btn.addEventListener('click', () => {
-      adjustResource('gold', entity.silver);
-      entity.isLooted = true;
-      hideOverlay(elModalEvent);
-      notify('STATE_UPDATED');
-    });
-    elModalEventChoices.appendChild(btn);
+    adjustResource('gold', entity.silver);
+    entity.isLooted = true;
+    showToast(`Uncovered buried chest! Looted +${entity.silver} Gold.`, '🪙');
+    notify('STATE_UPDATED');
   } 
   else if (entity.type === 'burial_mound') {
-    elModalEventTitle.innerText = 'Burial Mound';
-    elModalEventBody.innerText = `You uncover an ancient viking Barrow Grave. Deep markings suggest a warrior tomb. Defile the grave to look for relics, or perform a sacrifice of Sheep to please Hel?`;
-
-    const choice1 = document.createElement('button');
-    choice1.classList.add('btn', 'btn-danger');
-    choice1.innerText = 'Plunder Mound (+10 Gold, pleass Loki, angers Thor)';
-    choice1.addEventListener('click', () => {
-      adjustResource('gold', 10);
-      entity.isExplored = true;
-      adjustFavor('loki', 1);
-      hideOverlay(elModalEvent);
-      notify('STATE_UPDATED');
-    });
-
-    const choice2 = document.createElement('button');
-    choice2.classList.add('btn', 'btn-primary');
-    choice2.innerText = 'Sacrifice Sheep (-1 Sheep, pleases Hel)';
-    choice2.addEventListener('click', () => {
-      if (STATE.resources.sheep >= 1) {
-        adjustResource('sheep', -1);
-        entity.isExplored = true;
-        adjustFavor('hel', 1);
-        hideOverlay(elModalEvent);
-      } else {
-        showToast('You have no sheep to sacrifice!', '⚠️');
-      }
-      notify('STATE_UPDATED');
-    });
-
-    const choice3 = document.createElement('button');
-    choice3.classList.add('btn');
-    choice3.innerText = 'Leave Grave untouched';
-    choice3.addEventListener('click', () => {
-      hideOverlay(elModalEvent);
-    });
-
-    elModalEventChoices.appendChild(choice1);
-    elModalEventChoices.appendChild(choice2);
-    elModalEventChoices.appendChild(choice3);
+    adjustResource('gold', 10);
+    entity.isExplored = true;
+    adjustFavor('loki', 1);
+    showToast('Plundered Burial Mound! Gained +10 Gold (Thor displeased, Loki pleased).', '🪦');
+    notify('STATE_UPDATED');
   } 
   else if (entity.type === 'dolmen') {
-    elModalEventTitle.innerText = 'Druid Dolmen';
-    elModalEventBody.innerText = `You reach an ancient standing stone carved with elder runes. A magical object glows in the center. Retrieve the Object to please the God ${entity.godName.toUpperCase()}?`;
-
-    const choice1 = document.createElement('button');
-    choice1.classList.add('btn', 'btn-primary');
-    choice1.innerText = `Retrieve ${entity.magicObjectId}`;
-    choice1.addEventListener('click', () => {
-      STATE.inventory.push(entity.magicObjectId);
-      entity.isVisited = true;
-      hideOverlay(elModalEvent);
-      notify('STATE_UPDATED');
-    });
-
-    const choice2 = document.createElement('button');
-    choice2.classList.add('btn');
-    choice2.innerText = 'Leave Stone alone';
-    choice2.addEventListener('click', () => {
-      hideOverlay(elModalEvent);
-    });
-
-    elModalEventChoices.appendChild(choice1);
-    elModalEventChoices.appendChild(choice2);
+    STATE.inventory.push(entity.magicObjectId);
+    entity.isVisited = true;
+    showToast(`Retrieved ${entity.magicObjectId} relic from Druid Dolmen!`, '🗿');
+    notify('STATE_UPDATED');
   }
 }
 
