@@ -209,8 +209,8 @@ export function initUIBindings() {
   // Ascension Choice wins
   bindButton('btn-ascend-victory', () => {
     hideOverlay(elModalAscension);
-    alert('Congratulations! You have ascended to Valhalla. The sagas will sing of your name!');
-    location.reload();
+    showToast('Congratulations! You have ascended to Valhalla. The sagas will sing of your name!', '👑');
+    setTimeout(() => { location.reload(); }, 4000);
   });
 
   bindButton('btn-ascend-continue', () => {
@@ -971,7 +971,7 @@ function triggerEncounterEvent(coordKey, entity) {
         adjustFavor('hel', 1);
         hideOverlay(elModalEvent);
       } else {
-        alert('You have no sheep to sacrifice!');
+        showToast('You have no sheep to sacrifice!', '⚠️');
       }
       notify('STATE_UPDATED');
     });
@@ -1254,6 +1254,34 @@ export function logLocation(msg, typeClass = 'system-message') {
   elLocLog.scrollTop = elLocLog.scrollHeight;
 }
 
+// Display a discrete Norse-themed toast notification at top-center of screen
+export function showToast(msg, icon = '✨') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const card = document.createElement('div');
+  card.className = 'toast-card glass-panel';
+  
+  card.innerHTML = `
+    <span class="toast-icon">${icon}</span>
+    <span class="toast-message">${msg}</span>
+  `;
+
+  // Click to dismiss immediately
+  card.addEventListener('click', () => {
+    card.remove();
+  });
+
+  // Remove element after animation ends
+  card.addEventListener('animationend', (e) => {
+    if (e.animationName === 'toastFadeOut') {
+      card.remove();
+    }
+  });
+
+  container.appendChild(card);
+}
+
 function showOverlay(el) {
   el.classList.remove('hidden');
 }
@@ -1292,7 +1320,7 @@ export function handleStateNotification(event, data) {
   }
   else if (event === 'COMBAT_VICTORY') {
     logWorld('VICTORY! The lane has been cleared of monsters.', 'gain-message');
-    alert('Victory! You cleared the monsters.');
+    showToast('Victory! You cleared the monsters.', '⚔️');
     
     // Auto-resolve pending move on victory
     if (STATE.party.pendingLocalX !== undefined && STATE.party.pendingLocalY !== undefined) {
@@ -1318,7 +1346,7 @@ export function handleStateNotification(event, data) {
   }
   else if (event === 'COMBAT_DEFEAT') {
     logWorld('DEFEAT! All your Viking soldiers perished on the battlefield.', 'combat-message');
-    alert('Your band was wiped out!');
+    showToast('Your band was wiped out!', '💀');
     // If gold is also 0, trigger Game Over modal, else force them to world map so they recruit
     if (STATE.resources.gold === 0) {
       showOverlay(elModalGameOver);
@@ -1330,7 +1358,7 @@ export function handleStateNotification(event, data) {
     logWorld(`You sacrificed a ${data.relicId} relic to appease ${data.godName.toUpperCase()}.`, 'gain-message');
   }
   else if (event === 'QUEST_MILESTONE') {
-    alert(`Quest Milestone ${data.index + 1} reached for ${data.god.toUpperCase()}!`);
+    showToast(`Quest Milestone ${data.index + 1} reached for ${data.god.toUpperCase()}!`, '✨');
   }
   else if (event === 'ASCENSION_TRIGGERED') {
     elModalAscension.dataset.god = data;
