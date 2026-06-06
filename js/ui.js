@@ -87,6 +87,7 @@ export function initUIBindings() {
 
   // Town leave button
   document.getElementById('btn-leave-town').addEventListener('click', () => {
+    STATE.party.currentLocationId = null;
     setScreen('world');
   });
 
