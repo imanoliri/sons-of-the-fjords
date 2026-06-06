@@ -48,6 +48,7 @@ When entering a location, you zoom in from the World Map to a 10x10 sub-grid.
     *   All other tiles are face down (fog).
     *   When you move to an edge, a tile is **drawn from a randomized deck** (tile stack) and placed adjacent, revealing the terrain.
     *   *Rules for placement*: Drawn tiles must match adjacent terrain edges (e.g., a path connects to a path, water to water, forest to forest). This creates a unique procedural layout every time.
+        *   *(Note for future expansion: Tiles can also have edge blockades/walls on one or more boundaries. If an edge has a blockade, units cannot traverse between the two adjacent tiles. These edge blockades are represented as either `Mountain` (rock wall) or `Chasm` (canyon split) boundaries).*
 *   **Deck Composition**:
     *   The tile stack is generated based on the world map tile type.
     *   *Example*: A location in a Forest tile on the World Map will have a location deck composed mostly of Forest, Grass, and River/Water tiles. A cave location in a Mountain tile will consist primarily of Rock, Cave, Mountain, and Chasm tiles.
