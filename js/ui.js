@@ -636,7 +636,6 @@ function renderWorldMap() {
     }
   }, 10);
 }
-}
 
 // World Move State Processing
 function movePartyOnWorld(x, y) {
@@ -888,7 +887,6 @@ function renderLocationMap() {
       }
     }
   }, 10);
-}
 }
 
 // Find unplaced tiles sharing an edge with any placed tile
