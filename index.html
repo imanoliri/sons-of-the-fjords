@@ -185,7 +185,15 @@
           <div class="combat-grid-wrapper glass-panel">
             <div class="combat-ticker-header">
               <span id="combat-phase-badge">BATTLE ACTIVE</span>
-              <div style="display: flex; gap: 0.5rem;">
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <span style="font-size: 0.8rem; opacity: 0.8;">Orders:</span>
+                <button class="btn btn-sm" id="btn-stance-retreat">Retreat [Y]</button>
+                <button class="btn btn-sm" id="btn-stance-defend">Defend [X]</button>
+                <button class="btn btn-sm" id="btn-stance-hold">Hold [C]</button>
+                <button class="btn btn-sm btn-success active-stance" id="btn-stance-attack">Attack [V]</button>
+                
+                <div style="width: 2px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 0.25rem;"></div>
+                
                 <button class="btn btn-sm btn-warning" id="btn-combat-pause">Pause / Deploy</button>
                 <button class="btn btn-sm btn-danger" id="btn-combat-flee">Flee Mode: OFF</button>
               </div>
@@ -264,8 +272,9 @@
     <!-- Floating Custom Tooltip -->
     <div id="game-tooltip" class="game-tooltip"></div>
     
-    <!-- Custom Toast Container -->
+    <!-- Custom Toast Containers -->
     <div id="toast-container" class="toast-container"></div>
+    <div id="toast-container-important" class="toast-container-important"></div>
 
   </div>
 

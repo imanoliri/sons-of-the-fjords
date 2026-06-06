@@ -32,6 +32,7 @@
   
   /* Terrain Backgrounds */
   --tile-water: #1a3c50;
+  --tile-deep-water: #071324;
   --tile-plains: #2e4d35;
   --tile-river: #2d6070;
   --tile-forest: #193322;
@@ -268,7 +269,7 @@ body {
 .game-content {
   flex-grow: 1;
   position: relative;
-  height: 100%;
+  min-height: 0; /* Allows flex container to shrink correctly */
   overflow: hidden;
 }
 
@@ -345,6 +346,7 @@ body {
 
 /* Tile Terrain Classes */
 .terrain-water { background-color: var(--tile-water); }
+.terrain-deep_water { background-color: var(--tile-deep-water); }
 .terrain-plains { background-color: var(--tile-plains); }
 .terrain-river { background-color: var(--tile-river); }
 .terrain-forest { background-color: var(--tile-forest); }
@@ -560,10 +562,12 @@ body {
 /* Combat Screen Layout */
 .combat-layout {
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* Align to top to prevent scrolling boundary clip */
   justify-content: center;
   height: 100%;
+  overflow-y: auto;
   padding: 1rem;
+  box-sizing: border-box;
 }
 
 .combat-grid-wrapper {
@@ -581,6 +585,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 #combat-phase-badge {
@@ -746,6 +752,28 @@ body {
   pointer-events: none;
 }
 
+.key-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 240, 255, 0.6);
+  color: var(--text-accent);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--font-runes), monospace;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-right: 8px;
+  box-shadow: 0 0 5px rgba(0, 240, 255, 0.2);
+}
+
+.active-stance {
+  border-color: var(--text-accent) !important;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.6) !important;
+  background-color: rgba(0, 240, 255, 0.2) !important;
+}
+
 .pool-number-hint {
   color: var(--text-accent);
   font-family: var(--font-runes);
@@ -763,6 +791,17 @@ body {
   border-color: var(--text-accent);
   background: rgba(0, 240, 255, 0.1);
   box-shadow: 0 0 12px rgba(0,240,255,0.5);
+}
+
+.pool-card.dragging {
+  opacity: 0.4;
+  border: 1px dashed var(--text-accent);
+}
+
+.pool-card.drag-over {
+  border: 2px dashed var(--text-accent) !important;
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
 }
 
 /* Quest / Gods Alignment Screen Panel */
@@ -1007,7 +1046,21 @@ body {
 .toast-container {
   position: fixed;
   top: 1.5rem;
-  left: 50%;
+  left: calc(50% - 210px);
+  transform: translateX(-50%);
+  z-index: 11000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  pointer-events: none;
+  width: 100%;
+  max-width: 400px;
+}
+
+.toast-container-important {
+  position: fixed;
+  top: 1.5rem;
+  left: calc(50% + 210px);
   transform: translateX(-50%);
   z-index: 11000;
   display: flex;
@@ -1036,6 +1089,11 @@ body {
   animation: toastSlideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
              toastFadeOut 0.5s ease 3.5s forwards;
   backdrop-filter: blur(8px);
+}
+
+.toast-card.important-toast {
+  border-top: 3px solid #ffd700;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(255,215,0,0.3);
 }
 
 .toast-icon {

@@ -199,6 +199,26 @@ export function initUIBindings() {
     notify('COMBAT_UPDATE');
   });
 
+  bindButton('btn-stance-retreat', () => {
+    STATE.combat.stance = 'retreat';
+    notify('COMBAT_UPDATE');
+  });
+
+  bindButton('btn-stance-defend', () => {
+    STATE.combat.stance = 'defend';
+    notify('COMBAT_UPDATE');
+  });
+
+  bindButton('btn-stance-hold', () => {
+    STATE.combat.stance = 'hold';
+    notify('COMBAT_UPDATE');
+  });
+
+  bindButton('btn-stance-attack', () => {
+    STATE.combat.stance = 'attack';
+    notify('COMBAT_UPDATE');
+  });
+
   // Game over restart
   bindButton('btn-restart-game', () => {
     hideOverlay(elModalGameOver);
@@ -220,7 +240,6 @@ export function initUIBindings() {
     if (activeVictoryGod) {
       STATE.godFavor[activeVictoryGod] = 5;
     }
-    setScreen('world');
   });
 
   // Keyboard Arrow Movement
@@ -356,7 +375,45 @@ export function initUIBindings() {
     }
     // Check if player is on Combat screen
     else if (STATE.activeScreen === 'combat') {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (STATE.combat.paused) {
+          togglePause();
+        }
+        return;
+      }
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        togglePause();
+        return;
+      }
+
       const key = e.key.toLowerCase();
+
+      if (key === 'y') {
+        e.preventDefault();
+        STATE.combat.stance = 'retreat';
+        notify('COMBAT_UPDATE');
+        return;
+      }
+      if (key === 'x') {
+        e.preventDefault();
+        STATE.combat.stance = 'defend';
+        notify('COMBAT_UPDATE');
+        return;
+      }
+      if (key === 'c') {
+        e.preventDefault();
+        STATE.combat.stance = 'hold';
+        notify('COMBAT_UPDATE');
+        return;
+      }
+      if (key === 'v') {
+        e.preventDefault();
+        STATE.combat.stance = 'attack';
+        notify('COMBAT_UPDATE');
+        return;
+      }
       
       // 1. Select soldier from pool (1 to 8)
       const keyNum = parseInt(key);
@@ -369,16 +426,26 @@ export function initUIBindings() {
         return;
       }
 
-      // 2. Deploy on lanes (qwer for col 0, asdf for col 1)
+      // 2. Deploy on lanes (qweruiop for col 0, asdfjklö for col 1)
       const keyMap = {
         'q': { r: 0, c: 0 },
         'w': { r: 1, c: 0 },
         'e': { r: 2, c: 0 },
         'r': { r: 3, c: 0 },
+        'u': { r: 4, c: 0 },
+        'i': { r: 5, c: 0 },
+        'o': { r: 6, c: 0 },
+        'p': { r: 7, c: 0 },
         'a': { r: 0, c: 1 },
         's': { r: 1, c: 1 },
         'd': { r: 2, c: 1 },
-        'f': { r: 3, c: 1 }
+        'f': { r: 3, c: 1 },
+        'j': { r: 4, c: 1 },
+        'k': { r: 5, c: 1 },
+        'l': { r: 6, c: 1 },
+        'ö': { r: 7, c: 1 },
+        ';': { r: 7, c: 1 }, // Fallbacks for non-Nordic layouts
+        ':': { r: 7, c: 1 }
       };
 
       if (keyMap[key]) {
@@ -431,7 +498,7 @@ function initTooltipEvents() {
       const locationType = tile.dataset.locationType;
       const hasPlayer = tile.dataset.hasPlayer === 'true';
 
-      headerText = `${terrain ? terrain.charAt(0).toUpperCase() + terrain.slice(1) : 'Terrain'}`;
+      headerText = `${terrain ? terrain.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Terrain'}`;
       coordsText = `X: ${x}, Y: ${y}`;
       
       let contents = [];
@@ -444,7 +511,9 @@ function initTooltipEvents() {
       }
       
       if (contents.length === 0) {
-        if (terrain === 'water') {
+        if (terrain === 'deep_water') {
+          contents.push('🌊 Deep Water. Extremely dangerous, non-traversable.');
+        } else if (terrain === 'water') {
           contents.push('Open water. Safe sailing, costs 1 Food per step.');
         } else if (terrain === 'river') {
           contents.push('River stream. Fast sailing, costs 1 Food per step.');
@@ -455,6 +524,7 @@ function initTooltipEvents() {
       contentsText = contents.join('<br>');
 
       if (terrain === 'water') borderAccent = 'var(--tile-water)';
+      else if (terrain === 'deep_water') borderAccent = 'var(--tile-deep-water)';
       else if (terrain === 'river') borderAccent = 'var(--tile-river)';
       else if (terrain === 'plains') borderAccent = 'var(--tile-plains)';
       else if (terrain === 'forest') borderAccent = 'var(--tile-forest)';
@@ -484,6 +554,8 @@ function initTooltipEvents() {
         if (tile.classList.contains('discovery-edge')) {
           headerText = 'Unexplored Boundary';
           contents.push('Step here to draw and discover a new tile from the deck.');
+        } else if (terrain === 'deep_water' || terrain === 'chasm' || terrain === 'mountain') {
+          contents.push(`Rough ${terrain === 'deep_water' ? 'deep water' : terrain}. Impassable obstacle!`);
         } else {
           contents.push('Empty ground. Safe to cross.');
         }
@@ -581,8 +653,8 @@ function attemptLocalMove(targetX, targetY) {
   if (!tile) return;
 
   // Impassable terrain block
-  if (tile.terrainType === 'chasm' || tile.terrainType === 'mountain') {
-    logLocation(`The rugged ${tile.terrainType} is impassable!`, 'warn-message');
+  if (tile.terrainType === 'chasm' || tile.terrainType === 'mountain' || tile.terrainType === 'deep_water') {
+    logLocation(`The rugged ${tile.terrainType === 'deep_water' ? 'deep water' : tile.terrainType} is impassable!`, 'warn-message');
     return;
   }
 
@@ -774,7 +846,7 @@ function movePartyOnWorld(x, y) {
   
   const previousTerrain = STATE.worldMap.tiles[STATE.party.worldY][STATE.party.worldX];
   const targetTerrain = STATE.worldMap.tiles[y][x];
-  
+
   // Verify costs
   let cost = 1; // Sea/River cost
   if (targetTerrain !== 'water' && targetTerrain !== 'river') {
@@ -927,7 +999,7 @@ function renderLocationMap() {
           if (ent.type === 'treasure' && !ent.isLooted) entityDesc = '🪙 Treasure Chest (Loot Gold)';
           else if (ent.type === 'enemy_army' && !ent.isDefeated) entityDesc = `👹 Monster Nest (${ent.monsters[0].monsterClass})`;
           else if (ent.type === 'burial_mound' && !ent.isExplored) entityDesc = '🪦 Ancient Burial Mound';
-          else if (ent.type === 'dolmen' && !ent.isVisited) entityDesc = `🗿 Sacred Dolmen Stone (Appease ${ent.godName.toUpperCase()})`;
+          else if (ent.type === 'dolmen' && !ent.isVisited) entityDesc = `🏆 Sacred Dolmen Stone (Appease ${ent.godName.toUpperCase()})`;
           else if (ent.type === 'cave_entrance') entityDesc = '🕳️ Cave Sub-Dungeon Portal';
           
           if (entityDesc) {
@@ -955,7 +1027,7 @@ function renderLocationMap() {
             badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
           } 
           else if (ent.type === 'dolmen' && !ent.isVisited) {
-            badge.innerText = '🗿';
+            badge.innerText = '🏆';
             badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
           }
           else if (ent.type === 'cave_entrance') {
@@ -1064,6 +1136,12 @@ function triggerEncounterEvent(coordKey, entity) {
     showToast(`Uncovered buried chest! Looted +${entity.silver} Gold.`, '🪙');
     notify('STATE_UPDATED');
   } 
+  else if (entity.type === 'dolmen') {
+    STATE.inventory.push(entity.magicObjectId);
+    entity.isVisited = true;
+    showToast(`Retrieved ${entity.magicObjectId} relic from Druid Dolmen!`, '🏆');
+    notify('STATE_UPDATED');
+  }
   else {
     // Show overlay modal for entities with real choices
     showOverlay(elModalEvent);
@@ -1111,32 +1189,8 @@ function triggerEncounterEvent(coordKey, entity) {
       elModalEventChoices.appendChild(choice1);
       elModalEventChoices.appendChild(choice2);
       elModalEventChoices.appendChild(choice3);
-    } 
-    else if (entity.type === 'dolmen') {
-      elModalEventTitle.innerText = 'Druid Dolmen';
-      elModalEventBody.innerText = `You reach an ancient standing stone carved with elder runes. A magical object glows in the center. Retrieve the Object to please the God ${entity.godName.toUpperCase()}?`;
-
-      const choice1 = document.createElement('button');
-      choice1.classList.add('btn', 'btn-primary');
-      choice1.innerText = `Retrieve ${entity.magicObjectId}`;
-      choice1.addEventListener('click', () => {
-        STATE.inventory.push(entity.magicObjectId);
-        entity.isVisited = true;
-        hideOverlay(elModalEvent);
-        notify('STATE_UPDATED');
-        showToast(`Retrieved ${entity.magicObjectId} relic from Druid Dolmen!`, '🗿');
-      });
-
-      const choice2 = document.createElement('button');
-      choice2.classList.add('btn');
-      choice2.innerText = 'Leave Stone alone';
-      choice2.addEventListener('click', () => {
-        hideOverlay(elModalEvent);
-      });
-
-      elModalEventChoices.appendChild(choice1);
-      elModalEventChoices.appendChild(choice2);
     }
+    updateModalKeyboardNavigation();
   }
 }
 
@@ -1170,19 +1224,17 @@ function renderCombatGrid() {
           });
         }
         
-        // Render keyboard shortcut key hint in the cell (QWER for col 0, ASDF for col 1)
-        if (r < 4) {
-          const hints = {
-            '0,0': 'Q', '1,0': 'W', '2,0': 'E', '3,0': 'R',
-            '0,1': 'A', '1,1': 'S', '2,1': 'D', '3,1': 'F'
-          };
-          const hintKey = `${r},${c}`;
-          if (hints[hintKey]) {
-            const elHint = document.createElement('span');
-            elHint.className = 'cell-key-hint';
-            elHint.innerText = hints[hintKey];
-            elCell.appendChild(elHint);
-          }
+        // Render keyboard shortcut key hint in the cell (qweruiop for col 0, asdfjklö for col 1)
+        const hints = {
+          '0,0': 'Q', '1,0': 'W', '2,0': 'E', '3,0': 'R', '4,0': 'U', '5,0': 'I', '6,0': 'O', '7,0': 'P',
+          '0,1': 'A', '1,1': 'S', '2,1': 'D', '3,1': 'F', '4,1': 'J', '5,1': 'K', '6,1': 'L', '7,1': 'Ö'
+        };
+        const hintKey = `${r},${c}`;
+        if (hints[hintKey]) {
+          const elHint = document.createElement('span');
+          elHint.className = 'cell-key-hint';
+          elHint.innerText = hints[hintKey];
+          elCell.appendChild(elHint);
         }
       }
 
@@ -1256,12 +1308,12 @@ function renderCombatGrid() {
 
   // Toggle paused labels
   if (STATE.combat.paused) {
-    elCombatPauseBtn.innerText = 'Start Battle';
+    elCombatPauseBtn.innerText = 'Start Battle [Enter]';
     elCombatPauseBtn.classList.remove('btn-warning');
     elCombatPauseBtn.classList.add('btn-primary');
     elCombatGrid.classList.add('paused-deploying');
   } else {
-    elCombatPauseBtn.innerText = 'Pause / Place';
+    elCombatPauseBtn.innerText = 'Pause / Place [Space]';
     elCombatPauseBtn.classList.remove('btn-primary');
     elCombatPauseBtn.classList.add('btn-warning');
     elCombatGrid.classList.remove('paused-deploying');
@@ -1278,6 +1330,19 @@ function renderCombatGrid() {
       elCombatFleeBtn.classList.remove('btn-primary');
       elCombatFleeBtn.classList.add('btn-danger');
     }
+  }
+
+  // Update active stance class on buttons
+  const btnRetreat = document.getElementById('btn-stance-retreat');
+  const btnDefend = document.getElementById('btn-stance-defend');
+  const btnHold = document.getElementById('btn-stance-hold');
+  const btnAttack = document.getElementById('btn-stance-attack');
+  if (btnRetreat && btnDefend && btnHold && btnAttack) {
+    const stance = STATE.combat.stance || 'attack';
+    btnRetreat.classList.toggle('active-stance', stance === 'retreat');
+    btnDefend.classList.toggle('active-stance', stance === 'defend');
+    btnHold.classList.toggle('active-stance', stance === 'hold');
+    btnAttack.classList.toggle('active-stance', stance === 'attack');
   }
 
   // Render Deployment Pool Hand cards
@@ -1300,6 +1365,40 @@ function renderCombatGrid() {
         <div class="health-bar-fill" style="width: ${Math.max(0, hpPct)}%"></div>
       </div>
     `;
+    // Enable Drag and Drop to reorder pool cards
+    card.draggable = true;
+    card.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', idx);
+      card.classList.add('dragging');
+    });
+
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      card.classList.add('drag-over');
+    });
+
+    card.addEventListener('dragleave', () => {
+      card.classList.remove('drag-over');
+    });
+
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const draggedIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      if (!isNaN(draggedIdx) && draggedIdx !== idx) {
+        const selectedUnit = STATE.combat.selectedPoolIndex !== null ? STATE.combat.pool[STATE.combat.selectedPoolIndex] : null;
+
+        const [moved] = STATE.combat.pool.splice(draggedIdx, 1);
+        STATE.combat.pool.splice(idx, 0, moved);
+
+        if (selectedUnit) {
+          STATE.combat.selectedPoolIndex = STATE.combat.pool.indexOf(selectedUnit);
+        }
+
+        notify('COMBAT_UPDATE');
+      }
+    });
+
     card.addEventListener('click', () => {
       if (!STATE.combat.paused) {
         togglePause(); // Force pause to allow placements
@@ -1407,13 +1506,14 @@ export function logLocation(msg, typeClass = 'system-message') {
   elLocLog.scrollTop = elLocLog.scrollHeight;
 }
 
-// Display a discrete Norse-themed toast notification at top-center of screen
-export function showToast(msg, icon = '✨') {
-  const container = document.getElementById('toast-container');
+// Display a discrete Norse-themed toast notification
+export function showToast(msg, icon = '✨', isImportant = false) {
+  const containerId = isImportant ? 'toast-container-important' : 'toast-container';
+  const container = document.getElementById(containerId);
   if (!container) return;
 
   const card = document.createElement('div');
-  card.className = 'toast-card glass-panel';
+  card.className = `toast-card glass-panel ${isImportant ? 'important-toast' : ''}`;
   
   card.innerHTML = `
     <span class="toast-icon">${icon}</span>
@@ -1457,8 +1557,8 @@ function updateModalKeyboardNavigation() {
       btn.dataset.cleanText = cleanText;
     }
     
-    // Prefix numbers e.g. "[1] Plunder Mound"
-    btn.innerText = `[${idx + 1}] ${cleanText}`;
+    // Set HTML with a nice stylized key-badge
+    btn.innerHTML = `<span class="key-badge">${idx + 1}</span> ${btn.dataset.cleanText}`;
 
     // Apply focus indicator
     if (idx === activeModalFocusIndex) {
@@ -1510,7 +1610,7 @@ export function handleStateNotification(event, data) {
   }
   else if (event === 'COMBAT_VICTORY') {
     logWorld('VICTORY! The lane has been cleared of monsters.', 'gain-message');
-    showToast('Victory! You cleared the monsters.', '⚔️');
+    showToast('Victory! You cleared the monsters.', '⚔️', true);
     
     // Auto-resolve pending move on victory
     if (STATE.party.pendingLocalX !== undefined && STATE.party.pendingLocalY !== undefined) {
@@ -1536,7 +1636,7 @@ export function handleStateNotification(event, data) {
   }
   else if (event === 'COMBAT_DEFEAT') {
     logWorld('DEFEAT! All your Viking soldiers perished on the battlefield.', 'combat-message');
-    showToast('Your band was wiped out!', '💀');
+    showToast('Your band was wiped out!', '💀', true);
     // If gold is also 0, trigger Game Over modal, else force them to world map so they recruit
     if (STATE.resources.gold === 0) {
       showOverlay(elModalGameOver);
@@ -1548,7 +1648,7 @@ export function handleStateNotification(event, data) {
     logWorld(`You sacrificed a ${data.relicId} relic to appease ${data.godName.toUpperCase()}.`, 'gain-message');
   }
   else if (event === 'QUEST_MILESTONE') {
-    showToast(`Quest Milestone ${data.index + 1} reached for ${data.god.toUpperCase()}!`, '✨');
+    showToast(`Quest Milestone ${data.index + 1} reached for ${data.god.toUpperCase()}!`, '✨', true);
   }
   else if (event === 'ASCENSION_TRIGGERED') {
     elModalAscension.dataset.god = data;

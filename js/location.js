@@ -14,11 +14,11 @@ export function generateLocationMap(locationId, worldTileTerrain) {
   // 1. Generate Tile Stack Deck based on world tile class
   const deck = [];
   const terrainPools = {
-    water: ['grass', 'grass', 'forest', 'water', 'water', 'chasm', 'chasm'],
+    water: ['grass', 'grass', 'forest', 'water', 'water', 'chasm', 'chasm', 'deep_water'],
     forest: ['grass', 'forest', 'forest', 'forest', 'rock', 'chasm', 'grass'],
     snow: ['snow', 'snow', 'snow', 'mountain', 'rock', 'chasm', 'cave'],
     mountain: ['rock', 'rock', 'mountain', 'mountain', 'cave', 'cave', 'chasm'],
-    plains: ['grass', 'grass', 'grass', 'forest', 'rock', 'water', 'chasm']
+    plains: ['grass', 'grass', 'grass', 'forest', 'rock', 'water', 'chasm', 'deep_water']
   };
 
   const pool = terrainPools[worldTileTerrain] || terrainPools.plains;
@@ -63,7 +63,7 @@ export function discoverTile(locationId, x, y) {
   
   // Decide entity spawn (35% chance) - only on traversable terrains (not chasm or mountain)
   let entity = null;
-  const isTraversable = terrain !== 'chasm' && terrain !== 'mountain';
+  const isTraversable = terrain !== 'chasm' && terrain !== 'mountain' && terrain !== 'deep_water';
   if (isTraversable && Math.random() < 0.35) {
     entity = generateRandomEntity(locationId, terrain);
   }

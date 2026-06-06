@@ -6,6 +6,19 @@ import { STATE, notify, adjustResource } from './state.js';
 
 let combatTimer = null;
 
+export function sortPoolByPoints() {
+  const basePoints = {
+    berserker: 3,
+    shieldmaiden: 2,
+    huntsman: 1
+  };
+  STATE.combat.pool.sort((a, b) => {
+    const pointsA = (basePoints[a.type] || 1) * (a.hp / a.maxHp);
+    const pointsB = (basePoints[b.type] || 1) * (b.hp / b.maxHp);
+    return pointsB - pointsA;
+  });
+}
+
 // Initialize combat map grid & pool
 // Initialize combat map grid & pool
 export function startCombat(locationId, coordKey, enemyData) {
@@ -13,8 +26,8 @@ export function startCombat(locationId, coordKey, enemyData) {
   STATE.combat.paused = true; // Start paused to let player deploy
   STATE.combat.locationId = locationId;
   STATE.combat.entityCoordKey = coordKey;
-  STATE.combat.selectedPoolIndex = null;
   STATE.combat.fleeMode = false;
+  STATE.combat.stance = 'attack';
   
   // 1. Initialize 10x8 Grid of cells
   const grid = [];
@@ -36,6 +49,7 @@ export function startCombat(locationId, coordKey, enemyData) {
     currentHp: u.hp,
     alliance: 'player'
   }));
+  sortPoolByPoints();
 
   // 3. Populate wave monsters on the far right
   const monsters = [];
@@ -120,35 +134,58 @@ function combatTick() {
         notify('COMBAT_DEATH', target);
       }
     } else {
-      // No target: Advance along lane
-      // If player unit is fleeing, reverse direction to move left (-1)
-      const dir = (unit.alliance === 'player' && !unit.isFleeing) ? 1 : -1;
-      const nextCol = unit.col + dir;
-
-      // Check if next column is within bounds
-      if (nextCol >= 0 && nextCol < 10) {
-        // Only move if space is empty
-        if (!grid[unit.row][nextCol]) {
-          grid[unit.row][unit.col] = null;
-          unit.col = nextCol;
-          grid[unit.row][nextCol] = unit;
-        }
+      // No target: Move based on stance
+      let dir = 0;
+      let shouldMove = true;
+      if (unit.alliance === 'enemy') {
+        dir = -1;
+      } else if (unit.isFleeing) {
+        dir = -1;
       } else {
-        // Reached the end: Handle success/breach or fleeing exit
-        grid[unit.row][unit.col] = null;
-        if (unit.isFleeing && unit.alliance === 'player') {
-          // Put back in deployment pool
-          const poolUnit = {
-            ...unit,
-            hp: unit.hp,
-            row: undefined,
-            col: undefined,
-            isFleeing: false
-          };
-          STATE.combat.pool.push(poolUnit);
-          notify('COMBAT_UPDATE');
+        const stance = STATE.combat.stance || 'attack';
+        if (stance === 'attack') {
+          dir = 1;
+        } else if (stance === 'retreat' || stance === 'defend') {
+          dir = -1;
         } else {
-          handleUnitReachEnd(unit);
+          shouldMove = false; // Hold: stay in place
+        }
+      }
+
+      if (shouldMove) {
+        const nextCol = unit.col + dir;
+
+        // Check if next column is within bounds
+        if (nextCol >= 0 && nextCol < 10) {
+          // Only move if space is empty
+          if (!grid[unit.row][nextCol]) {
+            grid[unit.row][unit.col] = null;
+            unit.col = nextCol;
+            grid[unit.row][nextCol] = unit;
+          }
+        } else {
+          // Reached the end
+          if (unit.alliance === 'player' && STATE.combat.stance === 'defend' && nextCol < 0) {
+            // Defend stance: stop at column 0, do not exit
+            // Do nothing
+          } else {
+            grid[unit.row][unit.col] = null;
+            if (unit.alliance === 'player' && (unit.isFleeing || STATE.combat.stance === 'retreat') && nextCol < 0) {
+              // Return to deployment pool
+              const poolUnit = {
+                ...unit,
+                hp: unit.hp,
+                row: undefined,
+                col: undefined,
+                isFleeing: false
+              };
+              STATE.combat.pool.push(poolUnit);
+              sortPoolByPoints();
+              notify('COMBAT_UPDATE');
+            } else {
+              handleUnitReachEnd(unit);
+            }
+          }
         }
       }
     }
@@ -217,6 +254,7 @@ function handleUnitReachEnd(unit) {
       col: undefined
     };
     STATE.combat.pool.push(poolUnit);
+    sortPoolByPoints();
     notify('COMBAT_SUCCESS_REPLACE', unit);
   } else {
     // Enemy Breach: Drain random resource
@@ -280,7 +318,7 @@ export function undeployUnit(row, col) {
 
   // Push back into pool
   STATE.combat.pool.push(unit);
-
+  sortPoolByPoints();
   notify('COMBAT_UPDATE');
 }
 

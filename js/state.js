@@ -74,7 +74,8 @@ export const STATE = {
     spawnTimer: 0,
     locationId: null,
     entityCoordKey: null,
-    waveMonsters: [] // Monsters currently active on map
+    waveMonsters: [], // Monsters currently active on map
+    stance: 'attack' // Default combat stance: 'attack', 'defend', or 'retreat'
   }
 };
 
