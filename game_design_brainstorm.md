@@ -28,12 +28,12 @@ The world map represents the coastal fjords, islands, and harsh northern seas.
 *   **Movement**: Grid-based navigation (ortho/diagonal or hex-style, though standard grid is simplest for a 15x15 map).
 *   **Fog of War**: Initially covered in fog, revealed as your Drakkar (longship) or party sails/walks.
 *   **Tile Types**:
-    *   `Sea/Fjord`: Navigation lane for your Drakkar.
-    *   `Sand/Shore`: Landings where you transition from ship to foot.
-    *   `Grasslands`: Easy travel, common animals/encounters.
-    *   `Forests`: Higher ambush risk, wood resources.
-    *   `Snow/Tundra`: Harsh conditions, slows movement unless upgraded.
-    *   `Mountains`: Impassable borders containing valuable caves.
+    *   `Sea/Water`: Navigation lane for your Drakkar (longship).
+    *   `Plains`: Flat lands, easy walking, standard movement speed.
+    *   `Rivers`: Natural bottlenecks, requires crossing points or slows travel.
+    *   `Forests`: Densely wooded regions with high ambush risks.
+    *   `Snow`: Freezing tundras, slowing movement speed.
+    *   `Mountains`: Hard terrain containing mines and dangerous caves.
 *   **Locations**:
     *   **Towns (Friendly)**: Trade loot, buy supplies (rations, wood, iron), and hire soldiers (Shieldmaidens, Berserkers, Archers).
     *   **Raid Sites (Hostile)**: Monasteries, enemy camps, burial mounds, and caves.
@@ -50,7 +50,7 @@ When entering a location, you zoom in from the World Map to a 10x10 sub-grid.
     *   *Rules for placement*: Drawn tiles must match adjacent terrain edges (e.g., a path connects to a path, water to water, forest to forest). This creates a unique procedural layout every time.
 *   **Deck Composition**:
     *   The tile stack is generated based on the world map tile type.
-    *   *Example*: A cave in the Mountains will have a deck filled with Rock, Cave Chambers, and Ore Vein tiles. A monastery in the Grasslands will have Meadows, Roads, and Buildings.
+    *   *Example*: A location in a Forest tile on the World Map will have a location deck composed mostly of Forest, Grass, and River/Water tiles. A cave location in a Mountain tile will consist primarily of Rock, Cave, and Mountain tiles.
 *   **Tile Contents**:
     *   **Empty**: Safe travel.
     *   **Treasure**: Gold, weapons, artifacts.
@@ -247,35 +247,46 @@ Locations on the 15x15 map fall into two primary categories:
 
 ### B. Location Map Terrains (10x10 Carcassonne Cells)
 These are drawn procedural tiles:
-- **Sea / Shore**: Drakkar landing zones. Restricts movement unless starting from a ship.
-- **Meadow / Plain**: Basic terrain. Normal movement cost. Low defense values in combat.
-- **Deep Forest**: High defense (cover). Obstructs ranged lines of sight. Ambush danger.
-- **Rocky Pathway**: Narrow lane bottlenecks.
-- **Cave Passage**: Reduced visibility (fog of war only reveals adjacent 1-tile radius instead of 2).
-- **Ice Field / Glacier**: Slippery movement (units slip or slide), slow terrain traversal.
-- **Fortified Gate**: Obstacle requiring siege or a lockpick check (Loki favor / tools).
+- **Grass**: Standard green meadows, normal movement cost.
+- **Snow**: Ice and snowdrifts, slows movement, increases slippage.
+- **Forest**: Densely packed trees, offers combat cover but blocks projectile lines of sight.
+- **Rock**: Rugged boulder clusters, impassable except through pathways.
+- **Cave**: Pitch dark passages, reduces local vision distance to 1 tile.
+- **Mountain**: Massive stone cliffs, creates high-altitude vantage points or blocks paths.
+- **Water / Shore**: Requires bridges or drakkar landings.
+
+*(Note: Glacier is removed as an option; Mountain is used instead).*
 
 ---
 
 ### C. Soldier Types (Roster Classes)
-Soldiers possess stats: Class, Max HP, Current HP, Damage, Range, Speed, and Abilities.
+Initial prototype classes:
 - **Shieldmaiden**: Tank. *Ability*: Shield Wall (absorbs damage for adjacent lanes). High Armor.
 - **Berserker**: Shock Trooper. *Ability*: Frenzy (gains attack damage proportional to missing HP). Fast movement.
 - **Huntsman**: Ranged Physical. *Ability*: Poison Arrow (deals damage over time across lanes). Low Armor.
-- **Seidr Weaver**: Support Mage. *Ability*: Fate Weaver (heals units or applies shielding runes).
-- **Huskarl**: Heavy Melee. *Ability*: Shield-Breaker (shreds opponent defense/shields).
-- **Scout / Pathfinder**: Utility. *Ability*: Farsight (reveals adjacent Carcassonne tiles from 2 spaces away).
+
+/* COMMENTED FOR LATER EXPANSION:
+- Seidr Weaver: Support Mage. Ability: Fate Weaver (heals units or applies shielding runes).
+- Huskarl: Heavy Melee. Ability: Shield-Breaker (shreds opponent defense/shields).
+- Scout / Pathfinder: Utility. Ability: Farsight (reveals adjacent Carcassonne tiles from 2 spaces away).
+*/
 
 ---
 
-### D. Enemies
-Enemies spawn based on the location type:
-- **Saxon Monk / Peasant**: Very low HP, weak melee, flees when morale drops.
-- **Saxon Shield-Guard**: High armor, blocks lanes.
-- **Undead Draugr**: Medium health, rises once after defeat with 25% HP (unless slain by Seidr magic).
-- **Fenrir Pack Wolf**: High speed, leaps across lanes to attack weak backline units.
-- **Cave Troll**: Boss class. Massive HP, slow, deals area damage sweeping multiple lanes.
-- **Frost Giant (Jotunn)**: Boss class. Deals frost damage that slows attack speed and freezes units.
+### D. Enemies (Monster Focus)
+Combat focuses on mythical monsters for the initial prototype.
+- **Giant Brood-Spider**: Fast. *Ability*: Web spit (roots a target unit, disabling lane advance for 1 turn).
+- **Fenrir Pack Wolf**: Swift lane-hopper. *Ability*: Ravage (leaps to the lowest-HP lane and attacks).
+- **Draugr Warrior**: Undead. *Ability*: Reanimate (rises once after death with 25% HP).
+- **Cave Troll**: Heavy mini-boss. *Ability*: Ground Slam (sweeps three lanes simultaneously, dealing high physical damage).
+- **Frost Giant (Jotunn)**: Mythic boss. *Ability*: Freezing Aura (slows attack and movement speed in adjacent lanes).
+- **Lindwurm**: Acidic serpent. *Ability*: Acid Spit (degrades armor values permanently during the combat phase).
+
+/* COMMENTED FOR LATER EXPANSION (Human Enemies):
+- Saxon Monk / Peasant: Low HP, runs away when morale is depleted.
+- Saxon Shield-Guard: High armor, blocks lanes.
+- Outlaw Viking: High critical strike, uses traps.
+*/
 
 ---
 
@@ -306,24 +317,40 @@ Items fit into three distinct sub-types:
 ---
 
 ### G. God Alignment Quest Lines & Favor Tiers
-Favor is tracked on a numeric spectrum from **-5 to +5**:
+Favor is tracked on a numeric spectrum from **-5 to +5**. 
+
+> [!NOTE]
+> *Antagonization (negative favor/cursed state) is milder and less severe than the positive favor tiers.* Debuffs represent minor nuisance curses, whereas the positive favor levels unlock major game-altering mechanics and story campaigns.
 
 | Tier | Status | Effect State |
 | :--- | :--- | :--- |
-| **+5** | *Chosen Champion* | Legendary Artifact Unlock + Ultimate Passive (e.g., Thor: All hits deal +5 lightning damage). |
-| **+3 to +4** | *Blessed* | Major Passive Buffs (e.g., Freya: Double healing effectiveness in camps). |
-| **+1 to +2** | *Favored* | Minor Buffs (e.g., Odin: Reveal all town locations on the world map). |
+| **+5** | *Chosen Champion* | Legendary Artifact Unlock + Ultimate Divine Buff. |
+| **+3 to +4** | *Blessed* | Major Passive Buffs. |
+| **+1 to +2** | *Favored* | Minor Buffs. |
 | **0** | *Neutral* | Standard baseline. |
-| **-1 to -2** | *Disliked* | Minor Debuffs (e.g., Hel: Rations rot 10% faster). |
-| **-3 to -4** | *Angered* | Major Debuffs / Divine Hazards (e.g., Thor: Random lightning strikes in ship travel). |
-| **-5** | *Cursed* | Divine Curse active (e.g., Loki: Units randomly attack allies due to illusions). |
+| **-1 to -3** | *Disliked* | Minor Debuffs (e.g., Loki: Rations rot slightly faster due to trickery). |
+| **-4 to -5** | *Wrath State* | Milder curse (e.g., Thor: Occasional lightning bolt striking a random spot during sailing). |
 
-#### Quest Generation Mechanics
-Quests are linked to dynamic event milestones. For instance:
-- **Odin's Quest (The Wisdom Quest)**: Retrieve Runic Tablets hidden in Tomb Ruins. (Requires choosing wisdom/sacrifice options in events).
-- **Thor's Quest (The Giant Slayer)**: Slay a Jotunn in a Cave Dungeon.
-- **Freya's Quest (The Peace Weaver)**: Secure trade agreements with 3 towns and free captive slaves from raids.
-- **Hel's Quest (The Gravekeeper)**: Sacrifice silver at a burial mound and leave fallen soldiers behind.
-- **Loki's Quest (The Mischief Quest)**: Steal relics from Monasteries without triggering combat (using stealth options).
+#### Norse Mythological Quest Lines (Positive Alignment Themes)
+
+1. **Odin's Quest: "The Sacrifice for Runes" (Theme: Mimir's Well)**
+   - *Story*: Odin seeks the ultimate wisdom of the world runes. You must travel to ancient burial sites, sacrifice silver or high-level units, and retrieve tablets of elder knowledge.
+   - *Milestones*: Unlocks wisdom sight (removes fog of war from towns) and culminates in obtaining the *Shard of Gungnir*.
+
+2. **Thor's Quest: "The Halls of Utgarda-Loki" (Theme: Trial of Illusions)**
+   - *Story*: Thor journeys to the giant fortress of Utgarda-Loki to prove his strength. You must defeat giant monsters (Trolls, Jotunns) in direct lane combat, facing mirages and illusions that hide enemy stats.
+   - *Milestones*: Unlocks chain-lightning combat buffs and culminates in forging the *Mjolnir's Core*.
+
+3. **Freya's Quest: "The Necklace of the Brisings" (Theme: Beauty & Diplomacy)**
+   - *Story*: Freya's golden necklace *Brisingamen* has been stolen. You must forge trade agreements, free captive thralls from monsters, and retrieve amber gems from forests.
+   - *Milestones*: Unlocks high party morale, unit healing, and culminates in obtaining *Freya's Amber Tear*.
+
+4. **Hel's Quest: "The Descent into Niflheim" (Theme: Balder's Soul)**
+   - *Story*: To negotiate the release of souls from the underworld, you must explore dark caves and mounds, carrying out ritual offerings of defeat.
+   - *Milestones*: Unlocks the ability to command undead Draugr units and culminates in *Hel's Urn of Ash*.
+
+5. **Loki's Quest: "The Theft of Idunn's Apples" (Theme: Giants & Trickery)**
+   - *Story*: Loki is forced to help the giant Thjazi steal the apples of youth. You must complete location events using stealth, steal items from ruins without combat, and trick boss monsters.
+   - *Milestones*: Unlocks stealth options, high critical strike chances, and culminates in *Loki's Trickster Coin*.
 
 
