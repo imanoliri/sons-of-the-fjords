@@ -354,6 +354,50 @@ export function initUIBindings() {
         document.getElementById('btn-recruit-huntsman')?.click();
       }
     }
+    // Check if player is on Combat screen
+    else if (STATE.activeScreen === 'combat') {
+      const key = e.key.toLowerCase();
+      
+      // 1. Select soldier from pool (1 to 8)
+      const keyNum = parseInt(key);
+      if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= 8) {
+        e.preventDefault();
+        if (keyNum - 1 < STATE.combat.pool.length) {
+          STATE.combat.selectedPoolIndex = keyNum - 1;
+          notify('COMBAT_UPDATE');
+        }
+        return;
+      }
+
+      // 2. Deploy on lanes (qwer for col 0, asdf for col 1)
+      const keyMap = {
+        'q': { r: 0, c: 0 },
+        'w': { r: 1, c: 0 },
+        'e': { r: 2, c: 0 },
+        'r': { r: 3, c: 0 },
+        'a': { r: 0, c: 1 },
+        's': { r: 1, c: 1 },
+        'd': { r: 2, c: 1 },
+        'f': { r: 3, c: 1 }
+      };
+
+      if (keyMap[key]) {
+        e.preventDefault();
+        if (!STATE.combat.paused) {
+          togglePause(); // Ensure paused for deploying
+        }
+        
+        let poolIdx = STATE.combat.selectedPoolIndex;
+        if (poolIdx === null && STATE.combat.pool.length > 0) {
+          poolIdx = 0; // Default to first soldier in queue
+        }
+
+        if (poolIdx !== null && poolIdx < STATE.combat.pool.length) {
+          const target = keyMap[key];
+          deployUnit(poolIdx, target.r, target.c);
+        }
+      }
+    }
   });
 
   // Start tooltip tracking
@@ -1117,12 +1161,29 @@ function renderCombatGrid() {
       elCell.dataset.row = r;
       elCell.dataset.col = c;
 
-      // Make columns 0 and 1 highlighted deploy zones when paused and unit is selected
-      if (STATE.combat.paused && STATE.combat.selectedPoolIndex !== null && c <= 1 && !grid[r][c]) {
-        elCell.classList.add('deployable-zone');
-        elCell.addEventListener('click', () => {
-          deployUnit(STATE.combat.selectedPoolIndex, r, c);
-        });
+      // Make columns 0 and 1 highlighted deploy zones when paused
+      if (STATE.combat.paused && c <= 1 && !grid[r][c]) {
+        if (STATE.combat.selectedPoolIndex !== null) {
+          elCell.classList.add('deployable-zone');
+          elCell.addEventListener('click', () => {
+            deployUnit(STATE.combat.selectedPoolIndex, r, c);
+          });
+        }
+        
+        // Render keyboard shortcut key hint in the cell (QWER for col 0, ASDF for col 1)
+        if (r < 4) {
+          const hints = {
+            '0,0': 'Q', '1,0': 'W', '2,0': 'E', '3,0': 'R',
+            '0,1': 'A', '1,1': 'S', '2,1': 'D', '3,1': 'F'
+          };
+          const hintKey = `${r},${c}`;
+          if (hints[hintKey]) {
+            const elHint = document.createElement('span');
+            elHint.className = 'cell-key-hint';
+            elHint.innerText = hints[hintKey];
+            elCell.appendChild(elHint);
+          }
+        }
       }
 
       // Check for unit placed in cell
@@ -1229,7 +1290,16 @@ function renderCombatGrid() {
     }
 
     const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
-    card.innerHTML = `<span>${icons[unit.type]} ${unit.name}</span><span style="font-size:0.75rem">${unit.type}</span>`;
+    const numHint = idx < 8 ? `<span class="pool-number-hint">[${idx + 1}]</span> ` : '';
+    const hpPct = (unit.hp / unit.maxHp) * 100;
+    
+    card.innerHTML = `
+      <span>${numHint}${icons[unit.type]} ${unit.name}</span>
+      <span style="font-size:0.75rem">${unit.type}</span>
+      <div class="health-bar-container" style="position: absolute; bottom: 4px; left: 6px; right: 6px; height: 4px;">
+        <div class="health-bar-fill" style="width: ${Math.max(0, hpPct)}%"></div>
+      </div>
+    `;
     card.addEventListener('click', () => {
       if (!STATE.combat.paused) {
         togglePause(); // Force pause to allow placements

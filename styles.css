@@ -716,7 +716,7 @@ body {
 }
 
 .pool-card {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1rem 0.85rem 1rem;
   background: rgba(18, 22, 28, 0.9);
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -728,6 +728,29 @@ body {
   font-family: var(--font-runes);
   font-size: 0.9rem;
   transition: all 0.2s;
+  position: relative;
+}
+
+/* Cell and Pool keyboard hints */
+.cell-key-hint {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border-color);
+  color: var(--text-accent);
+  font-family: var(--font-runes);
+  font-size: 0.65rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.pool-number-hint {
+  color: var(--text-accent);
+  font-family: var(--font-runes);
+  font-size: 0.75rem;
+  font-weight: bold;
 }
 
 .pool-card:hover {
