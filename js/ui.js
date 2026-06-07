@@ -2372,6 +2372,8 @@ function renderPartyPanel() {
       row.className = 'trade-row';
       row.style.alignItems = 'center';
       row.style.padding = '0.5rem 0';
+      row.style.maxWidth = '450px';
+      row.style.margin = '0 auto';
       
       const details = document.createElement('div');
       details.style.display = 'flex';
@@ -2440,6 +2442,8 @@ function renderPartyPanel() {
       const row = document.createElement('div');
       row.className = 'trade-row';
       row.style.padding = '0.5rem 0';
+      row.style.maxWidth = '450px';
+      row.style.margin = '0 auto';
       
       const label = document.createElement('span');
       label.innerHTML = `💎 <b>${item}</b>`;
