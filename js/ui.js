@@ -2453,6 +2453,12 @@ function showGodLorePopup(gKey) {
   }).join('');
 
   const favorActionHtml = lore.favorAction || '';
+  
+  const opps = GODS_CONFIG.pentagramOpposites[gKey] || [];
+  const oppositesHtml = opps.map(oppKey => {
+    const oppLore = GOD_LORE[oppKey];
+    return oppLore ? `<span style="color: ${oppLore.color}; font-weight: bold;">${oppLore.icon} ${oppLore.title.split(' — ')[0]}</span>` : '';
+  }).join(' & ');
 
   elModalEventBody.innerHTML = `
     <div class="god-lore-popup-body">
@@ -2478,6 +2484,11 @@ function showGodLorePopup(gKey) {
       <div>
         <p class="god-lore-section-title">📋 How to gain Favor</p>
         <p class="god-lore-section-content">${favorActionHtml}</p>
+      </div>
+
+      <div>
+        <p class="god-lore-section-title">⚖️ Opposes (Drains Favor)</p>
+        <p class="god-lore-section-content">Pleasing this god drains favor from: ${oppositesHtml}</p>
       </div>
     </div>
   `;
