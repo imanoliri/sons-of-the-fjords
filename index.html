@@ -54,7 +54,7 @@
             <ul>
               <li><strong>World Map (15x15)</strong>: Sail your drakkar across sea tiles (safe and fast) or walk on land (slow, consumes more food, triggers monster attacks).</li>
               <li><strong>Starvation</strong>: If food hits 0, each step on the World Map kills one random band member!</li>
-              <li><strong>Raid Sites (10x10)</strong>: Procedurally generated like <em>Carcassonne</em>. Step to discovery edges to draw tiles. Defeat monsters, open chests, check burial mounds, or visit dolmen shrines to obtain <strong>Magic Objects</strong>.</li>
+              <li><strong>Raid Sites (10x10)</strong>: Pre-generated layout with Fog of War. Move cardinally to explore and push back the fog. Defeat monsters, open chests, check burial mounds, or visit dolmen shrines to obtain <strong>Magic Objects</strong>.</li>
               <li><strong>Lane Combat (10x8)</strong>: Automated lane battle. Deploy soldiers from your pool (pauses the game) into lanes. Soldiers reaching the end give <strong>+1 Gold</strong> and return to your pool. If monsters breach the left edge, they steal random resources. Units are lost permanently on death.</li>
               <li><strong>The 5 Gods</strong>: Trade Magic Objects to advance god favor tracks. Reaching 5/5 unlocks permanent favor, immunizes you from their wrath, and yields ultimate buffs (only one god's positive buffs can be active at a time).</li>
             </ul>
@@ -177,11 +177,11 @@
             <h2 class="section-title" id="location-title">Raid Site</h2>
             <div class="tile-deck-box">
               <span class="icon">🎴</span>
-              <span class="deck-desc">Procedural Tiles:</span>
+              <span class="deck-desc">Unexplored Tiles:</span>
               <span class="deck-count" id="location-deck-count">0</span>
             </div>
             <div id="location-event-log" class="event-log">
-              <p class="system-message">Step onto discovery edges to draw and place tiles. Look for treasures, burial mounds, dolmens, and monster nests.</p>
+              <p class="system-message">Move cardinally to explore the location and push back the fog. Look for treasures, burial mounds, dolmens, and monster nests.</p>
             </div>
             <div class="sidebar-controls">
               <button class="btn btn-danger" id="btn-leave-location">Flee to World Map</button>

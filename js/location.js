@@ -67,8 +67,147 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
     }
 
     // We accept the layout if there is a reasonably large reachable area (at least 35 tiles)
-    if (reachableCoords.size >= 35) {
+  }
+
+  // 3.5. pocket-connecting patch: Locate unreachable pockets and connect them by swapping skin non-traversable tiles
+  for (let iter = 0; iter < 5; iter++) {
+    // Recompute reachable coords
+    reachableCoords = new Set();
+    const queue = [[sx, sy]];
+    reachableCoords.add(`${sx},${sy}`);
+    while (queue.length > 0) {
+      const [cx, cy] = queue.shift();
+      const neighbors = [
+        [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]
+      ];
+      for (const [nx, ny] of neighbors) {
+        if (nx >= 0 && nx < 10 && ny >= 0 && ny < 10) {
+          const nKey = `${nx},${ny}`;
+          if (!reachableCoords.has(nKey)) {
+            const terrain = preGeneratedGrid[nKey];
+            if (!CFG.nonTraversable.includes(terrain)) {
+              reachableCoords.add(nKey);
+              queue.push([nx, ny]);
+            }
+          }
+        }
+      }
+    }
+
+    // Find unreachable traversable tiles
+    const unreachableTraversable = [];
+    for (let y = 0; y < 10; y++) {
+      for (let x = 0; x < 10; x++) {
+        const key = `${x},${y}`;
+        const terrain = preGeneratedGrid[key];
+        if (!CFG.nonTraversable.includes(terrain) && !reachableCoords.has(key)) {
+          unreachableTraversable.push(key);
+        }
+      }
+    }
+
+    // No unreachable pockets remaining
+    if (unreachableTraversable.length === 0) {
       break;
+    }
+
+    let connectionFound = false;
+    for (const uKey of unreachableTraversable) {
+      const [ux, uy] = uKey.split(',').map(Number);
+      const uNeighbors = [
+        [ux + 1, uy], [ux - 1, uy], [ux, uy + 1], [ux, uy - 1]
+      ];
+      for (const [nx, ny] of uNeighbors) {
+        if (nx >= 0 && nx < 10 && ny >= 0 && ny < 10) {
+          const nKey = `${nx},${ny}`;
+          const nTerrain = preGeneratedGrid[nKey];
+          // If neighbor is non-traversable, check if it borders the reachable area
+          if (CFG.nonTraversable.includes(nTerrain)) {
+            const nnNeighbors = [
+              [nx + 1, ny], [nx - 1, ny], [nx, ny + 1], [nx, ny - 1]
+            ];
+            let bordersReachable = false;
+            for (const [nnx, nny] of nnNeighbors) {
+              if (nnx >= 0 && nnx < 10 && nny >= 0 && nny < 10) {
+                const nnKey = `${nnx},${nny}`;
+                if (reachableCoords.has(nnKey)) {
+                  bordersReachable = true;
+                  break;
+                }
+              }
+            }
+
+            if (bordersReachable) {
+              // Swap this skin tile (nKey) with a safe traversable tile from reachableCoords
+              let safeSwapKey = null;
+              const reachableArray = Array.from(reachableCoords).filter(k => k !== `${sx},${sy}` && k !== nKey);
+              shuffle(reachableArray);
+
+              for (const candidateKey of reachableArray) {
+                const testReachable = new Set();
+                const testQueue = [[sx, sy]];
+                testReachable.add(`${sx},${sy}`);
+                while (testQueue.length > 0) {
+                  const [tcx, tcy] = testQueue.shift();
+                  const tcNeighbors = [
+                    [tcx + 1, tcy], [tcx - 1, tcy], [tcx, tcy + 1], [tcx, tcy - 1]
+                  ];
+                  for (const [tnx, tny] of tcNeighbors) {
+                    if (tnx >= 0 && tnx < 10 && tny >= 0 && tny < 10) {
+                      const tnKey = `${tnx},${tny}`;
+                      if (tnKey !== candidateKey && reachableCoords.has(tnKey) && !testReachable.has(tnKey)) {
+                        testReachable.add(tnKey);
+                        testQueue.push([tnx, tny]);
+                      }
+                    }
+                  }
+                }
+
+                if (testReachable.size === reachableCoords.size - 1) {
+                  safeSwapKey = candidateKey;
+                  break;
+                }
+              }
+
+              if (safeSwapKey) {
+                const temp = preGeneratedGrid[nKey];
+                preGeneratedGrid[nKey] = preGeneratedGrid[safeSwapKey];
+                preGeneratedGrid[safeSwapKey] = temp;
+                connectionFound = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+      if (connectionFound) break;
+    }
+
+    if (!connectionFound) {
+      break;
+    }
+  }
+
+  // Final recompute of reachableCoords to include the newly opened pockets
+  reachableCoords = new Set();
+  const finalQueue = [[sx, sy]];
+  reachableCoords.add(`${sx},${sy}`);
+  while (finalQueue.length > 0) {
+    const [cx, cy] = finalQueue.shift();
+    const neighbors = [
+      [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]
+    ];
+    for (const [nx, ny] of neighbors) {
+      if (nx >= 0 && nx < 10 && ny >= 0 && ny < 10) {
+        const nKey = `${nx},${ny}`;
+        if (!reachableCoords.has(nKey)) {
+          const terrain = preGeneratedGrid[nKey];
+          if (!CFG.nonTraversable.includes(terrain)) {
+            reachableCoords.add(nKey);
+            finalQueue.push([nx, ny]);
+          }
+        }
+      }
     }
   }
 
@@ -118,12 +257,12 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
   const startTerrain = preGeneratedGrid[`${sx},${sy}`];
   placedTiles[`${sx},${sy}`] = { terrainType: startTerrain, revealed: true, entity: startEntity };
 
-  // 8. Build tileStack as the remaining unplaced terrains (for the deck counter in UI)
+  // 8. Build tileStack as the remaining unplaced coordinates (for the deck counter in UI)
   const deck = [];
   for (let y = 0; y < 10; y++) {
     for (let x = 0; x < 10; x++) {
       if (x !== sx || y !== sy) {
-        deck.push(preGeneratedGrid[`${x},${y}`]);
+        deck.push(`${x},${y}`);
       }
     }
   }
@@ -133,6 +272,7 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
     isCleared: false,
     placedTiles,
     preGeneratedGrid,
+    preGeneratedEntities: {},
     tileStack: deck,
     hasCaveEntranceSpawned: false,
     isSubCave: (parentLocationId !== null),
@@ -140,6 +280,26 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
   };
 
   STATE.locations[locationId] = state;
+
+  // 9. Pre-generate all entities on the rest of the traversable tiles
+  for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 10; x++) {
+      if (x === sx && y === sy) continue;
+      const coordKey = `${x},${y}`;
+      const terrain = preGeneratedGrid[coordKey];
+      const isTraversable = !CFG.nonTraversable.includes(terrain);
+      const isFirstCaveEntranceNeeded = terrain === 'cave' && !state.isSubCave && !state.hasCaveEntranceSpawned;
+
+      let entity = null;
+      if (isTraversable && (isFirstCaveEntranceNeeded || Math.random() < CFG.entitySpawnChance)) {
+        entity = generateRandomEntity(locationId, terrain, x, y);
+      }
+      if (entity) {
+        state.preGeneratedEntities[coordKey] = entity;
+      }
+    }
+  }
+
   return state;
 }
 
@@ -152,20 +312,14 @@ export function discoverTile(locationId, x, y) {
   const terrain = locState.preGeneratedGrid[coordKey];
   if (!terrain) return null;
 
-  // Remove one instance of this terrain from the display deck stack
-  const idx = locState.tileStack.indexOf(terrain);
+  // Remove coordinate from unexplored stack
+  const idx = locState.tileStack.indexOf(coordKey);
   if (idx !== -1) {
     locState.tileStack.splice(idx, 1);
   }
 
-  // Decide entity spawn — only on traversable terrains
-  let entity = null;
-  const isTraversable = !CFG.nonTraversable.includes(terrain);
-  const isFirstCaveEntranceNeeded = terrain === 'cave' && !locState.isSubCave && !locState.hasCaveEntranceSpawned;
-
-  if (isTraversable && (isFirstCaveEntranceNeeded || Math.random() < CFG.entitySpawnChance)) {
-    entity = generateRandomEntity(locationId, terrain, x, y);
-  }
+  // Get the pre-generated entity
+  const entity = locState.preGeneratedEntities[coordKey] || null;
 
   locState.placedTiles[coordKey] = { terrainType: terrain, revealed: true, entity };
   return terrain;

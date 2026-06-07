@@ -345,6 +345,10 @@ body {
   cursor: default;
 }
 
+.location-tile.fog.tile-border-highlight {
+  cursor: pointer;
+}
+
 .world-tile.fog::after, .location-tile.fog::after {
   content: '᚛';
   font-family: var(--font-runes);

@@ -878,26 +878,31 @@ function attemptLocalMove(targetX, targetY) {
   const locState = STATE.locations[locId];
   if (!locState) return;
 
-  const coordKey = `${targetX},${targetY}`;
-  let tile = locState.placedTiles[coordKey];
+  // Bounds check
+  if (targetX < 0 || targetX >= 10 || targetY < 0 || targetY >= 10) return;
 
-  // If tile is unplaced but adjacent, auto-discover it
+  // Check if it's adjacent to the current player position
+  const isAdjacent = Math.abs(targetX - STATE.party.localX) + Math.abs(targetY - STATE.party.localY) === 1;
+  if (!isAdjacent) return;
+
+  const coordKey = `${targetX},${targetY}`;
+  const terrainType = locState.preGeneratedGrid[coordKey];
+
+  // Impassable terrain block
+  const isImpassable = terrainType === 'chasm' || terrainType === 'mountain' || terrainType === 'deep_water';
+  if (isImpassable) {
+    logLocation(`The rugged ${terrainType === 'deep_water' ? 'deep water' : terrainType} is impassable!`, 'warn-message');
+    return;
+  }
+
+  // If tile is unplaced, reveal it
+  let tile = locState.placedTiles[coordKey];
   if (!tile) {
-    const isAdjacent = Math.abs(targetX - STATE.party.localX) + Math.abs(targetY - STATE.party.localY) === 1;
-    const adjacentUnplaced = getAdjacentUnplacedSlots(locState.placedTiles);
-    if (isAdjacent && adjacentUnplaced.includes(coordKey)) {
-      discoverTile(locId, targetX, targetY);
-      tile = locState.placedTiles[coordKey];
-    }
+    discoverTile(locId, targetX, targetY);
+    tile = locState.placedTiles[coordKey];
   }
 
   if (!tile) return;
-
-  // Impassable terrain block
-  if (tile.terrainType === 'chasm' || tile.terrainType === 'mountain' || tile.terrainType === 'deep_water') {
-    logLocation(`The rugged ${tile.terrainType === 'deep_water' ? 'deep water' : tile.terrainType} is impassable!`, 'warn-message');
-    return;
-  }
 
   // Check tile entities
   if (tile.entity) {
@@ -1336,9 +1341,6 @@ function renderLocationMap() {
     activePortalTarget = null;
   }
 
-  // We gather adjacent tiles to verify discovery slots
-  const adjacentUnplaced = getAdjacentUnplacedSlots(placed);
-
   for (let y = 0; y < 10; y++) {
     for (let x = 0; x < 10; x++) {
       const elCell = document.createElement('div');
@@ -1348,6 +1350,7 @@ function renderLocationMap() {
       
       const coordKey = `${x},${y}`;
       const tile = placed[coordKey];
+      const isNeighbor = Math.abs(x - px) + Math.abs(y - py) === 1;
 
       if (tile) {
         // Render terrain
@@ -1433,7 +1436,6 @@ function renderLocationMap() {
         }
 
         // Click to move player locally to adjacent placed tiles
-        const isNeighbor = Math.abs(x - px) + Math.abs(y - py) === 1;
         if (isNeighbor) {
           elCell.classList.add('tile-border-highlight');
           elCell.addEventListener('click', () => {
@@ -1441,21 +1443,17 @@ function renderLocationMap() {
           });
         }
 
-      } 
-      // If cell is unplaced but adjacent to a placed tile, make it a discovery edge
-      else if (adjacentUnplaced.includes(coordKey)) {
-        const isNeighborToPlayer = Math.abs(x - px) + Math.abs(y - py) === 1;
-        if (isNeighborToPlayer) {
-          elCell.classList.add('discovery-edge');
+      } else {
+        // Render fog of war
+        elCell.classList.add('fog');
+        
+        // Adjacent tiles are clickable to move/discover
+        if (isNeighbor) {
+          elCell.classList.add('tile-border-highlight');
           elCell.addEventListener('click', () => {
             attemptLocalMove(x, y);
           });
-        } else {
-          elCell.classList.add('fog');
         }
-      } 
-      else {
-        elCell.classList.add('fog');
       }
 
       elLocMap.appendChild(elCell);
@@ -1479,32 +1477,6 @@ function renderLocationMap() {
   }, 50);
 }
 
-// Find unplaced tiles sharing an edge with any placed tile
-function getAdjacentUnplacedSlots(placed) {
-  const keys = Object.keys(placed);
-  const slots = new Set();
-  
-  keys.forEach(k => {
-    const [x, y] = k.split(',').map(Number);
-    const neighbors = [
-      { x: x + 1, y },
-      { x: x - 1, y },
-      { x, y: y + 1 },
-      { x, y: y - 1 }
-    ];
-
-    neighbors.forEach(n => {
-      if (n.x >= 0 && n.x < 10 && n.y >= 0 && n.y < 10) {
-        const nKey = `${n.x},${n.y}`;
-        if (!placed[nKey]) {
-          slots.add(nKey);
-        }
-      }
-    });
-  });
-
-  return Array.from(slots);
-}
 
 // Enter Cave Sub-Dungeon Portal
 function triggerEnterCavePortal(coordKey, entity) {
