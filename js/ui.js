@@ -248,10 +248,14 @@ export function initUIBindings() {
     logWorld('Escaped from raid site back to the open sea.');
   });
 
-  // Use portal button
+  // Use portal or explore button
   bindButton('btn-use-portal', () => {
     if (activePortalTarget) {
-      triggerEnterCavePortal(activePortalTarget.coordKey, activePortalTarget.entity);
+      if (activePortalTarget.entity.type === 'cave_entrance') {
+        triggerEnterCavePortal(activePortalTarget.coordKey, activePortalTarget.entity);
+      } else if (activePortalTarget.entity.type === 'burial_mound') {
+        triggerEncounterEvent(activePortalTarget.coordKey, activePortalTarget.entity);
+      }
     }
   });
 
@@ -445,8 +449,13 @@ export function initUIBindings() {
       } else if (e.key === 'Enter') {
         if (activePortalTarget) {
           e.preventDefault();
-          triggerEnterCavePortal(activePortalTarget.coordKey, activePortalTarget.entity);
+          if (activePortalTarget.entity.type === 'cave_entrance') {
+            triggerEnterCavePortal(activePortalTarget.coordKey, activePortalTarget.entity);
+          } else if (activePortalTarget.entity.type === 'burial_mound') {
+            triggerEncounterEvent(activePortalTarget.coordKey, activePortalTarget.entity);
+          }
         }
+        return;
       }
     }
     // Check if player is on Town screen
@@ -703,11 +712,54 @@ const GOD_LORE = {
 };
 
 
-// Global tooltip delegation
 function initTooltipEvents() {
   let hoverTimeout = null;
   let lastClientX = 0;
   let lastClientY = 0;
+
+  function showLocationTileTooltip(tile, clientX, clientY) {
+    const x = tile.dataset.x;
+    const y = tile.dataset.y;
+    const terrain = tile.dataset.terrain;
+    const hasPlayer = tile.dataset.hasPlayer === 'true';
+    const entityType = tile.dataset.entityType;
+    const entityState = tile.dataset.entityState;
+
+    const headerText = `${terrain ? terrain.charAt(0).toUpperCase() + terrain.slice(1) : 'Tile'}`;
+    const coordsText = `X: ${x}, Y: ${y}`;
+
+    let contents = [];
+    if (hasPlayer) {
+      contents.push('⚔️ Viking Expedition Band');
+    }
+    if (entityState) {
+      contents.push(entityState);
+    }
+
+    if (contents.length === 0) {
+      if (tile.classList.contains('discovery-edge')) {
+        headerText = 'Unexplored Boundary';
+        contents.push('Step here to draw and discover a new tile from the deck.');
+      } else if (terrain === 'deep_water' || terrain === 'chasm' || terrain === 'mountain') {
+        contents.push(`Rough ${terrain === 'deep_water' ? 'deep water' : terrain}. Impassable obstacle!`);
+      } else {
+        contents.push('Empty ground. Safe to cross.');
+      }
+    }
+    const contentsText = contents.join('<br>');
+
+    elTooltip.innerHTML = `
+      <div class="game-tooltip-header">
+        <span>${headerText}</span>
+        <span class="game-tooltip-coords">${coordsText}</span>
+      </div>
+      <div class="game-tooltip-contents">${contentsText}</div>
+    `;
+    elTooltip.style.borderLeftColor = 'var(--text-accent)';
+    elTooltip.style.display = 'flex';
+    elTooltip.style.left = (clientX + 15) + 'px';
+    elTooltip.style.top = (clientY + 15) + 'px';
+  }
 
   function showWorldTileTooltip(tile, clientX, clientY) {
     const x = tile.dataset.x;
@@ -868,42 +920,27 @@ function initTooltipEvents() {
       return;
     }
 
+    if (tile.classList.contains('location-tile')) {
+      if (hoverTimeout) clearTimeout(hoverTimeout);
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+      const entityType = tile.dataset.entityType;
+      if (entityType === 'burial_mound') {
+        hoverTimeout = setTimeout(() => {
+          showLocationTileTooltip(tile, lastClientX, lastClientY);
+        }, 800);
+      } else {
+        showLocationTileTooltip(tile, lastClientX, lastClientY);
+      }
+      return;
+    }
+
     let headerText = '';
     let coordsText = '';
     let contentsText = '';
     let borderAccent = 'var(--text-accent)';
 
-    if (tile.classList.contains('location-tile')) {
-      const x = tile.dataset.x;
-      const y = tile.dataset.y;
-      const terrain = tile.dataset.terrain;
-      const hasPlayer = tile.dataset.hasPlayer === 'true';
-      const entityType = tile.dataset.entityType;
-      const entityState = tile.dataset.entityState;
-
-      headerText = `${terrain ? terrain.charAt(0).toUpperCase() + terrain.slice(1) : 'Tile'}`;
-      coordsText = `X: ${x}, Y: ${y}`;
-
-      let contents = [];
-      if (hasPlayer) {
-        contents.push('⚔️ Viking Expedition Band');
-      }
-      if (entityState) {
-        contents.push(entityState);
-      }
-
-      if (contents.length === 0) {
-        if (tile.classList.contains('discovery-edge')) {
-          headerText = 'Unexplored Boundary';
-          contents.push('Step here to draw and discover a new tile from the deck.');
-        } else if (terrain === 'deep_water' || terrain === 'chasm' || terrain === 'mountain') {
-          contents.push(`Rough ${terrain === 'deep_water' ? 'deep water' : terrain}. Impassable obstacle!`);
-        } else {
-          contents.push('Empty ground. Safe to cross.');
-        }
-      }
-      contentsText = contents.join('<br>');
-    } else if (tile.classList.contains('combat-cell')) {
+    if (tile.classList.contains('combat-cell')) {
       const r = Number(tile.dataset.row);
       const c = Number(tile.dataset.col);
       headerText = `Combat Grid Lane ${r+1}`;
@@ -962,7 +999,7 @@ function initTooltipEvents() {
       elTooltip.style.left = (e.clientX + 15) + 'px';
       elTooltip.style.top = (e.clientY + 15) + 'px';
     }
-    const tile = e.target.closest('.world-tile');
+    const tile = e.target.closest('.world-tile, .location-tile');
     if (tile) {
       lastClientX = e.clientX;
       lastClientY = e.clientY;
@@ -973,8 +1010,8 @@ function initTooltipEvents() {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
     const godTarget = e.target.closest('[data-god-tooltip]');
     
-    if (tile && tile.classList.contains('world-tile')) {
-      const enteringTile = e.relatedTarget?.closest('.world-tile');
+    if (tile && (tile.classList.contains('world-tile') || tile.dataset.entityType === 'burial_mound')) {
+      const enteringTile = e.relatedTarget?.closest('.world-tile, .location-tile');
       if (enteringTile !== tile) {
         if (hoverTimeout) clearTimeout(hoverTimeout);
         elTooltip.style.display = 'none';
@@ -1151,8 +1188,6 @@ function attemptLocalMove(targetX, targetY) {
     } else if (ent.type === 'wood_source' && !ent.isLooted) {
       triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'ore_deposit' && !ent.isLooted) {
-      triggerEncounterEvent(coordKey, ent);
-    } else if (ent.type === 'burial_mound' && !ent.isExplored) {
       triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'dolmen' && !ent.isVisited) {
       triggerEncounterEvent(coordKey, ent);
@@ -1602,17 +1637,22 @@ function renderLocationMap() {
   const px = STATE.party.localX;
   const py = STATE.party.localY;
 
-  // Check if player is standing on a cave entrance/exit
+  // Check if player is standing on a cave entrance/exit or burial mound
   const currentTile = placed[`${px},${py}`];
-  if (currentTile && currentTile.entity && currentTile.entity.type === 'cave_entrance') {
+  if (currentTile && currentTile.entity && (currentTile.entity.type === 'cave_entrance' || (currentTile.entity.type === 'burial_mound' && !currentTile.entity.isExplored))) {
     const ent = currentTile.entity;
     elPromptPanel.classList.remove('hidden');
-    if (ent.isExit) {
-      elPromptText.innerText = '🪜 Ladder to upper level';
-      elPromptBtn.innerText = '[enter]';
-    } else {
-      elPromptText.innerText = '🕳️ Entrance to cave';
-      elPromptBtn.innerText = '[enter]';
+    if (ent.type === 'cave_entrance') {
+      if (ent.isExit) {
+        elPromptText.innerText = '🪜 Ladder to upper level';
+        elPromptBtn.innerText = '[enter]';
+      } else {
+        elPromptText.innerText = '🕳️ Entrance to cave';
+        elPromptBtn.innerText = '[enter]';
+      }
+    } else if (ent.type === 'burial_mound') {
+      elPromptText.innerText = '🪦 Ancient Burial Mound';
+      elPromptBtn.innerText = '[explore]';
     }
     activePortalTarget = { coordKey: `${px},${py}`, entity: ent };
   } else {
