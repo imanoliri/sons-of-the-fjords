@@ -449,8 +449,7 @@ body {
 }
 
 .tile-border-highlight {
-  outline: 2px solid var(--text-accent);
-  outline-offset: -2px;
+  box-shadow: inset 0 0 8px rgba(0, 240, 255, 0.45);
 }
 
 /* Discovery Edges for Carcassonne draw interaction */
