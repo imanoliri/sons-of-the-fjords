@@ -1535,7 +1535,7 @@ function triggerEnterCavePortal(coordKey, entity) {
     entity.visited = true; // Mark entrance in parent as visited
 
     STATE.party.currentLocationId = entity.targetLocationId;
-    generateLocationMap(entity.targetLocationId, 'mountain', parentLocationId, parentCoords);
+    generateLocationMap(entity.targetLocationId, 'cave', parentLocationId, parentCoords);
     STATE.party.localX = 5;
     STATE.party.localY = 5;
 

@@ -49,6 +49,12 @@ export const LOCATION_CONFIG = {
       water: 5,
       chasm: 5,
       deep_water: 5
+    },
+    cave: {
+      cave: 60,
+      rock: 20,
+      mountain: 15,
+      chasm: 5
     }
   },
 
