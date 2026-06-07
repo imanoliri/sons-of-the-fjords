@@ -326,7 +326,7 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
     if (caveCoords.length > 0) {
       const chosenCaveKey = caveCoords[Math.floor(Math.random() * caveCoords.length)];
       const [cx, cy] = chosenCaveKey.split(',').map(Number);
-      const entranceEntity = generateRandomEntity(locationId, 'cave', cx, cy, locationType, difficulty);
+      const entranceEntity = buildEntityOfType(locationId, 'cave_entrance', 'cave', cx, cy, locationType, difficulty, locationId.startsWith('raid_'));
       if (entranceEntity) {
         state.preGeneratedEntities[chosenCaveKey] = entranceEntity;
       }
@@ -334,6 +334,9 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
   }
 
   // 9. Pre-generate all entities on the rest of the traversable tiles
+  //    using per-tile spawn tables (tileEntitySpawns) from config.
+  const isRaid = locationId.startsWith('raid_');
+
   for (let y = 0; y < 10; y++) {
     for (let x = 0; x < 10; x++) {
       if (x === sx && y === sy) continue;
@@ -343,14 +346,34 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
       if (state.preGeneratedEntities[coordKey]) continue;
 
       const terrain = preGeneratedGrid[coordKey];
-      const isTraversable = !CFG.nonTraversable.includes(terrain);
+      if (CFG.nonTraversable.includes(terrain)) continue;
 
+      // --- Primary tile roll (percentage-based, no spawnChance field) ---
+      const tileTable = (CFG.tileEntitySpawns || {})[terrain];
       let entity = null;
-      if (isTraversable && Math.random() < CFG.entitySpawnChance) {
-        entity = generateRandomEntity(locationId, terrain, x, y, locationType, difficulty);
+      if (tileTable) {
+        entity = buildEntityFromTileTable(locationId, terrain, x, y, tileTable, locationType, difficulty, isRaid);
       }
+
       if (entity) {
         state.preGeneratedEntities[coordKey] = entity;
+        continue;
+      }
+
+      // --- Location-effect overlay roll (only on tiles with no entity yet) ---
+      const activeEffectKeys = getLocationEffectKeys(locationId, locationType, isRaid);
+      for (const effectKey of activeEffectKeys) {
+        const effect = (CFG.locationEffects || {})[effectKey];
+        if (!effect) continue;
+        const tileOk = effect.applyToTiles === '*' || effect.applyToTiles.includes(terrain);
+        if (!tileOk) continue;
+        if (Math.random() * 100 < effect.spawnChance) {
+          entity = buildEntityOfType(locationId, effect.entity, terrain, x, y, locationType, difficulty, isRaid);
+          if (entity) {
+            state.preGeneratedEntities[coordKey] = entity;
+            break;
+          }
+        }
       }
     }
   }
@@ -380,42 +403,71 @@ export function discoverTile(locationId, x, y) {
   return terrain;
 }
 
-// Generate random entity for location tile
-function generateRandomEntity(locationId, terrain, x = null, y = null, locationType = 'default', difficultyMultiplier = 1.0) {
-  const roll = Math.random();
-  const biomes = CFG.entityWeightsByBiome || {};
-  const w = biomes[locationType] || biomes.default || CFG.entityWeights;
+// ---------------------------------------------------------------------------
+// Build an entity using a tile's entity spawn table (percentage-based roll).
+// Entity values in tileTable.entities are direct spawn % (0–100).
+// We sum them; roll [0, 100). If roll < total → weighted pick; else no spawn.
+// ---------------------------------------------------------------------------
+function buildEntityFromTileTable(locationId, terrain, x, y, tileTable, locationType, difficulty, isRaid) {
+  const entities = tileTable.entities || {};
+  const entries = Object.entries(entities);
+  if (entries.length === 0) return null;
 
-  let type;
-  if      (w.treasure !== undefined && roll < w.treasure)         type = 'treasure';
-  else if (w.wood_source !== undefined && roll < w.wood_source)   type = 'wood_source';
-  else if (w.sheep_source !== undefined && roll < w.sheep_source) {
-    type = (terrain === 'grass') ? 'sheep_source' : 'treasure';
-  }
-  else if (w.ore_deposit !== undefined && roll < w.ore_deposit)   type = 'ore_deposit';
-  else if (w.enemy_army !== undefined && roll < w.enemy_army)     type = 'enemy_army';
-  else if (w.burial_mound !== undefined && roll < w.burial_mound) {
-    type = locationId.startsWith('raid_') ? 'burial_mound' : 'treasure';
-  }
-  else                                                            type = 'dolmen';
+  // Sum of all entity percentages = total spawn probability out of 100
+  const totalChance = entries.reduce((sum, [, v]) => sum + v, 0);
+  const roll = Math.random() * 100;
+  if (roll >= totalChance) return null; // no entity this tile
 
-  // Cave terrain override
+  // Weighted pick within the spawning band
+  let type = null;
+  let cursor = 0;
+  const pickRoll = Math.random() * totalChance;
+  for (const [key, weight] of entries) {
+    cursor += weight;
+    if (pickRoll < cursor) { type = key; break; }
+  }
+  if (!type) type = entries[entries.length - 1][0];
+
+  // burial_mound only on raid_ locations
+  if (type === 'burial_mound' && !isRaid) type = 'treasure';
+
+  // sheep_source restricted to grass tiles
+  if (type === 'sheep_source' && terrain !== 'grass') type = 'treasure';
+
+  // Resolve monster pool: prefer tile-specific, fall back to biome pool
+  const resolvedPool = tileTable.monsterPool || null;
+  return buildEntityOfType(locationId, type, terrain, x, y, locationType, difficulty, isRaid, resolvedPool);
+}
+
+// ---------------------------------------------------------------------------
+// Build an entity object for a given type string.
+// resolvedPool overrides the biome-level monster pool when provided.
+// ---------------------------------------------------------------------------
+function buildEntityOfType(locationId, type, terrain, x, y, locationType, difficulty, isRaid, resolvedPool = null) {
+  // Cave entrance override: if terrain is 'cave', check portal logic first
   if (terrain === 'cave') {
     const locState = STATE.locations[locationId];
     if (locState) {
       const isFirstTopLevelEntrance = !locState.isSubCave && !locState.hasCaveEntranceSpawned;
       if (isFirstTopLevelEntrance) {
-        type = 'cave_entrance';
         locState.hasCaveEntranceSpawned = true;
         locState.caveEntranceCount = (locState.caveEntranceCount || 0) + 1;
+        const targetId = (x !== null && y !== null)
+          ? `${locationId}_sub_cave_${x}_${y}`
+          : `${locationId}_sub_cave`;
+        return { type: 'cave_entrance', targetLocationId: targetId };
       } else {
         const currentCount = locState.caveEntranceCount || 0;
         const rollChance = CFG.cavePortalBaseChance / Math.pow(CFG.cavePortalDecayFactor, currentCount);
         if (Math.random() < rollChance) {
-          type = 'cave_entrance';
           locState.hasCaveEntranceSpawned = true;
           locState.caveEntranceCount = currentCount + 1;
+          const targetId = (x !== null && y !== null)
+            ? `${locationId}_sub_cave_${x}_${y}`
+            : `${locationId}_sub_cave`;
+          return { type: 'cave_entrance', targetLocationId: targetId };
         }
+        // Cave tile that didn't roll a portal — fall through to normal entity
       }
     }
   }
@@ -460,24 +512,22 @@ function generateRandomEntity(locationId, terrain, x = null, y = null, locationT
   if (type === 'enemy_army') {
     const e = CFG.enemyArmy;
     const pools = CFG.monsterPoolsByBiome || {};
-    let pool = [...(pools[locationType] || pools.default || e.monsterPool)];
+    let pool = resolvedPool
+      ? [...resolvedPool]
+      : [...(pools[locationType] || pools.default || e.monsterPool)];
 
     const ds = CFG.difficultyScaling || {};
-    // Inject mini-bosses if above threshold
-    if (difficultyMultiplier >= (ds.bossThreshold || 1.40)) {
+    if (difficulty >= (ds.bossThreshold || 1.40)) {
       const bosses = ds.bosses || ['Frost Giant (Jotunn)', 'Lindwurm'];
       pool = pool.concat(bosses);
     }
 
     const selectedMonster = pool[Math.floor(Math.random() * pool.length)];
-
-    // Scale counts by difficulty multiplier
-    let countMin = Math.floor(e.countMin * difficultyMultiplier);
-    let countMax = Math.floor(e.countMax * difficultyMultiplier);
+    let countMin = Math.floor(e.countMin * difficulty);
+    let countMax = Math.floor(e.countMax * difficulty);
     const maxLimit = ds.maxCountLimit || 6;
     countMin = Math.min(maxLimit, Math.max(1, countMin));
     countMax = Math.min(maxLimit, Math.max(countMin, countMax));
-
     const count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
     return {
       type: 'enemy_army',
@@ -506,11 +556,38 @@ function generateRandomEntity(locationId, terrain, x = null, y = null, locationT
   }
 
   if (type === 'cave_entrance') {
-    const targetId = (x !== null && y !== null) ? `${locationId}_sub_cave_${x}_${y}` : `${locationId}_sub_cave`;
+    const targetId = (x !== null && y !== null)
+      ? `${locationId}_sub_cave_${x}_${y}`
+      : `${locationId}_sub_cave`;
     return { type: 'cave_entrance', targetLocationId: targetId };
   }
 
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Return the list of active locationEffect keys for this location.
+// Merges locationBiomeEffects (by locationType) with raidLocationEffects
+// (both the 'all' entry and any entry matching this specific locationId).
+// ---------------------------------------------------------------------------
+function getLocationEffectKeys(locationId, locationType, isRaid) {
+  // 1. Biome-based effects
+  const biomeMap = CFG.locationBiomeEffects || {};
+  const keys = [...(biomeMap[locationType] || biomeMap.default || [])];
+
+  // 2. Raid-based effects (all raids + location-specific)
+  if (isRaid) {
+    const raidMap = CFG.raidLocationEffects || {};
+    const toAdd = [
+      ...(raidMap.all || []),
+      ...(raidMap[locationId] || [])
+    ];
+    for (const k of toAdd) {
+      if (!keys.includes(k)) keys.push(k);
+    }
+  }
+
+  return keys;
 }
 
 // Utility shuffler
@@ -531,6 +608,21 @@ function getRandomFromWeights(weightsObj) {
       return terrain;
     }
     roll -= weight;
+  }
+  return entries[entries.length - 1][0];
+}
+
+// Pick a random key from { key: weight } — same logic as getRandomFromWeights
+// but returns null for empty objects.
+function weightedRandom(weightsObj) {
+  const entries = Object.entries(weightsObj);
+  if (entries.length === 0) return null;
+  const totalWeight = entries.reduce((sum, [_, w]) => sum + w, 0);
+  if (totalWeight <= 0) return null;
+  let roll = Math.random() * totalWeight;
+  for (const [key, w] of entries) {
+    if (roll < w) return key;
+    roll -= w;
   }
   return entries[entries.length - 1][0];
 }
