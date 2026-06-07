@@ -747,10 +747,11 @@ function initTooltipEvents() {
         if (locationType === 'raid') {
           const biome = locationBiome || 'default';
           const poolMap = {
-            forest: 'Fenrir Pack Wolves, Giant Brood-Spiders',
-            mountain: 'Cave Trolls, Fenrir Pack Wolves',
+            forest: 'Spiders & Wolves',
+            mountain: 'Wolves & Trolls',
+            cave: 'Spiders & Trolls',
             burial_mound: 'Draugr Warriors',
-            default: 'Giant Brood-Spiders, Fenrir Pack Wolves'
+            default: 'Spiders & Wolves'
           };
           const list = poolMap[biome] || poolMap.default;
           contents.push(`<span style="color:var(--color-danger);font-size:0.82em;display:block;margin-top:2px;">👹 Enemies: ${list}</span>`);
