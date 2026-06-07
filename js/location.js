@@ -37,8 +37,16 @@ export function generateLocationMap(locationId, worldTileTerrain) {
     }
   }
 
-  // 2. Initialize grid state with center starting tile
-  const { x: sx, y: sy, terrain: st } = CFG.startTile;
+  // 2. Initialize grid state with center starting tile drawn from the deck (must be traversable)
+  const { x: sx, y: sy } = CFG.startTile;
+  let st = 'grass'; // Fallback
+  for (let i = deck.length - 1; i >= 0; i--) {
+    if (!CFG.nonTraversable.includes(deck[i])) {
+      st = deck.splice(i, 1)[0];
+      break;
+    }
+  }
+
   const placedTiles = {};
   placedTiles[`${sx},${sy}`] = { terrainType: st, revealed: true, entity: null };
 
