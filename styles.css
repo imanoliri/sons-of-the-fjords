@@ -202,8 +202,7 @@ body {
 
 .active-blessing {
   font-family: var(--font-runes);
-  color: var(--color-thor);
-  text-shadow: 0 0 6px var(--color-thor);
+  color: var(--text-muted);
   font-size: 1.1rem;
 }
 

@@ -731,6 +731,9 @@ function initTooltipEvents() {
       } else if (section === 'champion_locked') {
         header = `${lore.icon} Champion Buff`;
         content = `<span style="color:var(--text-muted)">reach Milestone 5 to unlock the champion buff of this god</span>`;
+      } else if (section === 'curse') {
+        header = `${lore.icon} Active Curse (${gKey.toUpperCase()})`;
+        content = `<b style="color:var(--color-danger)">${lore.wrath}</b>`;
       }
 
       elTooltip.innerHTML = `
@@ -739,7 +742,9 @@ function initTooltipEvents() {
         </div>
         <div class="game-tooltip-contents">${content}</div>
       `;
-      elTooltip.style.borderLeftColor = lore.color;
+      elTooltip.style.borderLeftColor = section === 'curse' ? 'var(--color-danger)' : lore.color;
+      elTooltip.style.left = (e.clientX + 15) + 'px';
+      elTooltip.style.top = (e.clientY + 15) + 'px';
       elTooltip.style.display = 'flex';
       return;
     }
@@ -1111,13 +1116,13 @@ function renderResourceBar() {
   const tempBlessings = [];
   if (STATE.activeBlessing) {
     const lore = GOD_LORE[STATE.activeBlessing];
-    tempBlessings.push(`<span style="color: var(--color-${STATE.activeBlessing})">${lore.icon} ${STATE.activeBlessing.toUpperCase()}</span>`);
+    tempBlessings.push(`<span data-god-tooltip="${STATE.activeBlessing}" data-tooltip-section="champion" style="color: var(--color-${STATE.activeBlessing}); cursor: pointer;">${lore.icon} ${STATE.activeBlessing.toUpperCase()}</span>`);
   }
   if (STATE.permanentlyActivatedBlessings && STATE.permanentlyActivatedBlessings.length > 0) {
     STATE.permanentlyActivatedBlessings.forEach(b => {
       if (b !== STATE.activeBlessing) {
         const lore = GOD_LORE[b];
-        tempBlessings.push(`<span style="color: var(--color-${b})">${lore.icon} ${b.toUpperCase()} (Perm)</span>`);
+        tempBlessings.push(`<span data-god-tooltip="${b}" data-tooltip-section="champion" style="color: var(--color-${b}); cursor: pointer;">${lore.icon} ${b.toUpperCase()} (Perm)</span>`);
       }
     });
   }
@@ -1129,7 +1134,10 @@ function renderResourceBar() {
   }
 
   if (activeWraths.length > 0) {
-    const wrathNames = activeWraths.map(g => `<span style="color:var(--color-danger); font-weight:bold;">${g.toUpperCase()}'S WRATH ⚡</span>`).join(', ');
+    const wrathNames = activeWraths.map(g => {
+      const lore = GOD_LORE[g];
+      return `<span data-god-tooltip="${g}" data-tooltip-section="curse" style="color:var(--color-danger); font-weight:bold; cursor: pointer;">${g.toUpperCase()}'S WRATH ⚡</span>`;
+    }).join(', ');
     elBlessing.innerHTML = `${blessingHtml} | <span style="font-size:0.85em;">Active Curses: ${wrathNames}</span>`;
   } else {
     elBlessing.innerHTML = blessingHtml;
