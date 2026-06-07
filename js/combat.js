@@ -297,7 +297,7 @@ function findTargetInLane(unit) {
     for (const rToCheck of targetRows) {
       for (let cToCheck = 0; cToCheck < CFG.gridCols; cToCheck++) {
         const colDist = (cToCheck - unit.col) * dir;
-        if (colDist > 0 && colDist <= range) {
+        if (colDist >= 0 && colDist <= range) {
           const cell = grid[rToCheck][cToCheck];
           if (cell && cell.alliance !== unit.alliance) {
             const manhattan = Math.abs(unit.row - rToCheck) + Math.abs(unit.col - cToCheck);
