@@ -45,6 +45,8 @@ const elLocMap = document.getElementById('location-map');
 const elLocTitle = document.getElementById('location-title');
 const elLocDeckCount = document.getElementById('location-deck-count');
 const elLocLog = document.getElementById('location-event-log');
+const elPromptPanel = document.getElementById('portal-prompt-panel');
+const elPromptText = document.getElementById('portal-prompt-text');
 
 // Combat elements
 const elCombatGrid = document.getElementById('combat-grid');
@@ -200,6 +202,13 @@ export function initUIBindings() {
     logWorld('Escaped from raid site back to the open sea.');
   });
 
+  // Use portal button
+  bindButton('btn-use-portal', () => {
+    if (activePortalTarget) {
+      triggerEnterCavePortal(activePortalTarget.coordKey, activePortalTarget.entity);
+    }
+  });
+
   // Combat controls
   bindButton('btn-combat-pause', () => {
     togglePause();
@@ -349,6 +358,11 @@ export function initUIBindings() {
         const targetX = STATE.party.localX + dx;
         const targetY = STATE.party.localY + dy;
         attemptLocalMove(targetX, targetY);
+      } else if (e.key === 'Enter') {
+        if (activePortalTarget) {
+          e.preventDefault();
+          triggerEnterCavePortal(activePortalTarget.coordKey, activePortalTarget.entity);
+        }
       }
     }
     // Check if player is on Town screen
@@ -1294,6 +1308,22 @@ function renderLocationMap() {
   const px = STATE.party.localX;
   const py = STATE.party.localY;
 
+  // Check if player is standing on a cave entrance/exit
+  const currentTile = placed[`${px},${py}`];
+  if (currentTile && currentTile.entity && currentTile.entity.type === 'cave_entrance') {
+    const ent = currentTile.entity;
+    elPromptPanel.classList.remove('hidden');
+    if (ent.isExit) {
+      elPromptText.innerText = '🪜 Cave Exit (Ladder to surface) is here.';
+    } else {
+      elPromptText.innerText = '🕳️ Cave Sub-Dungeon Portal is here.';
+    }
+    activePortalTarget = { coordKey: `${px},${py}`, entity: ent };
+  } else {
+    elPromptPanel.classList.add('hidden');
+    activePortalTarget = null;
+  }
+
   // We gather adjacent tiles to verify discovery slots
   const adjacentUnplaced = getAdjacentUnplacedSlots(placed);
 
@@ -1367,7 +1397,14 @@ function renderLocationMap() {
                 badge.classList.add('visited-portal');
               }
             }
-            badge.addEventListener('click', () => promptEnterCavePortal(coordKey, ent));
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) {
+                triggerEnterCavePortal(coordKey, ent);
+              } else {
+                attemptLocalMove(x, y);
+              }
+            });
           }
 
           elCell.appendChild(badge);
@@ -1454,44 +1491,6 @@ function getAdjacentUnplacedSlots(placed) {
   });
 
   return Array.from(slots);
-}
-
-// Prompt Cave Sub-Dungeon Portal
-function promptEnterCavePortal(coordKey, entity) {
-  showOverlay(elModalEvent);
-  elModalEventChoices.innerHTML = '';
-  
-  if (entity.isExit) {
-    elModalEventTitle.innerText = 'Cave Exit';
-    elModalEventBody.innerText = 'Do you want to climb the ladder and return to the surface?';
-  } else {
-    elModalEventTitle.innerText = 'Cave Entrance';
-    elModalEventBody.innerText = 'Do you want to step down into the dark cave chambers?';
-  }
-
-  // Option 1: Travel
-  const travelBtn = document.createElement('button');
-  travelBtn.classList.add('btn', 'btn-primary');
-  travelBtn.innerText = entity.isExit ? 'Climb Up (Enter)' : 'Enter Cave (Enter)';
-  travelBtn.addEventListener('click', () => {
-    hideOverlay(elModalEvent);
-    triggerEnterCavePortal(coordKey, entity);
-  });
-
-  // Option 2: Cancel
-  const cancelBtn = document.createElement('button');
-  cancelBtn.classList.add('btn', 'btn-danger');
-  cancelBtn.innerText = 'Stay here (Esc)';
-  cancelBtn.addEventListener('click', () => {
-    hideOverlay(elModalEvent);
-  });
-
-  elModalEventChoices.appendChild(travelBtn);
-  elModalEventChoices.appendChild(cancelBtn);
-  
-  // Set focus index to 0 so "Enter" triggers travelBtn
-  activeModalFocusIndex = 0;
-  updateModalKeyboardNavigation();
 }
 
 // Enter Cave Sub-Dungeon Portal
@@ -1965,6 +1964,7 @@ export function showToast(msg, icon = '✨', isImportant = false) {
 }
 
 let activeModalFocusIndex = 0;
+let activePortalTarget = null;
 
 function updateModalKeyboardNavigation() {
   const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');

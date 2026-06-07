@@ -1161,3 +1161,35 @@ body {
   0% { opacity: 1; }
   100% { opacity: 0; transform: translateY(-20px); pointer-events: none; }
 }
+
+/* Floating Portal Prompt Panel */
+.portal-prompt-panel {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 20, 28, 0.95);
+  border: 1.5px solid var(--text-accent);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 240, 255, 0.3);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+  animation: promptFadeIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+}
+
+#portal-prompt-text {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+}
+
+@keyframes promptFadeIn {
+  0% { opacity: 0; transform: translate(-50%, 15px); }
+  100% { opacity: 1; transform: translate(-50%, 0); }
+}
