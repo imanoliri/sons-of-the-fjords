@@ -109,7 +109,7 @@ export const GODS_CONFIG = {
         'Berserkers gain +1 DMG per combat tick.',
         null
       ],
-      buff: 'Huntsmen gain +2 Attack Range & +1 DMG per turn.'
+      buff: 'Huntsmen gain +2 Attack Range & +1 DMG.'
     },
     thor: {
       title: 'Thor — The Thunderer',
