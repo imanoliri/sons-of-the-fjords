@@ -128,6 +128,16 @@ body {
   border-color: var(--text-accent);
 }
 
+.btn:disabled, .btn.btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+  box-shadow: none !important;
+}
+
 .btn-primary {
   background: rgba(0, 240, 255, 0.15);
   border-color: var(--text-accent);

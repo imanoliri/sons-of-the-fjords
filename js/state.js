@@ -410,3 +410,35 @@ export function buyRecruit(type, cost) {
   const label = type.charAt(0).toUpperCase() + type.slice(1);
   return { success: true, message: `Enrolled a ${label} to your band!` };
 }
+
+export function getHealCost() {
+  let totalCost = 0;
+  for (const warrior of STATE.band) {
+    if (warrior.hp < warrior.maxHp) {
+      if (warrior.hp < warrior.maxHp * 0.2) {
+        totalCost += 4;
+      } else if (warrior.hp < warrior.maxHp * 0.8) {
+        totalCost += 2;
+      }
+    }
+  }
+  return totalCost;
+}
+
+export function healWarriors() {
+  const cost = getHealCost();
+  if (STATE.resources.gold >= cost) {
+    let healedCount = 0;
+    for (const warrior of STATE.band) {
+      if (warrior.hp < warrior.maxHp) {
+        warrior.hp = warrior.maxHp;
+        healedCount++;
+      }
+    }
+    adjustResource('gold', -cost);
+    notify('STATE_UPDATED');
+    return { success: true, message: `Healed ${healedCount} warriors for ${cost} gold.` };
+  }
+  return { success: false, message: `Not enough gold! Need ${cost} gold.` };
+}
+

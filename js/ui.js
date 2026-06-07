@@ -2,7 +2,7 @@
    UI MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, executePlunderMound, executeSacrificeSheep, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, buyRecruit } from './state.js';
+import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, executePlunderMound, executeSacrificeSheep, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, buyRecruit, getHealCost, healWarriors } from './state.js';
 import { getAdjacentCoords } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
 import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats, fleeCombat } from './combat.js';
@@ -168,6 +168,12 @@ export function initUIBindings() {
     const cost = TOWN_CONFIG.recruitCosts.huntsman;
     const res = buyRecruit('huntsman', cost);
     logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+  });
+
+  bindButton('btn-heal-warriors', () => {
+    const res = healWarriors();
+    logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+    renderTownScreen();
   });
 
   // Repair Drakkar
@@ -1677,6 +1683,28 @@ function renderTownScreen() {
     });
   } else {
     elPatronCard.classList.add('hidden');
+  }
+
+  // Update Heal Warriors button and label dynamically
+  const elHealLabel = document.getElementById('heal-warriors-label');
+  const elHealBtn = document.getElementById('btn-heal-warriors');
+  if (elHealLabel && elHealBtn) {
+    const cost = getHealCost();
+    const injuredCount = STATE.band.filter(w => w.hp < w.maxHp).length;
+    if (injuredCount === 0) {
+      elHealLabel.innerText = 'All warriors are fully healthy.';
+      elHealBtn.disabled = true;
+      elHealBtn.classList.add('btn-disabled');
+    } else {
+      elHealLabel.innerText = `Heal ${injuredCount} injured warrior${injuredCount > 1 ? 's' : ''} (-${cost} Gold)`;
+      if (STATE.resources.gold < cost) {
+        elHealBtn.disabled = true;
+        elHealBtn.classList.add('btn-disabled');
+      } else {
+        elHealBtn.disabled = false;
+        elHealBtn.classList.remove('btn-disabled');
+      }
+    }
   }
 }
 
