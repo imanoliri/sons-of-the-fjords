@@ -2483,6 +2483,11 @@ export function showToast(msg, icon = '✨', isImportant = false) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
+  // Enforce a maximum of 4 active toast notifications at once
+  while (container.children.length >= 4) {
+    container.children[0].remove();
+  }
+
   const card = document.createElement('div');
   card.className = `toast-card glass-panel ${isImportant ? 'important-toast' : ''}`;
   
