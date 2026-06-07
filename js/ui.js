@@ -416,10 +416,7 @@ export function initUIBindings() {
       else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') dx = -1;
       else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') dx = 1;
       else if (e.key === 'Enter') {
-        const hasLocation = STATE.worldMap.locations[`${STATE.party.worldX},${STATE.party.worldY}`];
-        if (hasLocation) {
-          enterLocation(hasLocation);
-        }
+        tryEnterCurrentLocation();
         return;
       }
       
@@ -1371,10 +1368,10 @@ function renderWorldMap() {
         });
       }
 
-      // Allow entering town/raid if clicked on player's current coordinate
-      if (x === STATE.party.worldX && y === STATE.party.worldY && hasLocation) {
+      // Allow entering town/raid if clicked on player's current coordinate (and not water)
+      if (x === STATE.party.worldX && y === STATE.party.worldY && tiles[y][x] !== 'water') {
         elCell.addEventListener('click', () => {
-          enterLocation(locations[`${x},${y}`]);
+          tryEnterCurrentLocation();
         });
       }
 
@@ -1526,6 +1523,44 @@ function revealWorldFog(px, py) {
       }
     }
   }
+}
+
+// Helper to dynamically resolve and enter the player's current world location if not water
+function tryEnterCurrentLocation() {
+  const px = STATE.party.worldX;
+  const py = STATE.party.worldY;
+  const locKey = `${px},${py}`;
+  let locData = STATE.worldMap.locations[locKey];
+  const terrain = STATE.worldMap.tiles[py][px];
+
+  if (terrain === 'water') {
+    logWorld('Cannot enter the deep sea.');
+    return;
+  }
+
+  if (!locData) {
+    let locationType = 'default';
+    if (terrain === 'mountain') locationType = 'mountain';
+    else if (terrain === 'forest') locationType = 'forest';
+    else if (terrain === 'snow') locationType = 'default';
+
+    // Scale danger level based on distance from starting point (2,7)
+    const startX = 2;
+    const startY = 7;
+    const distance = Math.abs(px - startX) + Math.abs(py - startY);
+    const dangerLevel = Math.min(5, Math.max(1, Math.floor(distance / 3) + 1));
+
+    locData = {
+      id: `dynamic_raid_${px}_${py}`,
+      name: `Wilderness ${terrain.charAt(0).toUpperCase() + terrain.slice(1)}`,
+      type: 'raid',
+      terrain: terrain,
+      locationType: locationType,
+      dangerLevel: dangerLevel
+    };
+    STATE.worldMap.locations[locKey] = locData;
+  }
+  enterLocation(locData);
 }
 
 // Enter Town or Dungeon
