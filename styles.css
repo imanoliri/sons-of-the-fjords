@@ -1224,3 +1224,74 @@ body {
   padding: 0.4rem 0.6rem !important;
   max-width: 200px !important;
 }
+
+/* Refactored inline styles */
+.heal-warriors-row {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 0.75rem;
+}
+
+.recruit-stats-subtext {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.god-lore-popup-body {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.god-lore-section-title {
+  font-weight: bold;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 4px;
+}
+
+.god-lore-section-content {
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.god-lore-list {
+  margin-top: 4px;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.god-lore-milestones-list {
+  margin-top: 4px;
+  padding-left: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.god-lore-milestone-item {
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.god-lore-milestone-item.locked {
+  color: var(--text-muted);
+}
+
+.recruit-info-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.god-lore-curse-title {
+  color: var(--color-danger);
+}
+
+.god-lore-list li {
+  margin-bottom: 4px;
+}

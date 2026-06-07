@@ -2438,35 +2438,36 @@ function showGodLorePopup(gKey) {
       desc = "Unlocks this god's secret Blessing!";
     }
     const check = track[idx] ? '✅' : '🔒';
-    return `<li style="margin-bottom: 4px; color: ${track[idx] ? 'var(--text-primary)' : 'var(--text-muted)'}">${check} Milestone ${idx + 1}: ${desc || ''}</li>`;
+    const isLockedClass = track[idx] ? '' : ' locked';
+    return `<li class="god-lore-milestone-item${isLockedClass}">${check} Milestone ${idx + 1}: ${desc || ''}</li>`;
   }).join('');
 
-  const favorStepsHtml = lore.favorSteps.map(step => `<li style="margin-bottom: 4px;">${step}</li>`).join('');
+  const favorStepsHtml = lore.favorSteps.map(step => `<li>${step}</li>`).join('');
 
   elModalEventBody.innerHTML = `
-    <div style="text-align: left; display: flex; flex-direction: column; gap: 1rem; max-height: 400px; overflow-y: auto; padding-right: 8px;">
+    <div class="god-lore-popup-body">
       <p><b>🏺 Relic:</b> ${lore.relic}</p>
       
       <div>
-        <p style="font-weight: bold; color: ${lore.color}; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;">👑 Active Blessing (Champion Buff)</p>
-        <p style="margin-top: 4px; font-style: italic;">${lore.buff}</p>
+        <p class="god-lore-section-title" style="color: ${lore.color};">👑 Active Blessing (Champion Buff)</p>
+        <p class="god-lore-section-content">${lore.buff}</p>
       </div>
 
       <div>
-        <p style="font-weight: bold; color: var(--color-danger); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;">⚠️ Active Curse (Wrath)</p>
-        <p style="margin-top: 4px; font-style: italic;">${lore.wrath}</p>
+        <p class="god-lore-section-title god-lore-curse-title">⚠️ Active Curse (Wrath)</p>
+        <p class="god-lore-section-content">${lore.wrath}</p>
       </div>
 
       <div>
-        <p style="font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;">📋 How to gain Favor</p>
-        <ul style="margin-top: 4px; padding-left: 1.2rem; font-size: 0.85rem; line-height: 1.4;">
+        <p class="god-lore-section-title">📋 How to gain Favor</p>
+        <ul class="god-lore-list">
           ${favorStepsHtml}
         </ul>
       </div>
 
       <div>
-        <p style="font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;">ᚱ Milestones Progression</p>
-        <ul style="margin-top: 4px; padding-left: 0; list-style: none; font-size: 0.85rem; line-height: 1.4;">
+        <p class="god-lore-section-title">ᚱ Milestones Progression</p>
+        <ul class="god-lore-milestones-list">
           ${milestoneList}
         </ul>
       </div>
