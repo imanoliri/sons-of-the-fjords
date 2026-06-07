@@ -1667,7 +1667,7 @@ function renderLocationMap() {
 
   elLocDeckCount.innerText = locState.tileStack.length;
 
-  const stars = '💀'.repeat(dangerVal) + '⬜'.repeat(Math.max(0, 5 - dangerVal));
+  const stars = '💀'.repeat(dangerVal);
   elLocationDifficultyStatus.innerHTML = `Danger: <span style="color:var(--color-danger)">${stars}</span>`;
 
   const placed = locState.placedTiles;
