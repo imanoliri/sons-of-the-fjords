@@ -762,15 +762,15 @@ function initTooltipEvents() {
       if (locationType === 'raid' || (terrain !== 'water' && terrain !== 'deep_water' && terrain !== 'river')) {
         const biome = locationType === 'raid' ? (locationBiome || 'default') : terrain;
         const poolMap = {
-          forest: 'Spiders & Wolves',
-          mountain: 'Wolves & Trolls',
-          snow: 'Spiders & Trolls',
-          plains: 'Spiders & Wolves',
-          burial_mound: 'Draugr Warriors',
-          default: 'Spiders & Wolves'
+          forest: 'spiders and wolves',
+          mountain: 'wolves and trolls',
+          snow: 'spiders and trolls',
+          plains: 'spiders and wolves',
+          burial_mound: 'draugr warriors',
+          default: 'spiders and wolves'
         };
         const list = poolMap[biome] || poolMap.default;
-        contents.push(`Enemies: ${list}`);
+        contents.push(`You will find ${list} here.`);
       }
 
       contentsText = contents.join('<br>');
