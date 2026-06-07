@@ -11,6 +11,7 @@ import { MOVEMENT_CONFIG } from './config/movement.js';
 import { LOCATION_CONFIG } from './config/location.js';
 import { WORLD_CONFIG } from './config/world.js';
 import { GODS_CONFIG } from './config/gods.js';
+import { SOLDIERS_CONFIG } from './config/soldiers.js';
 
 // DOM Selectors
 const elHeader = document.getElementById('game-header');
@@ -200,10 +201,10 @@ export function initUIBindings() {
       return;
     }
     const cost = TOWN_CONFIG.recruitCosts.shieldmaiden;
-    if (STATE.resources.gold >= cost && STATE.band.length < 8) {
+    if (STATE.resources.gold >= cost && STATE.band.length < SOLDIERS_CONFIG.maxBandSize) {
       adjustResource('gold', -cost); recruitSoldier('shieldmaiden');
       logWorld('Enrolled a Shieldmaiden to your band!', 'gain-message');
-    } else if (STATE.band.length >= 8) { logWorld('Your Drakkar deck is full (max 8 soldiers)!', 'warn-message');
+    } else if (STATE.band.length >= SOLDIERS_CONFIG.maxBandSize) { logWorld(`Your Drakkar deck is full (max ${SOLDIERS_CONFIG.maxBandSize} soldiers)!`, 'warn-message');
     } else { logWorld('Not enough gold to hire recruit!', 'warn-message'); }
   });
 
@@ -213,10 +214,10 @@ export function initUIBindings() {
       return;
     }
     const cost = TOWN_CONFIG.recruitCosts.berserker;
-    if (STATE.resources.gold >= cost && STATE.band.length < 8) {
+    if (STATE.resources.gold >= cost && STATE.band.length < SOLDIERS_CONFIG.maxBandSize) {
       adjustResource('gold', -cost); recruitSoldier('berserker');
       logWorld('Enrolled a Berserker to your band!', 'gain-message');
-    } else if (STATE.band.length >= 8) { logWorld('Your Drakkar deck is full!', 'warn-message');
+    } else if (STATE.band.length >= SOLDIERS_CONFIG.maxBandSize) { logWorld(`Your Drakkar deck is full (max ${SOLDIERS_CONFIG.maxBandSize} soldiers)!`, 'warn-message');
     } else { logWorld('Not enough gold!', 'warn-message'); }
   });
 
@@ -226,10 +227,10 @@ export function initUIBindings() {
       return;
     }
     const cost = TOWN_CONFIG.recruitCosts.huntsman;
-    if (STATE.resources.gold >= cost && STATE.band.length < 8) {
+    if (STATE.resources.gold >= cost && STATE.band.length < SOLDIERS_CONFIG.maxBandSize) {
       adjustResource('gold', -cost); recruitSoldier('huntsman');
       logWorld('Enrolled a Huntsman to your band!', 'gain-message');
-    } else if (STATE.band.length >= 8) { logWorld('Your Drakkar is full!', 'warn-message');
+    } else if (STATE.band.length >= SOLDIERS_CONFIG.maxBandSize) { logWorld(`Your Drakkar is full (max ${SOLDIERS_CONFIG.maxBandSize} soldiers)!`, 'warn-message');
     } else { logWorld('Not enough gold!', 'warn-message'); }
   });
 
@@ -563,9 +564,9 @@ export function initUIBindings() {
         return;
       }
       
-      // 1. Select soldier from pool (1 to 8)
+      // 1. Select soldier from pool (1 to maxBandSize)
       const keyNum = parseInt(key);
-      if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= 8) {
+      if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= SOLDIERS_CONFIG.maxBandSize) {
         e.preventDefault();
         if (keyNum - 1 < STATE.combat.pool.length) {
           STATE.combat.selectedPoolIndex = keyNum - 1;
@@ -1302,8 +1303,9 @@ function renderWorldMap() {
   elWorldCoords.innerText = `Longship Pos - X: ${STATE.party.worldX}, Y: ${STATE.party.worldY}`;
 
   const timeFactor = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.timeFactor) || 0.02;
+  const maxCap = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.maxTimeFactorCap) !== undefined ? LOCATION_CONFIG.difficultyScaling.maxTimeFactorCap : 2.5;
   const dayValue = STATE.day || 1;
-  const dayMulti = Math.min(2.5, dayValue * timeFactor).toFixed(2);
+  const dayMulti = Math.min(maxCap, dayValue * timeFactor).toFixed(2);
   elWorldDifficultyStatus.innerText = `Day Multiplier: +${dayMulti}x (Day ${dayValue})`;
 
   const tiles = STATE.worldMap.tiles;
@@ -2215,7 +2217,7 @@ function renderCombatGrid() {
     }
 
     const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
-    const numHint = idx < 8 ? `<span class="pool-number-hint">[${idx + 1}]</span> ` : '';
+    const numHint = idx < SOLDIERS_CONFIG.maxBandSize ? `<span class="pool-number-hint">[${idx + 1}]</span> ` : '';
     const hpPct = (unit.hp / unit.maxHp) * 100;
     
     card.innerHTML = `

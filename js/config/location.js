@@ -159,6 +159,7 @@ export const LOCATION_CONFIG = {
     dangerMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2],
     caveDepthFactor: 0.35,
     timeFactor: 0.02,
+    maxTimeFactorCap: 2.5,
     bossThreshold: 1.40,
     bosses: ['Frost Giant (Jotunn)', 'Lindwurm'],
     maxCountLimit: 6

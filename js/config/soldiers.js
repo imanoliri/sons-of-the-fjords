@@ -3,6 +3,8 @@
    ========================================================================== */
 
 export const SOLDIERS_CONFIG = {
+  // Maximum size of the band
+  maxBandSize: 8,
   // Starting resources
   startingResources: {
     gold: 15,

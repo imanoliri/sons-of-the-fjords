@@ -539,9 +539,10 @@ function updateEnemyArmyAmount(entity, difficultyMultiplier) {
 
 // Compute location difficulty incorporating danger level, cave depth, and time scaling
 function calculateDifficulty(locationId, dangerLevel) {
-  const ds = CFG.difficultyScaling || { dangerMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2], caveDepthFactor: 0.35, timeFactor: 0.02 };
+  const ds = CFG.difficultyScaling || { dangerMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2], caveDepthFactor: 0.35, timeFactor: 0.02, maxTimeFactorCap: 2.5 };
   const baseMulti = ds.dangerMultipliers[dangerLevel - 1] || 1.0;
   const subCaveDepth = (locationId.match(/_sub_cave_/g) || []).length;
   const dayValue = STATE.day || 1;
-  return baseMulti + (subCaveDepth * ds.caveDepthFactor) + Math.min(2.5, dayValue * ds.timeFactor);
+  const maxCap = ds.maxTimeFactorCap !== undefined ? ds.maxTimeFactorCap : 2.5;
+  return baseMulti + (subCaveDepth * ds.caveDepthFactor) + Math.min(maxCap, dayValue * ds.timeFactor);
 }
