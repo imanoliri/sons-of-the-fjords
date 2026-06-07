@@ -2483,8 +2483,8 @@ export function showToast(msg, icon = '✨', isImportant = false) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  // Enforce a maximum of 4 active toast notifications at once
-  while (container.children.length >= 4) {
+  // Enforce a maximum of 3 active toast notifications at once
+  while (container.children.length >= 3) {
     container.children[0].remove();
   }
 
