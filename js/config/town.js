@@ -20,5 +20,42 @@ export const TOWN_CONFIG = {
     shieldmaiden: 5,
     berserker:    7,
     huntsman:     6
+  },
+
+  // Dynamic pricing coefficients and limits based on surrounding geography
+  dynamicPricing: {
+    food: {
+      baseCost: 2,
+      minCost: 1,
+      maxCost: 5,
+      foodGained: 5
+    },
+    woodBuy: {
+      baseCost: 2,
+      minCost: 1,
+      maxCost: 5,
+      woodGained: 2,
+      scarceBonus: 2
+    },
+    sheepBuy: {
+      baseCost: 6,
+      minCost: 3,
+      maxCost: 10,
+      sheepGained: 1
+    },
+    sheepSell: {
+      baseGain: 4,
+      minGain: 1,
+      maxGain: 8,
+      sheepSold: 1,
+      scarceBonus: 2
+    },
+    woodSell: {
+      baseGain: 4,
+      minGain: 1,
+      maxGain: 8,
+      woodSold: 10,
+      scarceBonus: 2
+    }
   }
 };
