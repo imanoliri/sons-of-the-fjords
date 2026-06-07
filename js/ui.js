@@ -1319,7 +1319,15 @@ function renderLocationMap() {
           else if (ent.type === 'enemy_army' && !ent.isDefeated) entityDesc = `👹 Monster Nest (${ent.monsters[0].monsterClass})`;
           else if (ent.type === 'burial_mound' && !ent.isExplored) entityDesc = '🪦 Ancient Burial Mound';
           else if (ent.type === 'dolmen' && !ent.isVisited) entityDesc = `🏆 Sacred Dolmen Stone (Appease ${ent.godName.toUpperCase()})`;
-          else if (ent.type === 'cave_entrance') entityDesc = '🕳️ Cave Sub-Dungeon Portal';
+          else if (ent.type === 'cave_entrance') {
+            if (ent.isExit) {
+              entityDesc = '🪜 Cave Exit Portal (Return to surface)';
+            } else if (ent.visited) {
+              entityDesc = '🕳️ Active Cave Entrance (Visited)';
+            } else {
+              entityDesc = '🕳️ Cave Sub-Dungeon Portal';
+            }
+          }
           
           if (entityDesc) {
             elCell.dataset.entityType = ent.type;
@@ -1350,7 +1358,15 @@ function renderLocationMap() {
             badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
           }
           else if (ent.type === 'cave_entrance') {
-            badge.innerText = '🕳️';
+            if (ent.isExit) {
+              badge.innerText = '🪜';
+              badge.classList.add('exit-portal');
+            } else {
+              badge.innerText = '🕳️';
+              if (ent.visited) {
+                badge.classList.add('visited-portal');
+              }
+            }
             badge.addEventListener('click', () => triggerEnterCavePortal(coordKey, ent));
           }
 
@@ -1442,12 +1458,41 @@ function getAdjacentUnplacedSlots(placed) {
 
 // Enter Cave Sub-Dungeon Portal
 function triggerEnterCavePortal(coordKey, entity) {
-  STATE.party.currentLocationId = entity.targetLocationId;
-  generateLocationMap(entity.targetLocationId, 'mountain');
-  STATE.party.localX = 5;
-  STATE.party.localY = 5;
-  notify('STATE_UPDATED');
-  logLocation('Stepped down into the deep Jotunn Crag Cave chambers.');
+  if (entity.isExit) {
+    // Going back to parent location
+    STATE.party.currentLocationId = entity.targetLocationId;
+    const [px, py] = entity.targetCoords.split(',').map(Number);
+    STATE.party.localX = px;
+    STATE.party.localY = py;
+
+    // Mark the parent cave entrance as visited (if it exists)
+    const parentLoc = STATE.locations[entity.targetLocationId];
+    if (parentLoc) {
+      const parentTile = parentLoc.placedTiles[entity.targetCoords];
+      if (parentTile && parentTile.entity) {
+        parentTile.entity.visited = true;
+      }
+    }
+
+    autoDiscoverAdjacent(entity.targetLocationId);
+    notify('STATE_UPDATED');
+    logLocation('Climbed back up from the damp cave chambers.');
+  } else {
+    // Going down to sub-cave
+    const parentLocationId = STATE.party.currentLocationId;
+    const parentCoords = coordKey;
+
+    entity.visited = true; // Mark entrance in parent as visited
+
+    STATE.party.currentLocationId = entity.targetLocationId;
+    generateLocationMap(entity.targetLocationId, 'mountain', parentLocationId, parentCoords);
+    STATE.party.localX = 5;
+    STATE.party.localY = 5;
+
+    autoDiscoverAdjacent(entity.targetLocationId);
+    notify('STATE_UPDATED');
+    logLocation('Stepped down into the deep Jotunn Crag Cave chambers.');
+  }
 }
 
 // Renders choice dialogs for location interactions

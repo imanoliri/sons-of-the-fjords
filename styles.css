@@ -403,6 +403,29 @@ body {
   font-size: 1.4rem;
   filter: drop-shadow(0 0 4px rgba(255,255,255,0.7));
   z-index: 2;
+  transition: filter 0.3s ease, transform 0.3s ease;
+}
+
+.location-entity.exit-portal {
+  filter: drop-shadow(0 0 6px var(--color-thor));
+  animation: portalPulseExit 2.5s infinite ease-in-out;
+}
+
+.location-entity.visited-portal {
+  filter: drop-shadow(0 0 6px var(--text-accent));
+  animation: portalPulseVisited 2.5s infinite ease-in-out;
+}
+
+@keyframes portalPulseExit {
+  0% { transform: scale(1); filter: drop-shadow(0 0 4px var(--color-thor)); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 10px var(--color-thor)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 4px var(--color-thor)); }
+}
+
+@keyframes portalPulseVisited {
+  0% { transform: scale(1); filter: drop-shadow(0 0 4px var(--text-accent)); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 10px var(--text-accent)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 4px var(--text-accent)); }
 }
 
 .tile-border-highlight {

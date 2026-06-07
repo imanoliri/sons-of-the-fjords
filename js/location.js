@@ -6,7 +6,7 @@ import { STATE } from './state.js';
 import { LOCATION_CONFIG as CFG } from './config/location.js';
 
 // Spawns/Initializes the Carcassonne stack for a location
-export function generateLocationMap(locationId, worldTileTerrain) {
+export function generateLocationMap(locationId, worldTileTerrain, parentLocationId = null, parentCoords = null) {
   // Return existing state if already initialized
   if (STATE.locations[locationId]) {
     return STATE.locations[locationId];
@@ -47,8 +47,20 @@ export function generateLocationMap(locationId, worldTileTerrain) {
     }
   }
 
+  // Spawn exit entity if this is a sub-cave
+  let startEntity = null;
+  if (parentLocationId && parentCoords) {
+    startEntity = {
+      type: 'cave_entrance',
+      targetLocationId: parentLocationId,
+      targetCoords: parentCoords,
+      isExit: true,
+      visited: true
+    };
+  }
+
   const placedTiles = {};
-  placedTiles[`${sx},${sy}`] = { terrainType: st, revealed: true, entity: null };
+  placedTiles[`${sx},${sy}`] = { terrainType: st, revealed: true, entity: startEntity };
 
   const state = {
     isDiscovered: true,
