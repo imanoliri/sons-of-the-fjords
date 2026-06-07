@@ -61,11 +61,9 @@ export const GODS_CONFIG = {
     }
   },
 
-  // Combat blessings, milestones, and wrath modifiers
   modifiers: {
-    blessings: {
-      odin: { targetType: 'huntsman', range: 2, dmg: 1 },
-      thor: { targetType: 'berserker', dmg: 3, speed: 1 }
+    wrath: {
+      freya: { maxHpPenalty: -10 }
     },
     milestones: {
       odin: [
@@ -82,8 +80,9 @@ export const GODS_CONFIG = {
         { index: 2, targetType: 'shieldmaiden', dmg: 2 }
       ]
     },
-    wrath: {
-      freya: { maxHpPenalty: -10 }
+    blessings: {
+      odin: { targetType: 'huntsman', range: 2, dmg: 1 },
+      thor: { targetType: 'berserker', dmg: 3, speed: 1 }
     }
   },
 
@@ -102,7 +101,6 @@ export const GODS_CONFIG = {
         '5. Repeat: each sacrifice grants +1 Favor toward the next milestone',
         '6. Alternative: Kill 3 Wolves (🐺) or 1 Giant (❄️) to gain 1 Favor'
       ],
-      buff: 'Huntsmen gain +2 Attack Range & +1 DMG per turn.',
       wrath: 'Wrath: Random unit loses 1 HP every 3 world steps.',
       milestoneEffects: [
         'Fog of war reveals 1 extra tile on each move.',
@@ -110,7 +108,8 @@ export const GODS_CONFIG = {
         'All Huntsmen gain +1 Attack Range.',
         'Berserkers gain +1 DMG per combat tick.',
         null
-      ]
+      ],
+      buff: 'Huntsmen gain +2 Attack Range & +1 DMG per turn.'
     },
     thor: {
       title: 'Thor — The Thunderer',
@@ -125,7 +124,6 @@ export const GODS_CONFIG = {
         '5. Repeat: each sacrifice grants +1 Favor toward the next milestone',
         '6. Alternative: Kill 3 Draugrs (🧟) or 1 Lindwurm (🐉) to gain 1 Favor'
       ],
-      buff: 'Berserkers gain +3 DMG and +1 Speed.',
       wrath: 'Wrath: Storms during travel cost +1 extra Food on land and +1 extra Wood on sea per step.',
       milestoneEffects: [
         'Berserkers gain +1 DMG in combat.',
@@ -133,7 +131,8 @@ export const GODS_CONFIG = {
         'Enemy spawn rate slowed by 10%.',
         'All units gain +5 max HP.',
         null
-      ]
+      ],
+      buff: 'Berserkers gain +3 DMG and +1 Speed.'
     },
     freya: {
       title: 'Freya — Goddess of Love & Life',
@@ -148,7 +147,6 @@ export const GODS_CONFIG = {
         '5. Repeat: each sacrifice grants +1 Favor toward the next milestone',
         '6. Alternative: Sell 3 Sheep (🐑) or 10 Wood (🪵) to gain 1 Favor'
       ],
-      buff: 'Shieldmaidens heal 2 HP per combat tick when not in melee.',
       wrath: 'Wrath: Recruited units start with -10 max HP.',
       milestoneEffects: [
         'Shieldmaidens gain +5 max HP.',
@@ -156,7 +154,8 @@ export const GODS_CONFIG = {
         'Shieldmaidens gain +2 DMG.',
         'Shieldmaidens block 1 DMG per hit.',
         null
-      ]
+      ],
+      buff: 'Shieldmaidens heal 2 HP per combat tick when not in melee.'
     },
     hel: {
       title: 'Hel — Goddess of the Underworld',
@@ -170,7 +169,6 @@ export const GODS_CONFIG = {
         '3. Open the Town screen → Temple section → click <b>Appease Hel</b>',
         '4. Repeat: each sacrifice grants +1 Favor toward the next milestone'
       ],
-      buff: 'Fallen enemies have a 50% chance to rise as allied undead for 3 ticks.',
       wrath: 'Wrath: Dead band members cannot be replaced for 5 turns.',
       milestoneEffects: [
         'Enemies deal -1 DMG.',
@@ -178,7 +176,8 @@ export const GODS_CONFIG = {
         'Slain enemies drop +1 extra Gold.',
         'Gold cost to recruit is reduced by 1.',
         null
-      ]
+      ],
+      buff: 'Fallen enemies have a 50% chance to rise as allied undead for 3 ticks.'
     },
     loki: {
       title: 'Loki — The Trickster',
@@ -192,7 +191,6 @@ export const GODS_CONFIG = {
         '3. Open the Town screen → Temple section → click <b>Appease Loki</b>',
         '4. Repeat: each sacrifice grants +1 Favor toward the next milestone'
       ],
-      buff: 'Chaos Mirror: 25% chance for spawning monsters to be Charmed, spawning on the left and fighting for you.',
       wrath: 'Wrath: Random event triggers each world move (ambush, resource loss, or unit injury).',
       milestoneEffects: [
         'Chest loot gives +1 extra Gold.',
@@ -200,7 +198,8 @@ export const GODS_CONFIG = {
         'One enemy per wave spawns confused (fights allies for 2 ticks).',
         'Town prices reduced by 1 Gold each.',
         null
-      ]
+      ],
+      buff: 'Chaos Mirror: 25% chance for spawning monsters to be Charmed, spawning on the left and fighting for you.'
     }
   }
 };
