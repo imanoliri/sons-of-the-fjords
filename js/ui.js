@@ -708,7 +708,57 @@ function initTooltipEvents() {
   document.body.addEventListener('mouseover', (e) => {
     const godTarget = e.target.closest('[data-god-tooltip]');
     if (godTarget) {
-      // Deactivated: popup fulfills this function
+      const section = godTarget.dataset.tooltipSection;
+      if (section === 'identity') {
+        // Deactivated: popup fulfills this function
+        return;
+      }
+
+      const gKey = godTarget.dataset.godTooltip;
+      const lore = GOD_LORE[gKey];
+      if (!lore) return;
+
+      let header = '';
+      let content = '';
+
+      if (section === 'milestone') {
+        const idx = parseInt(godTarget.dataset.milestoneIdx);
+        const achieved = STATE.godQuests[gKey][idx];
+        header = `${lore.icon} Milestone ${['I', 'II', 'III', 'IV', 'V'][idx]}`;
+        
+        let statusHtml = achieved 
+          ? `<span style="color:var(--color-success)">✅ Completed</span>` 
+          : `<span style="color:var(--text-muted)">🔒 Unlocked at Favor +${idx + 1}</span>`;
+          
+        let effectHtml = '';
+        if (idx === 4) {
+          effectHtml = `<b style="color:${lore.color}">Blessing: ${lore.buff}</b>`;
+        } else {
+          effectHtml = `<b style="color:${lore.color}">${lore.milestoneEffects[idx]}</b>`;
+        }
+        
+        content = `${statusHtml}<br><div style="margin-top:4px;">${effectHtml}</div>`;
+      } else if (section === 'champion') {
+        header = `${lore.icon} Champion Buff`;
+        content = `<b style="color:${lore.color}">${lore.buff}</b>`;
+      } else if (section === 'champion_locked') {
+        header = `${lore.icon} Champion Buff`;
+        content = `<span style="color:var(--text-muted)">reach Milestone 5 to unlock:</span><br><b style="color:${lore.color}">${lore.buff}</b>`;
+      } else if (section === 'curse') {
+        header = `${lore.icon} Active Curse (${gKey.toUpperCase()})`;
+        content = `<b style="color:var(--color-danger)">${lore.wrath}</b>`;
+      }
+
+      elTooltip.innerHTML = `
+        <div class="game-tooltip-header">
+          <span>${header}</span>
+        </div>
+        <div class="game-tooltip-contents">${content}</div>
+      `;
+      elTooltip.style.borderLeftColor = section === 'curse' ? 'var(--color-danger)' : lore.color;
+      elTooltip.style.left = (e.clientX + 15) + 'px';
+      elTooltip.style.top = (e.clientY + 15) + 'px';
+      elTooltip.style.display = 'flex';
       return;
     }
   });
@@ -717,7 +767,9 @@ function initTooltipEvents() {
   document.body.addEventListener('mouseover', (e) => {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
     if (!tile) {
-      elTooltip.style.display = 'none';
+      if (!e.target.closest('[data-god-tooltip]')) {
+        elTooltip.style.display = 'none';
+      }
       return;
     }
     
@@ -815,6 +867,7 @@ function initTooltipEvents() {
 
   document.body.addEventListener('mouseout', (e) => {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
+    const godTarget = e.target.closest('[data-god-tooltip]');
     
     if (tile && (tile.classList.contains('world-tile') || tile.dataset.entityType === 'burial_mound')) {
       const enteringTile = e.relatedTarget?.closest('.world-tile, .location-tile');
@@ -823,6 +876,10 @@ function initTooltipEvents() {
         elTooltip.style.display = 'none';
       }
     } else if (tile && !e.relatedTarget?.closest('.world-tile, .location-tile, .combat-cell')) {
+      elTooltip.style.display = 'none';
+    }
+    
+    if (godTarget && !e.relatedTarget?.closest('[data-god-tooltip]')) {
       elTooltip.style.display = 'none';
     }
   });
@@ -2389,7 +2446,7 @@ function showGodLorePopup(gKey) {
   const milestoneList = lore.milestoneEffects.map((effect, idx) => {
     let desc = effect;
     if (!desc && idx === 4) {
-      desc = "Unlocks this god's secret Blessing!";
+      desc = `Unlocks Blessing: ${lore.buff}`;
     }
     const check = track[idx] ? '✅' : '🔒';
     const isLockedClass = track[idx] ? '' : ' locked';
