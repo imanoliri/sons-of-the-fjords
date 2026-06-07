@@ -317,3 +317,81 @@ export function executeSacrificeSheep(entity) {
   }
   return null;
 }
+
+/* --- Town Transaction state methods --- */
+
+export function buyFood(cost, amount) {
+  if (STATE.resources.gold >= cost) {
+    adjustResource('gold', -cost);
+    adjustResource('food', amount);
+    return { success: true, message: `Bought ${amount} food supplies for ${cost} gold.` };
+  }
+  return { success: false, message: 'Not enough gold to trade food!' };
+}
+
+export function buyWood(cost, amount) {
+  if (STATE.resources.gold >= cost) {
+    adjustResource('gold', -cost);
+    adjustResource('wood', amount);
+    return { success: true, message: `Bought ${amount} wood planks for ${cost} gold.` };
+  }
+  return { success: false, message: 'Not enough gold to buy wood!' };
+}
+
+export function sellSheepDynamic(gain, amount = 1) {
+  if (STATE.resources.sheep >= amount) {
+    adjustResource('sheep', -amount);
+    adjustResource('gold', gain);
+    const targets = GC.alternativeFavor.freya;
+    STATE.freyaSheepSold = (STATE.freyaSheepSold || 0) + amount;
+    if (STATE.freyaSheepSold >= targets.sheepTarget) {
+      STATE.freyaSheepSold = 0;
+      adjustFavor('freya', 1);
+      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.sheepTarget} sheep` });
+    }
+    return { success: true, message: `Sold ${amount} livestock sheep for ${gain} gold.` };
+  }
+  return { success: false, message: 'No sheep available to trade!' };
+}
+
+export function sellWoodDynamic(gain, amount = 10) {
+  if (STATE.resources.wood >= amount) {
+    adjustResource('wood', -amount);
+    adjustResource('gold', gain);
+    const targets = GC.alternativeFavor.freya;
+    STATE.freyaWoodSold = (STATE.freyaWoodSold || 0) + amount;
+    if (STATE.freyaWoodSold >= targets.woodTarget) {
+      const favorGained = Math.floor(STATE.freyaWoodSold / targets.woodTarget);
+      STATE.freyaWoodSold = STATE.freyaWoodSold % targets.woodTarget;
+      adjustFavor('freya', favorGained);
+      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.woodTarget} wood` });
+    }
+    return { success: true, message: `Sold ${amount} wood planks for ${gain} gold.` };
+  }
+  return { success: false, message: `Not enough wood to sell (requires ${amount} wood)!` };
+}
+
+export function buySheepDynamic(cost, amount = 1) {
+  if (STATE.resources.gold >= cost) {
+    adjustResource('gold', -cost);
+    adjustResource('sheep', amount);
+    return { success: true, message: `Bought ${amount} sheep for ${cost} gold.` };
+  }
+  return { success: false, message: 'Not enough gold to purchase sheep!' };
+}
+
+export function buyRecruit(type, cost) {
+  if (STATE.godFavor.hel === -5) {
+    return { success: false, message: "Hel's Wrath: Dead band members cannot be replaced!" };
+  }
+  if (STATE.band.length >= SC.maxBandSize) {
+    return { success: false, message: `Your Drakkar deck is full (max ${SC.maxBandSize} soldiers)!` };
+  }
+  if (STATE.resources.gold >= cost) {
+    adjustResource('gold', -cost);
+    recruitSoldier(type);
+    const label = type.charAt(0).toUpperCase() + type.slice(1);
+    return { success: true, message: `Enrolled a ${label} to your band!` };
+  }
+  return { success: false, message: 'Not enough gold to hire recruit!' };
+}

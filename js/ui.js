@@ -2,7 +2,7 @@
    UI MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, sellSheep, sellWood, executePlunderMound, executeSacrificeSheep } from './state.js';
+import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, executePlunderMound, executeSacrificeSheep, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, buyRecruit } from './state.js';
 import { getAdjacentCoords } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
 import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats } from './combat.js';
@@ -158,42 +158,21 @@ export function initUIBindings() {
 
   // Recruiting action handlers
   bindButton('btn-recruit-shieldmaiden', () => {
-    if (STATE.godFavor.hel === -5) {
-      logWorld("Hel's Wrath: Dead band members cannot be replaced!", 'warn-message');
-      return;
-    }
     const cost = TOWN_CONFIG.recruitCosts.shieldmaiden;
-    if (STATE.resources.gold >= cost && STATE.band.length < SOLDIERS_CONFIG.maxBandSize) {
-      adjustResource('gold', -cost); recruitSoldier('shieldmaiden');
-      logWorld('Enrolled a Shieldmaiden to your band!', 'gain-message');
-    } else if (STATE.band.length >= SOLDIERS_CONFIG.maxBandSize) { logWorld(`Your Drakkar deck is full (max ${SOLDIERS_CONFIG.maxBandSize} soldiers)!`, 'warn-message');
-    } else { logWorld('Not enough gold to hire recruit!', 'warn-message'); }
+    const res = buyRecruit('shieldmaiden', cost);
+    logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
   });
 
   bindButton('btn-recruit-berserker', () => {
-    if (STATE.godFavor.hel === -5) {
-      logWorld("Hel's Wrath: Dead band members cannot be replaced!", 'warn-message');
-      return;
-    }
     const cost = TOWN_CONFIG.recruitCosts.berserker;
-    if (STATE.resources.gold >= cost && STATE.band.length < SOLDIERS_CONFIG.maxBandSize) {
-      adjustResource('gold', -cost); recruitSoldier('berserker');
-      logWorld('Enrolled a Berserker to your band!', 'gain-message');
-    } else if (STATE.band.length >= SOLDIERS_CONFIG.maxBandSize) { logWorld(`Your Drakkar deck is full (max ${SOLDIERS_CONFIG.maxBandSize} soldiers)!`, 'warn-message');
-    } else { logWorld('Not enough gold!', 'warn-message'); }
+    const res = buyRecruit('berserker', cost);
+    logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
   });
 
   bindButton('btn-recruit-huntsman', () => {
-    if (STATE.godFavor.hel === -5) {
-      logWorld("Hel's Wrath: Dead band members cannot be replaced!", 'warn-message');
-      return;
-    }
     const cost = TOWN_CONFIG.recruitCosts.huntsman;
-    if (STATE.resources.gold >= cost && STATE.band.length < SOLDIERS_CONFIG.maxBandSize) {
-      adjustResource('gold', -cost); recruitSoldier('huntsman');
-      logWorld('Enrolled a Huntsman to your band!', 'gain-message');
-    } else if (STATE.band.length >= SOLDIERS_CONFIG.maxBandSize) { logWorld(`Your Drakkar is full (max ${SOLDIERS_CONFIG.maxBandSize} soldiers)!`, 'warn-message');
-    } else { logWorld('Not enough gold!', 'warn-message'); }
+    const res = buyRecruit('huntsman', cost);
+    logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
   });
 
   // Repair Drakkar
@@ -1532,59 +1511,29 @@ function renderTownScreen() {
     marketList.innerHTML = '';
     const trades = [
       { id: 'btn-buy-food', label: `Buy ${dp.food.foodGained} Food (-${foodCost} Gold)`, btnText: 'Buy [F]', action: () => {
-        if (STATE.resources.gold >= foodCost) {
-          adjustResource('gold', -foodCost);
-          adjustResource('food', dp.food.foodGained);
-          logWorld(`Bought ${dp.food.foodGained} food supplies for ${foodCost} gold.`, 'gain-message');
-          renderTownScreen();
-        } else { logWorld('Not enough gold to trade food!', 'warn-message'); }
+        const res = buyFood(foodCost, dp.food.foodGained);
+        logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+        renderTownScreen();
       }},
       { id: 'btn-buy-wood', label: `Buy ${dp.woodBuy.woodGained} Wood (-${woodCost} Gold)`, btnText: 'Buy [W]', action: () => {
-        if (STATE.resources.gold >= woodCost) {
-          adjustResource('gold', -woodCost);
-          adjustResource('wood', dp.woodBuy.woodGained);
-          logWorld(`Bought ${dp.woodBuy.woodGained} wood planks for ${woodCost} gold.`, 'gain-message');
-          renderTownScreen();
-        } else { logWorld('Not enough gold to buy wood!', 'warn-message'); }
+        const res = buyWood(woodCost, dp.woodBuy.woodGained);
+        logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+        renderTownScreen();
       }},
       { id: 'btn-sell-sheep', label: `Sell ${dp.sheepSell.sheepSold} Sheep (+${sheepSellGain} Gold)`, btnText: 'Sell [G]', action: () => {
-        if (STATE.resources.sheep >= dp.sheepSell.sheepSold) {
-          adjustResource('sheep', -dp.sheepSell.sheepSold);
-          adjustResource('gold', sheepSellGain);
-          const targets = GODS_CONFIG.alternativeFavor.freya;
-          STATE.freyaSheepSold = (STATE.freyaSheepSold || 0) + dp.sheepSell.sheepSold;
-          if (STATE.freyaSheepSold >= targets.sheepTarget) {
-            STATE.freyaSheepSold = 0;
-            adjustFavor('freya', 1);
-            notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.sheepTarget} sheep` });
-          }
-          logWorld(`Sold ${dp.sheepSell.sheepSold} livestock sheep for ${sheepSellGain} gold.`, 'gain-message');
-          renderTownScreen();
-        } else { logWorld('No sheep available to trade!', 'warn-message'); }
+        const res = sellSheepDynamic(sheepSellGain, dp.sheepSell.sheepSold);
+        logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+        renderTownScreen();
       }},
       { id: 'btn-sell-wood', label: `Sell ${dp.woodSell.woodSold} Wood (+${woodSellGain} Gold)`, btnText: 'Sell [H]', action: () => {
-        const targets = GODS_CONFIG.alternativeFavor.freya;
-        if (STATE.resources.wood >= dp.woodSell.woodSold) {
-          adjustResource('wood', -dp.woodSell.woodSold);
-          adjustResource('gold', woodSellGain);
-          STATE.freyaWoodSold = (STATE.freyaWoodSold || 0) + dp.woodSell.woodSold;
-          if (STATE.freyaWoodSold >= targets.woodTarget) {
-            const favorGained = Math.floor(STATE.freyaWoodSold / targets.woodTarget);
-            STATE.freyaWoodSold = STATE.freyaWoodSold % targets.woodTarget;
-            adjustFavor('freya', favorGained);
-            notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.woodTarget} wood` });
-          }
-          logWorld(`Sold ${dp.woodSell.woodSold} wood planks for ${woodSellGain} gold.`, 'gain-message');
-          renderTownScreen();
-        } else { logWorld(`Not enough wood to sell (requires ${dp.woodSell.woodSold} wood)!`, 'warn-message'); }
+        const res = sellWoodDynamic(woodSellGain, dp.woodSell.woodSold);
+        logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+        renderTownScreen();
       }},
       { id: 'btn-buy-sheep', label: `Buy ${dp.sheepBuy.sheepGained} Sheep (-${sheepBuyCost} Gold)`, btnText: 'Buy [S]', action: () => {
-        if (STATE.resources.gold >= sheepBuyCost) {
-          adjustResource('gold', -sheepBuyCost);
-          adjustResource('sheep', dp.sheepBuy.sheepGained);
-          logWorld(`Bought ${dp.sheepBuy.sheepGained} sheep for ${sheepBuyCost} gold.`, 'gain-message');
-          renderTownScreen();
-        } else { logWorld('Not enough gold to purchase sheep!', 'warn-message'); }
+        const res = buySheepDynamic(sheepBuyCost, dp.sheepBuy.sheepGained);
+        logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+        renderTownScreen();
       }}
     ];
 
