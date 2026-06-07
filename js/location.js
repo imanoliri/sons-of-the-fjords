@@ -193,7 +193,7 @@ function generateRandomEntity(locationId, terrain, x = null, y = null) {
         locState.caveEntranceCount = (locState.caveEntranceCount || 0) + 1;
       } else {
         const currentCount = locState.caveEntranceCount || 0;
-        const rollChance = 0.02 / Math.pow(2, currentCount);
+        const rollChance = CFG.cavePortalBaseChance / Math.pow(CFG.cavePortalDecayFactor, currentCount);
         if (Math.random() < rollChance) {
           type = 'cave_entrance';
           locState.hasCaveEntranceSpawned = true;

@@ -70,8 +70,9 @@ export const LOCATION_CONFIG = {
     dolmen: 1.00    // 0.85 – 1.00
   },
 
-  // Chance a cave terrain cell spawns a cave_entrance instead of normal entity
-  caveEntranceChance: 0.05,
+  // Chance settings for cave portals under diminishing returns
+  cavePortalBaseChance: 0.02,
+  cavePortalDecayFactor: 2,
 
   // Treasure loot settings
   treasure: {
