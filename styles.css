@@ -617,12 +617,12 @@ body {
   justify-content: center;
   height: 100%;
   overflow-y: auto;
-  padding: 1rem;
+  padding: 0 1rem 1rem 1rem;
   box-sizing: border-box;
 }
 
 .combat-grid-wrapper {
-  padding: 1.5rem;
+  padding: 0.25rem 1.5rem 1.5rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 0;
