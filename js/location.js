@@ -162,7 +162,7 @@ export function discoverTile(locationId, x, y) {
   const isFirstCaveEntranceNeeded = terrain === 'cave' && !locState.hasCaveEntranceSpawned;
 
   if (isTraversable && (isFirstCaveEntranceNeeded || Math.random() < CFG.entitySpawnChance)) {
-    entity = generateRandomEntity(locationId, terrain);
+    entity = generateRandomEntity(locationId, terrain, x, y);
   }
 
   locState.placedTiles[coordKey] = { terrainType: terrain, revealed: true, entity };
@@ -170,7 +170,7 @@ export function discoverTile(locationId, x, y) {
 }
 
 // Generate random entity for location tile
-function generateRandomEntity(locationId, terrain) {
+function generateRandomEntity(locationId, terrain, x = null, y = null) {
   const roll = Math.random();
   const w = CFG.entityWeights;
 
@@ -233,7 +233,8 @@ function generateRandomEntity(locationId, terrain) {
   }
 
   if (type === 'cave_entrance') {
-    return { type: 'cave_entrance', targetLocationId: `${locationId}_sub_cave` };
+    const targetId = (x !== null && y !== null) ? `${locationId}_sub_cave_${x}_${y}` : `${locationId}_sub_cave`;
+    return { type: 'cave_entrance', targetLocationId: targetId };
   }
 
   return null;
