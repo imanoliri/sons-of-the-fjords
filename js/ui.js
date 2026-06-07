@@ -703,6 +703,74 @@ const GOD_LORE = {
 
 // Global tooltip delegation
 function initTooltipEvents() {
+  let hoverTimeout = null;
+  let detailLockedTile = null;
+  let lastClientX = 0;
+  let lastClientY = 0;
+
+  function showWorldTileTooltip(tile, clientX, clientY, isDetailed) {
+    const x = tile.dataset.x;
+    const y = tile.dataset.y;
+    const terrain = tile.dataset.terrain;
+    const locationName = tile.dataset.locationName;
+    const locationType = tile.dataset.locationType;
+    const hasPlayer = tile.dataset.hasPlayer === 'true';
+
+    const headerText = `${terrain ? terrain.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Terrain'}`;
+    const coordsText = `X: ${x}, Y: ${y}`;
+    
+    let borderAccent = 'var(--text-accent)';
+    if (terrain === 'water') borderAccent = 'var(--tile-water)';
+    else if (terrain === 'deep_water') borderAccent = 'var(--tile-deep-water)';
+    else if (terrain === 'river') borderAccent = 'var(--tile-river)';
+    else if (terrain === 'plains') borderAccent = 'var(--tile-plains)';
+    else if (terrain === 'forest') borderAccent = 'var(--tile-forest)';
+    else if (terrain === 'snow') borderAccent = 'var(--tile-snow)';
+    else if (terrain === 'mountain') borderAccent = 'var(--tile-mountain)';
+
+    let contentsText = '';
+
+    if (isDetailed) {
+      let contents = [];
+      if (hasPlayer) {
+        contents.push('🚢 Drakkar Longship');
+      }
+      if (locationName) {
+        const typeLabel = locationType === 'town' ? 'Town' : 'Raid Site';
+        contents.push(`🏘️ ${locationName} (${typeLabel})`);
+        const danger = tile.dataset.dangerLevel;
+        if (danger && locationType === 'raid') {
+          contents.push(`💀 Danger Level: ${'💀'.repeat(danger)} (Level ${danger})`);
+        }
+      }
+      
+      if (contents.length === 0) {
+        if (terrain === 'deep_water') {
+          contents.push('🌊 Deep Water. Extremely dangerous, non-traversable.');
+        } else if (terrain === 'water') {
+          contents.push('Open water. Safe sailing, costs 1 Food per step.');
+        } else if (terrain === 'river') {
+          contents.push('River stream. Fast sailing, costs 1 Food per step.');
+        } else {
+          contents.push('Rugged land. Slow travel, costs 3 Food per step. Dangerous creature attacks!');
+        }
+      }
+      contentsText = contents.join('<br>');
+    }
+
+    elTooltip.innerHTML = `
+      <div class="game-tooltip-header">
+        <span>${headerText}</span>
+        <span class="game-tooltip-coords">${coordsText}</span>
+      </div>
+      ${contentsText ? `<div class="game-tooltip-contents">${contentsText}</div>` : ''}
+    `;
+    elTooltip.style.borderLeftColor = borderAccent;
+    elTooltip.style.display = 'flex';
+    elTooltip.style.left = (clientX + 15) + 'px';
+    elTooltip.style.top = (clientY + 15) + 'px';
+  }
+
   // ── God quest / .has-tooltip elements ──
   document.body.addEventListener('mouseover', (e) => {
     const godTarget = e.target.closest('[data-god-tooltip]');
@@ -749,7 +817,6 @@ function initTooltipEvents() {
         content = `<span style="color:var(--text-muted)">reach Milestone 5 to unlock the champion buff of this god</span>`;
       }
 
-
       elTooltip.innerHTML = `
         <div class="game-tooltip-header">
           <span>${header}</span>
@@ -762,10 +829,10 @@ function initTooltipEvents() {
     }
   });
 
+  // World, location, and combat tooltips
   document.body.addEventListener('mouseover', (e) => {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
     if (!tile) {
-      // Only hide if not hovering a god tooltip target
       if (!e.target.closest('[data-god-tooltip]')) {
         elTooltip.style.display = 'none';
       }
@@ -777,57 +844,26 @@ function initTooltipEvents() {
       return;
     }
 
+    if (tile.classList.contains('world-tile')) {
+      if (hoverTimeout) clearTimeout(hoverTimeout);
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+      if (detailLockedTile === tile) {
+        showWorldTileTooltip(tile, lastClientX, lastClientY, true);
+      } else {
+        hoverTimeout = setTimeout(() => {
+          showWorldTileTooltip(tile, lastClientX, lastClientY, false);
+        }, 400);
+      }
+      return;
+    }
+
     let headerText = '';
     let coordsText = '';
     let contentsText = '';
     let borderAccent = 'var(--text-accent)';
 
-    if (tile.classList.contains('world-tile')) {
-      const x = tile.dataset.x;
-      const y = tile.dataset.y;
-      const terrain = tile.dataset.terrain;
-      const locationName = tile.dataset.locationName;
-      const locationType = tile.dataset.locationType;
-      const hasPlayer = tile.dataset.hasPlayer === 'true';
-
-      headerText = `${terrain ? terrain.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Terrain'}`;
-      coordsText = `X: ${x}, Y: ${y}`;
-      
-      let contents = [];
-      if (hasPlayer) {
-        contents.push('🚢 Drakkar Longship');
-      }
-      if (locationName) {
-        const typeLabel = locationType === 'town' ? 'Town' : 'Raid Site';
-        contents.push(`🏘️ ${locationName} (${typeLabel})`);
-        const danger = tile.dataset.dangerLevel;
-        if (danger && locationType === 'raid') {
-          contents.push(`💀 Danger Level: ${'💀'.repeat(danger)} (Level ${danger})`);
-        }
-      }
-      
-      if (contents.length === 0) {
-        if (terrain === 'deep_water') {
-          contents.push('🌊 Deep Water. Extremely dangerous, non-traversable.');
-        } else if (terrain === 'water') {
-          contents.push('Open water. Safe sailing, costs 1 Food per step.');
-        } else if (terrain === 'river') {
-          contents.push('River stream. Fast sailing, costs 1 Food per step.');
-        } else {
-          contents.push('Rugged land. Slow travel, costs 3 Food per step. Dangerous creature attacks!');
-        }
-      }
-      contentsText = contents.join('<br>');
-
-      if (terrain === 'water') borderAccent = 'var(--tile-water)';
-      else if (terrain === 'deep_water') borderAccent = 'var(--tile-deep-water)';
-      else if (terrain === 'river') borderAccent = 'var(--tile-river)';
-      else if (terrain === 'plains') borderAccent = 'var(--tile-plains)';
-      else if (terrain === 'forest') borderAccent = 'var(--tile-forest)';
-      else if (terrain === 'snow') borderAccent = 'var(--tile-snow)';
-      else if (terrain === 'mountain') borderAccent = 'var(--tile-mountain)';
-
-    } else if (tile.classList.contains('location-tile')) {
+    if (tile.classList.contains('location-tile')) {
       const x = tile.dataset.x;
       const y = tile.dataset.y;
       const terrain = tile.dataset.terrain;
@@ -911,19 +947,43 @@ function initTooltipEvents() {
     elTooltip.style.display = 'flex';
   });
 
+  // Track click to show detailed tooltip on world map tiles
+  document.body.addEventListener('click', (e) => {
+    const tile = e.target.closest('.world-tile');
+    if (tile && !tile.classList.contains('fog')) {
+      if (hoverTimeout) clearTimeout(hoverTimeout);
+      detailLockedTile = tile;
+      showWorldTileTooltip(tile, e.clientX, e.clientY, true);
+    }
+  });
+
   document.body.addEventListener('mousemove', (e) => {
     if (elTooltip.style.display === 'flex') {
       elTooltip.style.left = (e.clientX + 15) + 'px';
       elTooltip.style.top = (e.clientY + 15) + 'px';
+    }
+    const tile = e.target.closest('.world-tile');
+    if (tile) {
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
     }
   });
 
   document.body.addEventListener('mouseout', (e) => {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
     const godTarget = e.target.closest('[data-god-tooltip]');
-    if (tile && !e.relatedTarget?.closest('.world-tile, .location-tile, .combat-cell')) {
+    
+    if (tile && tile.classList.contains('world-tile')) {
+      const enteringTile = e.relatedTarget?.closest('.world-tile');
+      if (enteringTile !== tile) {
+        if (hoverTimeout) clearTimeout(hoverTimeout);
+        elTooltip.style.display = 'none';
+        detailLockedTile = null;
+      }
+    } else if (tile && !e.relatedTarget?.closest('.world-tile, .location-tile, .combat-cell')) {
       elTooltip.style.display = 'none';
     }
+    
     if (godTarget && !e.relatedTarget?.closest('[data-god-tooltip]')) {
       elTooltip.style.display = 'none';
     }
