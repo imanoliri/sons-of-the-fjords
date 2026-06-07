@@ -106,7 +106,7 @@ export const GODS_CONFIG = {
         'Fog of war reveals 1 extra tile on each move.',
         'Scouts reveal a 2-tile radius instead of 1.',
         'All Huntsmen gain +1 Attack Range.',
-        'Berserkers gain +1 DMG per combat tick.',
+        'Berserkers gain +1 DMG.',
         null
       ],
       buff: 'Huntsmen gain +2 Attack Range & +1 DMG.'
@@ -126,8 +126,8 @@ export const GODS_CONFIG = {
       ],
       wrath: 'Wrath: Storms during travel cost +1 extra Food on land and +1 extra Wood on sea per step.',
       milestoneEffects: [
-        'Berserkers gain +1 DMG in combat.',
-        'Berserkers move +1 Speed per tick.',
+        'Berserkers gain +1 DMG.',
+        'Berserkers move +1 Speed.',
         'Enemy spawn rate slowed by 10%.',
         'All units gain +5 max HP.',
         null
