@@ -562,10 +562,29 @@ body {
   font-size: 0.9rem;
 }
 
-.town-footer {
-  margin-top: 1.5rem;
+/* Shared close-X button for panels (town, quests) */
+.btn-close-x {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: none;
+  background: rgba(220, 50, 50, 0.75);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.1s;
+  z-index: 10;
+}
+.btn-close-x:hover {
+  background: rgba(220, 50, 50, 1);
+  transform: scale(1.12);
 }
 
 /* Combat Screen Layout */
@@ -900,11 +919,7 @@ body {
   width: 100%;
 }
 
-.quests-footer {
-  margin-top: 1.5rem;
-  display: flex;
-  justify-content: flex-end;
-}
+
 
 /* Modals Overlay */
 .modal-overlay {

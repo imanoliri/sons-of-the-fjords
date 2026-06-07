@@ -83,7 +83,8 @@
 
       <!-- SCREEN: TOWN INTERFACE -->
       <section class="screen screen-town hidden" id="screen-town">
-        <div class="town-box glass-panel">
+        <div class="town-box glass-panel" style="position:relative">
+          <button class="btn-close-x" id="btn-leave-town" title="Board the Drakkar">✕</button>
           <h2 class="logo-text" id="town-name">Kaufang Town</h2>
           <p class="subtitle">Friendly outpost. Trade goods, hire mercenaries, and seek divine aid.</p>
           
@@ -158,10 +159,7 @@
               </div>
             </div>
           </div>
-          
-          <div class="town-footer">
-            <button class="btn btn-primary" id="btn-leave-town">Board the Drakkar</button>
-          </div>
+
         </div>
       </section>
 
@@ -222,17 +220,15 @@
       
       <!-- SCREEN: QUEST / GOD ALIGNMENT -->
       <section class="screen screen-quests hidden" id="screen-quests">
-        <div class="quests-box glass-panel">
+        <div class="quests-box glass-panel" style="position:relative">
+          <button class="btn-close-x" id="btn-close-quests" title="Return to Expedition">✕</button>
           <h2 class="logo-text">Pantheon Alignment</h2>
           <p class="subtitle">Complete deity milestones (5/5) to gain permanent favors. Opposing gods will drain favor.</p>
           
           <div class="gods-tracks-container" id="gods-tracks-list">
             <!-- Generated dynamically for Odin, Thor, Freya, Hel, Loki -->
           </div>
-          
-          <div class="quests-footer">
-            <button class="btn btn-primary" id="btn-close-quests">Return to Expedition</button>
-          </div>
+
         </div>
       </section>
 
