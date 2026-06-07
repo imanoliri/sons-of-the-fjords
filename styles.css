@@ -1244,7 +1244,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  max-height: 400px;
+  max-height: 540px;
   overflow-y: auto;
   padding-right: 8px;
 }

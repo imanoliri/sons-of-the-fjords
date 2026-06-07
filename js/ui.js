@@ -2182,6 +2182,10 @@ function triggerEncounterEvent(coordKey, entity) {
     if (elModalEventCloseBtn) {
       elModalEventCloseBtn.style.display = 'none';
     }
+    const box = elModalEvent.querySelector('.modal-box');
+    if (box) {
+      box.style.maxWidth = '';
+    }
     showOverlay(elModalEvent);
     elModalEventChoices.innerHTML = '';
 
@@ -2453,27 +2457,20 @@ function showGodLorePopup(gKey) {
     return `<li class="god-lore-milestone-item${isLockedClass}">${check} Milestone ${idx + 1}: ${desc || ''}</li>`;
   }).join('');
 
-  const favorStepsHtml = lore.favorSteps.map(step => `<li>${step}</li>`).join('');
+  const favorActions = {
+    odin: "Appease with <b>Shard of Gungnir</b> at a Town Shrine, or kill Wolves/Giants.",
+    thor: "Appease with <b>Mjolnir's Core</b> at a Town Shrine, or kill Draugrs/Lindwurms.",
+    freya: "Appease with <b>Freya's Amber Tear</b> at a Town Shrine, or trade Sheep/Wood.",
+    hel: "Appease with <b>Hel's Urn of Ash</b> at a Town Shrine, or Sacrifice Sheep at Burial Mounds.",
+    loki: "Appease with <b>Loki's Trickster Coin</b> at a Town Shrine, or Plunder Burial Mounds."
+  };
+  const favorActionHtml = favorActions[gKey] || '';
 
   elModalEventBody.innerHTML = `
     <div class="god-lore-popup-body">
-      <p><b>🏺 Relic:</b> ${lore.relic}</p>
-      
       <div>
         <p class="god-lore-section-title" style="color: ${lore.color};">👑 Active Blessing (Champion Buff)</p>
         <p class="god-lore-section-content">${lore.buff}</p>
-      </div>
-
-      <div>
-        <p class="god-lore-section-title god-lore-curse-title">⚠️ Active Curse (Wrath)</p>
-        <p class="god-lore-section-content">${lore.wrath}</p>
-      </div>
-
-      <div>
-        <p class="god-lore-section-title">📋 How to gain Favor</p>
-        <ul class="god-lore-list">
-          ${favorStepsHtml}
-        </ul>
       </div>
 
       <div>
@@ -2482,6 +2479,18 @@ function showGodLorePopup(gKey) {
           ${milestoneList}
         </ul>
       </div>
+
+      <div>
+        <p class="god-lore-section-title god-lore-curse-title">⚠️ Active Curse (Wrath)</p>
+        <p class="god-lore-section-content">${lore.wrath}</p>
+      </div>
+
+      <p><b>🏺 Relic:</b> ${lore.relic}</p>
+
+      <div>
+        <p class="god-lore-section-title">📋 How to gain Favor</p>
+        <p class="god-lore-section-content">${favorActionHtml}</p>
+      </div>
     </div>
   `;
 
@@ -2489,7 +2498,12 @@ function showGodLorePopup(gKey) {
   if (elModalEventCloseBtn) {
     elModalEventCloseBtn.style.display = 'block';
   }
-  
+
+  const box = elModalEvent.querySelector('.modal-box');
+  if (box) {
+    box.style.maxWidth = '540px';
+  }
+
   showOverlay(elModalEvent);
   updateModalKeyboardNavigation();
 }
