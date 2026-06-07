@@ -8,6 +8,8 @@ import { discoverTile, generateLocationMap } from './location.js';
 import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats } from './combat.js';
 import { TOWN_CONFIG } from './config/town.js';
 import { MOVEMENT_CONFIG } from './config/movement.js';
+import { LOCATION_CONFIG } from './config/location.js';
+import { WORLD_CONFIG } from './config/world.js';
 import { GODS_CONFIG } from './config/gods.js';
 
 // DOM Selectors
@@ -19,6 +21,9 @@ const elSheep = document.getElementById('res-sheep').querySelector('.val');
 const elBand = document.getElementById('res-band').querySelector('.val');
 const elBlessing = document.getElementById('active-blessing-display');
 const elTooltip = document.getElementById('game-tooltip');
+const elDay = document.getElementById('res-day').querySelector('.val');
+const elWorldDifficultyStatus = document.getElementById('world-difficulty-status');
+const elLocationDifficultyStatus = document.getElementById('location-difficulty-status');
 
 // Screens
 const screens = {
@@ -721,6 +726,10 @@ function initTooltipEvents() {
       if (locationName) {
         const typeLabel = locationType === 'town' ? 'Town' : 'Raid Site';
         contents.push(`🏘️ ${locationName} (${typeLabel})`);
+        const danger = tile.dataset.dangerLevel;
+        if (danger && locationType === 'raid') {
+          contents.push(`💀 Danger Level: ${'💀'.repeat(danger)} (Level ${danger})`);
+        }
       }
       
       if (contents.length === 0) {
@@ -925,6 +934,10 @@ function attemptLocalMove(targetX, targetY) {
     // Automatically trigger interactions
     if (ent.type === 'treasure' && !ent.isLooted) {
       triggerEncounterEvent(coordKey, ent);
+    } else if (ent.type === 'wood_source' && !ent.isLooted) {
+      triggerEncounterEvent(coordKey, ent);
+    } else if (ent.type === 'ore_deposit' && !ent.isLooted) {
+      triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'burial_mound' && !ent.isExplored) {
       triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'dolmen' && !ent.isVisited) {
@@ -988,6 +1001,7 @@ function renderResourceBar() {
   elWood.innerText = STATE.resources.wood;
   elSheep.innerText = STATE.resources.sheep;
   elBand.innerText = STATE.band.length;
+  elDay.innerText = STATE.day || 1;
 
   if (STATE.activeBlessing) {
     elBlessing.innerHTML = `<span class="icon">✨</span> <span style="color: var(--color-${STATE.activeBlessing})">${STATE.activeBlessing.toUpperCase()}'S BLESSING</span>`;
@@ -1000,6 +1014,11 @@ function renderResourceBar() {
 function renderWorldMap() {
   elWorldMap.innerHTML = '';
   elWorldCoords.innerText = `Longship Pos - X: ${STATE.party.worldX}, Y: ${STATE.party.worldY}`;
+
+  const timeFactor = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.timeFactor) || 0.02;
+  const dayValue = STATE.day || 1;
+  const dayMulti = (dayValue * timeFactor).toFixed(2);
+  elWorldDifficultyStatus.innerText = `Day Multiplier: +${dayMulti}x (Day ${dayValue})`;
 
   const tiles = STATE.worldMap.tiles;
   const revealed = STATE.worldMap.revealed;
@@ -1026,6 +1045,7 @@ function renderWorldMap() {
         if (hasLocation) {
           elCell.dataset.locationName = hasLocation.name;
           elCell.dataset.locationType = hasLocation.type;
+          elCell.dataset.dangerLevel = hasLocation.dangerLevel || '';
         }
 
         if (hasLocation) {
@@ -1119,6 +1139,8 @@ function movePartyOnWorld(x, y) {
   // Set position
   STATE.party.worldX = x;
   STATE.party.worldY = y;
+  STATE.day = (STATE.day || 1) + 1;
+  renderResourceBar();
 
   // Reveal fog in a 2-tile radius around player
   revealWorldFog(x, y);
@@ -1316,8 +1338,16 @@ function renderLocationMap() {
   const locState = STATE.locations[locId];
   if (!locState) return;
 
-  elLocTitle.innerText = `Exploring Site`;
+  const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
+  const locName = locData ? locData.name : (locState.isSubCave ? 'Sub-Cave Chamber' : 'Exploring Site');
+  const dangerVal = locState.dangerLevel || 3;
+  const diffVal = (locState.difficulty || 1.0).toFixed(2);
+
+  elLocTitle.innerText = `${locName} (${diffVal}x Threat)`;
   elLocDeckCount.innerText = locState.tileStack.length;
+
+  const stars = '💀'.repeat(dangerVal) + '⬜'.repeat(Math.max(0, 5 - dangerVal));
+  elLocationDifficultyStatus.innerHTML = `Danger: <span style="color:var(--color-danger)">${stars}</span> (Multiplier: ${diffVal}x)`;
 
   const placed = locState.placedTiles;
   const px = STATE.party.localX;
@@ -1361,6 +1391,8 @@ function renderLocationMap() {
         if (tile.entity) {
           const ent = tile.entity;
           if (ent.type === 'treasure' && !ent.isLooted) entityDesc = '🪙 Treasure Chest (Loot Gold)';
+          else if (ent.type === 'wood_source' && !ent.isLooted) entityDesc = '🪵 Wood Source (Harvest Wood)';
+          else if (ent.type === 'ore_deposit' && !ent.isLooted) entityDesc = '🪨 Ore Deposit (Mine Gold)';
           else if (ent.type === 'enemy_army' && !ent.isDefeated) entityDesc = `👹 Monster Nest (${ent.monsters[0].monsterClass})`;
           else if (ent.type === 'burial_mound' && !ent.isExplored) entityDesc = '🪦 Ancient Burial Mound';
           else if (ent.type === 'dolmen' && !ent.isVisited) entityDesc = `🏆 Sacred Dolmen Stone (Appease ${ent.godName.toUpperCase()})`;
@@ -1390,6 +1422,14 @@ function renderLocationMap() {
             badge.innerText = '🪙';
             badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
           } 
+          else if (ent.type === 'wood_source' && !ent.isLooted) {
+            badge.innerText = '🪵';
+            badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
+          }
+          else if (ent.type === 'ore_deposit' && !ent.isLooted) {
+            badge.innerText = '🪨';
+            badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
+          }
           else if (ent.type === 'enemy_army' && !ent.isDefeated) {
             const firstMonster = ent.monsters && ent.monsters[0] ? ent.monsters[0].monsterClass : '';
             badge.innerText = MONSTER_EMOJIS[firstMonster] || '👹';
@@ -1525,6 +1565,18 @@ function triggerEncounterEvent(coordKey, entity) {
     showToast(`Uncovered buried chest! Looted +${entity.silver} Gold.`, '🪙');
     notify('STATE_UPDATED');
   } 
+  else if (entity.type === 'wood_source') {
+    adjustResource('wood', entity.wood);
+    entity.isLooted = true;
+    showToast(`Harvested wood source! Gathered +${entity.wood} Wood.`, '🪵');
+    notify('STATE_UPDATED');
+  }
+  else if (entity.type === 'ore_deposit') {
+    adjustResource('gold', entity.gold);
+    entity.isLooted = true;
+    showToast(`Mined ore deposit! Gained +${entity.gold} Gold.`, '🪨');
+    notify('STATE_UPDATED');
+  }
   else if (entity.type === 'dolmen') {
     STATE.inventory.push(entity.magicObjectId);
     entity.isVisited = true;

@@ -4,12 +4,40 @@
 
 import { STATE } from './state.js';
 import { LOCATION_CONFIG as CFG } from './config/location.js';
+import { WORLD_CONFIG } from './config/world.js';
 
 // Spawns/Initializes the Carcassonne stack for a location
 export function generateLocationMap(locationId, worldTileTerrain, parentLocationId = null, parentCoords = null) {
-  // Return existing state if already initialized
+  // Return existing state if already initialized, but update difficulty and undefeated enemy counts
   if (STATE.locations[locationId]) {
-    return STATE.locations[locationId];
+    const existingState = STATE.locations[locationId];
+
+    // Recalculate difficulty for current day
+    const locMeta = Object.values(WORLD_CONFIG.locations).find(loc => loc.id === locationId) || {};
+    const ds = CFG.difficultyScaling || { dangerMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2], caveDepthFactor: 0.35, timeFactor: 0.02 };
+    const dangerLevel = locMeta.dangerLevel || 3;
+    const baseMulti = ds.dangerMultipliers[dangerLevel - 1] || 1.0;
+    const subCaveDepth = (locationId.match(/_sub_cave_/g) || []).length;
+    const dayValue = STATE.day || 1;
+    const difficulty = baseMulti + (subCaveDepth * ds.caveDepthFactor) + (dayValue * ds.timeFactor);
+
+    existingState.difficulty = difficulty;
+
+    // Scale counts of undefeated enemy armies
+    for (const key in existingState.placedTiles) {
+      const tile = existingState.placedTiles[key];
+      if (tile.entity && tile.entity.type === 'enemy_army' && !tile.entity.isDefeated) {
+        updateEnemyArmyAmount(tile.entity, difficulty);
+      }
+    }
+    for (const key in existingState.preGeneratedEntities) {
+      const ent = existingState.preGeneratedEntities[key];
+      if (ent && ent.type === 'enemy_army' && !ent.isDefeated) {
+        updateEnemyArmyAmount(ent, difficulty);
+      }
+    }
+
+    return existingState;
   }
 
   const pool = CFG.terrainPools[worldTileTerrain] || CFG.terrainPools.plains;
@@ -281,6 +309,22 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
 
   STATE.locations[locationId] = state;
 
+  const locMeta = Object.values(WORLD_CONFIG.locations).find(loc => loc.id === locationId) || {};
+  const locationType = state.isSubCave ? 'cave' : (locMeta.locationType || worldTileTerrain || 'default');
+
+  // Calculate difficulty scaling
+  const ds = CFG.difficultyScaling || { dangerMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2], caveDepthFactor: 0.35, timeFactor: 0.02 };
+  const dangerLevel = locMeta.dangerLevel || 3;
+  const baseMulti = ds.dangerMultipliers[dangerLevel - 1] || 1.0;
+  const subCaveDepth = (locationId.match(/_sub_cave_/g) || []).length;
+  const dayValue = STATE.day || 1;
+  const difficulty = baseMulti + (subCaveDepth * ds.caveDepthFactor) + (dayValue * ds.timeFactor);
+
+  // Store in state for UI display
+  state.dangerLevel = dangerLevel;
+  state.subCaveDepth = subCaveDepth;
+  state.difficulty = difficulty;
+
   // 8.5. If not a sub-cave, randomly choose a reachable cave tile to host the first cave entrance
   if (!state.isSubCave) {
     const caveCoords = Array.from(reachableCoords).filter(key => {
@@ -291,7 +335,7 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
     if (caveCoords.length > 0) {
       const chosenCaveKey = caveCoords[Math.floor(Math.random() * caveCoords.length)];
       const [cx, cy] = chosenCaveKey.split(',').map(Number);
-      const entranceEntity = generateRandomEntity(locationId, 'cave', cx, cy);
+      const entranceEntity = generateRandomEntity(locationId, 'cave', cx, cy, locationType, difficulty);
       if (entranceEntity) {
         state.preGeneratedEntities[chosenCaveKey] = entranceEntity;
       }
@@ -312,7 +356,7 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
 
       let entity = null;
       if (isTraversable && Math.random() < CFG.entitySpawnChance) {
-        entity = generateRandomEntity(locationId, terrain, x, y);
+        entity = generateRandomEntity(locationId, terrain, x, y, locationType, difficulty);
       }
       if (entity) {
         state.preGeneratedEntities[coordKey] = entity;
@@ -346,15 +390,18 @@ export function discoverTile(locationId, x, y) {
 }
 
 // Generate random entity for location tile
-function generateRandomEntity(locationId, terrain, x = null, y = null) {
+function generateRandomEntity(locationId, terrain, x = null, y = null, locationType = 'default', difficultyMultiplier = 1.0) {
   const roll = Math.random();
-  const w = CFG.entityWeights;
+  const biomes = CFG.entityWeightsByBiome || {};
+  const w = biomes[locationType] || biomes.default || CFG.entityWeights;
 
   let type;
-  if      (roll < w.treasure)     type = 'treasure';
-  else if (roll < w.enemy_army)   type = 'enemy_army';
-  else if (roll < w.burial_mound) type = 'burial_mound';
-  else                            type = 'dolmen';
+  if      (w.treasure !== undefined && roll < w.treasure)         type = 'treasure';
+  else if (w.wood_source !== undefined && roll < w.wood_source)   type = 'wood_source';
+  else if (w.ore_deposit !== undefined && roll < w.ore_deposit)   type = 'ore_deposit';
+  else if (w.enemy_army !== undefined && roll < w.enemy_army)     type = 'enemy_army';
+  else if (w.burial_mound !== undefined && roll < w.burial_mound) type = 'burial_mound';
+  else                                                            type = 'dolmen';
 
   // Cave terrain override
   if (terrain === 'cave') {
@@ -387,10 +434,46 @@ function generateRandomEntity(locationId, terrain, x = null, y = null) {
     };
   }
 
+  if (type === 'wood_source') {
+    const ws = CFG.woodSource || { woodMin: 3, woodMax: 7 };
+    return {
+      type: 'wood_source',
+      wood: Math.floor(Math.random() * (ws.woodMax - ws.woodMin + 1)) + ws.woodMin,
+      isLooted: false
+    };
+  }
+
+  if (type === 'ore_deposit') {
+    const od = CFG.oreDeposit || { goldMin: 5, goldMax: 12 };
+    return {
+      type: 'ore_deposit',
+      gold: Math.floor(Math.random() * (od.goldMax - od.goldMin + 1)) + od.goldMin,
+      isLooted: false
+    };
+  }
+
   if (type === 'enemy_army') {
     const e = CFG.enemyArmy;
-    const selectedMonster = e.monsterPool[Math.floor(Math.random() * e.monsterPool.length)];
-    const count = Math.floor(Math.random() * (e.countMax - e.countMin + 1)) + e.countMin;
+    const pools = CFG.monsterPoolsByBiome || {};
+    let pool = [...(pools[locationType] || pools.default || e.monsterPool)];
+
+    const ds = CFG.difficultyScaling || {};
+    // Inject mini-bosses if above threshold
+    if (difficultyMultiplier >= (ds.bossThreshold || 1.40)) {
+      const bosses = ds.bosses || ['Frost Giant (Jotunn)', 'Lindwurm'];
+      pool = pool.concat(bosses);
+    }
+
+    const selectedMonster = pool[Math.floor(Math.random() * pool.length)];
+
+    // Scale counts by difficulty multiplier
+    let countMin = Math.floor(e.countMin * difficultyMultiplier);
+    let countMax = Math.floor(e.countMax * difficultyMultiplier);
+    const maxLimit = ds.maxCountLimit || 6;
+    countMin = Math.min(maxLimit, Math.max(1, countMin));
+    countMax = Math.min(maxLimit, Math.max(countMin, countMax));
+
+    const count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
     return {
       type: 'enemy_army',
       monsters: [{ monsterClass: selectedMonster, count }],
@@ -445,4 +528,20 @@ function getRandomFromWeights(weightsObj) {
     roll -= weight;
   }
   return entries[entries.length - 1][0];
+}
+
+// Re-scale the monster counts of an existing undefeated enemy army without changing classes
+function updateEnemyArmyAmount(entity, difficultyMultiplier) {
+  const e = CFG.enemyArmy;
+  const ds = CFG.difficultyScaling || {};
+  if (!entity.monsters) return;
+  for (const monster of entity.monsters) {
+    let countMin = Math.floor(e.countMin * difficultyMultiplier);
+    let countMax = Math.floor(e.countMax * difficultyMultiplier);
+    const maxLimit = ds.maxCountLimit || 6;
+    countMin = Math.min(maxLimit, Math.max(1, countMin));
+    countMax = Math.min(maxLimit, Math.max(countMin, countMax));
+
+    monster.count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
+  }
 }

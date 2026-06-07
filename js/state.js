@@ -55,6 +55,9 @@ export const STATE = {
   // Deity Quest Milestones (5 steps per god)
   godQuests: makeGodQuests(),
 
+  // Current global game day
+  day: 1,
+
   // Active Champion Buff
   activeBlessing: null,
 
@@ -188,6 +191,7 @@ export function resetGame() {
   STATE.party = { worldX: WC.partyStart.x, worldY: WC.partyStart.y, currentLocationId: null, localX: 0, localY: 0 };
   STATE.godFavor = makeGodFavor();
   STATE.godQuests = makeGodQuests();
+  STATE.day = 1;
   STATE.activeBlessing = null;
   STATE.combat = {
     active: false, grid: [], pool: [], paused: true,

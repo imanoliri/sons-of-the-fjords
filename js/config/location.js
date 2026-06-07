@@ -61,13 +61,69 @@ export const LOCATION_CONFIG = {
   // Terrains that cannot have entities spawned on them
   nonTraversable: ['chasm', 'mountain', 'deep_water'],
 
-  // Entity spawn probability (roll < threshold triggers that type, checked in order)
+  // Entity spawn probability
   entitySpawnChance: 0.35,
   entityWeights: {
-    treasure: 0.25,   // 0.00 – 0.25
-    enemy_army: 0.65,   // 0.25 – 0.65
-    burial_mound: 0.85,  // 0.65 – 0.85
-    dolmen: 1.00    // 0.85 – 1.00
+    treasure: 0.25,
+    enemy_army: 0.65,
+    burial_mound: 0.85,
+    dolmen: 1.00
+  },
+
+  // Specialized entity weights per biome type (cumulative thresholds)
+  entityWeightsByBiome: {
+    forest: {
+      treasure: 0.15,
+      wood_source: 0.35,
+      enemy_army: 0.70,
+      burial_mound: 0.85,
+      dolmen: 1.00
+    },
+    mountain: {
+      treasure: 0.15,
+      ore_deposit: 0.35,
+      enemy_army: 0.75,
+      burial_mound: 0.85,
+      dolmen: 1.00
+    },
+    cave: {
+      treasure: 0.15,
+      ore_deposit: 0.40,
+      enemy_army: 0.80,
+      burial_mound: 0.90,
+      dolmen: 1.00
+    },
+    burial_mound: {
+      treasure: 0.15,
+      enemy_army: 0.55,
+      burial_mound: 0.90,
+      dolmen: 1.00
+    },
+    default: {
+      treasure: 0.25,
+      enemy_army: 0.65,
+      burial_mound: 0.85,
+      dolmen: 1.00
+    }
+  },
+
+  // Specialized monster pools per biome
+  monsterPoolsByBiome: {
+    forest: ['Fenrir Pack Wolf', 'Giant Brood-Spider'],
+    mountain: ['Cave Troll', 'Fenrir Pack Wolf'],
+    cave: ['Cave Troll', 'Fenrir Pack Wolf'],
+    burial_mound: ['Draugr Warrior'],
+    default: ['Giant Brood-Spider', 'Fenrir Pack Wolf']
+  },
+
+  // Resource nodes harvest yield settings
+  woodSource: {
+    woodMin: 3,
+    woodMax: 7
+  },
+  oreDeposit: {
+    goldMin: 5,
+    goldMax: 12
   },
 
   // Chance settings for cave portals under diminishing returns
@@ -96,5 +152,15 @@ export const LOCATION_CONFIG = {
     freya: "Freya's Amber Tear",
     hel: "Hel's Urn of Ash",
     loki: "Loki's Trickster Coin"
+  },
+
+  // Difficulty scaling parameters
+  difficultyScaling: {
+    dangerMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2],
+    caveDepthFactor: 0.35,
+    timeFactor: 0.02,
+    bossThreshold: 1.40,
+    bosses: ['Frost Giant (Jotunn)', 'Lindwurm'],
+    maxCountLimit: 6
   }
 };
