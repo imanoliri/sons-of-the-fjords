@@ -616,12 +616,11 @@ function initTooltipEvents() {
       let content = '';
 
       if (section === 'identity') {
-        header = `${lore.icon} ${lore.title}`;
-        const stepsHtml = lore.favorSteps.map(s => `<li style="margin:2px 0">${s}</li>`).join('');
+        header = '';
+        const stepsHtml = lore.favorSteps.map(s => `<div style="margin:2px 0">${s}</div>`).join('');
         content = [
           `<b style="color:var(--text-accent)">📋 How to gain Favor:</b>`,
-          `<ol style="margin:4px 0 4px 16px;padding:0">${stepsHtml}</ol>`,
-          `<hr style="border-color:rgba(255,255,255,0.08);margin:4px 0">`,
+          `<div style="margin:4px 0 0 0">${stepsHtml}</div>`,
           `<b>Opposes:</b> ${lore.opposites.join(' & ')} — pleasing ${lore.icon} drains their favor`,
           `<b style="color:var(--color-danger)">⚠️ ${lore.wrath}</b>`
         ].join('<br>');
