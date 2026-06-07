@@ -134,7 +134,9 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
     placedTiles,
     preGeneratedGrid,
     tileStack: deck,
-    hasCaveEntranceSpawned: false
+    hasCaveEntranceSpawned: false,
+    isSubCave: (parentLocationId !== null),
+    caveEntranceCount: 0
   };
 
   STATE.locations[locationId] = state;
@@ -159,7 +161,7 @@ export function discoverTile(locationId, x, y) {
   // Decide entity spawn — only on traversable terrains
   let entity = null;
   const isTraversable = !CFG.nonTraversable.includes(terrain);
-  const isFirstCaveEntranceNeeded = terrain === 'cave' && !locState.hasCaveEntranceSpawned;
+  const isFirstCaveEntranceNeeded = terrain === 'cave' && !locState.isSubCave && !locState.hasCaveEntranceSpawned;
 
   if (isTraversable && (isFirstCaveEntranceNeeded || Math.random() < CFG.entitySpawnChance)) {
     entity = generateRandomEntity(locationId, terrain, x, y);
@@ -183,12 +185,21 @@ function generateRandomEntity(locationId, terrain, x = null, y = null) {
   // Cave terrain override
   if (terrain === 'cave') {
     const locState = STATE.locations[locationId];
-    if (locState && !locState.hasCaveEntranceSpawned) {
-      type = 'cave_entrance';
-      locState.hasCaveEntranceSpawned = true;
-    } else if (Math.random() < CFG.caveEntranceChance) {
-      type = 'cave_entrance';
-      if (locState) locState.hasCaveEntranceSpawned = true;
+    if (locState) {
+      const isFirstTopLevelEntrance = !locState.isSubCave && !locState.hasCaveEntranceSpawned;
+      if (isFirstTopLevelEntrance) {
+        type = 'cave_entrance';
+        locState.hasCaveEntranceSpawned = true;
+        locState.caveEntranceCount = (locState.caveEntranceCount || 0) + 1;
+      } else {
+        const currentCount = locState.caveEntranceCount || 0;
+        const rollChance = 0.02 / Math.pow(2, currentCount);
+        if (Math.random() < rollChance) {
+          type = 'cave_entrance';
+          locState.hasCaveEntranceSpawned = true;
+          locState.caveEntranceCount = currentCount + 1;
+        }
+      }
     }
   }
 
