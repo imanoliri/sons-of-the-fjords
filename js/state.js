@@ -151,6 +151,11 @@ export function sacrificeRelic(relicId, godName) {
 
 // Pentagram dynamic shifting favor logic
 export function adjustFavor(godName, amt) {
+  // If this god's quest line is fully complete, we don't gain more favor or trigger opponents' drain
+  if (amt > 0 && STATE.godQuests[godName] && STATE.godQuests[godName].every(x => x === true)) {
+    return;
+  }
+
   const opposites = GC.pentagramOpposites;
   const current = STATE.godFavor[godName];
 
