@@ -14,13 +14,8 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
 
     // Recalculate difficulty for current day
     const locMeta = Object.values(WORLD_CONFIG.locations).find(loc => loc.id === locationId) || {};
-    const ds = CFG.difficultyScaling || { dangerMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2], caveDepthFactor: 0.35, timeFactor: 0.02 };
     const dangerLevel = locMeta.dangerLevel || 3;
-    const baseMulti = ds.dangerMultipliers[dangerLevel - 1] || 1.0;
-    const subCaveDepth = (locationId.match(/_sub_cave_/g) || []).length;
-    const dayValue = STATE.day || 1;
-    const difficulty = baseMulti + (subCaveDepth * ds.caveDepthFactor) + (dayValue * ds.timeFactor);
-
+    const difficulty = calculateDifficulty(locationId, dangerLevel);
     existingState.difficulty = difficulty;
 
     // Scale counts of undefeated enemy armies
@@ -313,16 +308,12 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
   const locationType = state.isSubCave ? 'cave' : (locMeta.locationType || worldTileTerrain || 'default');
 
   // Calculate difficulty scaling
-  const ds = CFG.difficultyScaling || { dangerMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2], caveDepthFactor: 0.35, timeFactor: 0.02 };
   const dangerLevel = locMeta.dangerLevel || 3;
-  const baseMulti = ds.dangerMultipliers[dangerLevel - 1] || 1.0;
-  const subCaveDepth = (locationId.match(/_sub_cave_/g) || []).length;
-  const dayValue = STATE.day || 1;
-  const difficulty = baseMulti + (subCaveDepth * ds.caveDepthFactor) + (dayValue * ds.timeFactor);
+  const difficulty = calculateDifficulty(locationId, dangerLevel);
 
   // Store in state for UI display
   state.dangerLevel = dangerLevel;
-  state.subCaveDepth = subCaveDepth;
+  state.subCaveDepth = (locationId.match(/_sub_cave_/g) || []).length;
   state.difficulty = difficulty;
 
   // 8.5. If not a sub-cave, randomly choose a reachable cave tile to host the first cave entrance
@@ -544,4 +535,13 @@ function updateEnemyArmyAmount(entity, difficultyMultiplier) {
 
     monster.count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
   }
+}
+
+// Compute location difficulty incorporating danger level, cave depth, and time scaling
+function calculateDifficulty(locationId, dangerLevel) {
+  const ds = CFG.difficultyScaling || { dangerMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2], caveDepthFactor: 0.35, timeFactor: 0.02 };
+  const baseMulti = ds.dangerMultipliers[dangerLevel - 1] || 1.0;
+  const subCaveDepth = (locationId.match(/_sub_cave_/g) || []).length;
+  const dayValue = STATE.day || 1;
+  return baseMulti + (subCaveDepth * ds.caveDepthFactor) + Math.min(2.5, dayValue * ds.timeFactor);
 }

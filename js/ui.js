@@ -1303,7 +1303,7 @@ function renderWorldMap() {
 
   const timeFactor = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.timeFactor) || 0.02;
   const dayValue = STATE.day || 1;
-  const dayMulti = (dayValue * timeFactor).toFixed(2);
+  const dayMulti = Math.min(2.5, dayValue * timeFactor).toFixed(2);
   elWorldDifficultyStatus.innerText = `Day Multiplier: +${dayMulti}x (Day ${dayValue})`;
 
   const tiles = STATE.worldMap.tiles;

@@ -134,8 +134,8 @@ export const LOCATION_CONFIG = {
   treasure: {
     goldMin: 5,
     goldMax: 16,   // Math.floor(Math.random() * 12) + 5
-    itemChance: 0.4,
-    itemPool: ['Mead Horn', 'Valkyrie Herb']
+    itemChance: 0.0,
+    itemPool: []
   },
 
   // Enemy army settings
