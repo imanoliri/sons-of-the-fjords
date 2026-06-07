@@ -63,6 +63,9 @@ const elModalAscensionText = document.getElementById('modal-ascension-text');
 
 const elModalGameOver = document.getElementById('modal-gameover');
 
+const elPatronCard = document.getElementById('town-patron-card');
+const elPatronList = document.getElementById('town-patron-list');
+
 // Initialize UI binding event listeners
 export function initUIBindings() {
   
@@ -493,14 +496,14 @@ const GOD_LORE = {
       '5. Repeat: each sacrifice grants +1 Favor toward the next milestone'
     ],
     opposites: ['Freya', 'Hel'],
-    buff: 'Champion Buff: All Huntsmen gain +2 Attack Range & +1 DMG per turn.',
-    wrath: 'Wrath (favor < 0): Random unit loses 1 HP every 3 world steps.',
-    milestones: [
-      'Favor 1 — Odin watches. Fog of war reveals 1 extra tile on each move.',
-      'Favor 2 — Odin blesses sight. Your scouts reveal 2-tile radius instead of 1.',
-      'Favor 3 — Odin sharpens minds. All Huntsmen gain +1 Attack Range.',
-      'Favor 4 — Wisdom of the Runes. Berserkers gain +1 DMG per combat tick.',
-      'Favor 5 — ASCENSION. Odin’s eternal champion. Select buff to activate.'
+    buff: 'Huntsmen gain +2 Attack Range & +1 DMG per turn.',
+    wrath: 'Wrath: Random unit loses 1 HP every 3 world steps.',
+    milestoneEffects: [
+      'Fog of war reveals 1 extra tile on each move.',
+      'Scouts reveal a 2-tile radius instead of 1.',
+      'All Huntsmen gain +1 Attack Range.',
+      'Berserkers gain +1 DMG per combat tick.',
+      null // Ascension — handled specially
     ]
   },
   thor: {
@@ -516,14 +519,14 @@ const GOD_LORE = {
       '5. Repeat: each sacrifice grants +1 Favor toward the next milestone'
     ],
     opposites: ['Hel', 'Loki'],
-    buff: 'Champion Buff: All Berserkers gain +3 DMG and +1 Speed.',
-    wrath: 'Wrath (favor < 0): Storms during land travel cost +1 extra Food per step.',
-    milestones: [
-      'Favor 1 — Thor stirs. Berserkers gain +1 DMG in combat.',
-      'Favor 2 — Thunder in veins. Berserkers move +1 Speed per tick.',
-      'Favor 3 — War drums. Enemy spawn rate slowed by 10%.',
-      'Favor 4 — Storm Caller. All units gain +1 max HP.',
-      'Favor 5 — ASCENSION. Thor’s eternal champion. Select buff to activate.'
+    buff: 'Berserkers gain +3 DMG and +1 Speed.',
+    wrath: 'Wrath: Storms during land travel cost +1 extra Food per step.',
+    milestoneEffects: [
+      'Berserkers gain +1 DMG in combat.',
+      'Berserkers move +1 Speed per tick.',
+      'Enemy spawn rate slowed by 10%.',
+      'All units gain +1 max HP.',
+      null
     ]
   },
   freya: {
@@ -539,14 +542,14 @@ const GOD_LORE = {
       '5. Repeat: each sacrifice grants +1 Favor toward the next milestone'
     ],
     opposites: ['Loki', 'Odin'],
-    buff: 'Champion Buff: Shieldmaidens heal 2 HP per combat tick when not in melee.',
-    wrath: 'Wrath (favor < 0): Recruited units start with -10 max HP.',
-    milestones: [
-      'Favor 1 — Freya smiles. Shieldmaidens gain +5 max HP.',
-      'Favor 2 — Life aura. Any unit below 25% HP heals 1 HP/tick.',
-      'Favor 3 — Seiðr magic. Shieldmaidens gain +2 DMG.',
-      'Favor 4 — Shield of Asgard. Shieldmaidens block 1 DMG per hit.',
-      'Favor 5 — ASCENSION. Freya’s eternal champion. Select buff to activate.'
+    buff: 'Shieldmaidens heal 2 HP per combat tick when not in melee.',
+    wrath: 'Wrath: Recruited units start with -10 max HP.',
+    milestoneEffects: [
+      'Shieldmaidens gain +5 max HP.',
+      'Any unit below 25% HP heals 1 HP/tick.',
+      'Shieldmaidens gain +2 DMG.',
+      'Shieldmaidens block 1 DMG per hit.',
+      null
     ]
   },
   hel: {
@@ -562,14 +565,14 @@ const GOD_LORE = {
       '4. Repeat: each sacrifice grants +1 Favor toward the next milestone'
     ],
     opposites: ['Odin', 'Thor'],
-    buff: 'Champion Buff: Fallen enemies have a 20% chance to rise as allied undead for 3 ticks.',
-    wrath: 'Wrath (favor < 0): Dead band members cannot be replaced for 5 turns.',
-    milestones: [
-      'Favor 1 — Hel stirs. Enemies deal -1 DMG.',
-      'Favor 2 — Veil of death. Player units survive lethal hits once with 1 HP (once per battle).',
-      'Favor 3 — Reaper’s mark. Slain enemies drop +1 extra Gold.',
-      'Favor 4 — Death bargain. Gold cost to recruit is reduced by 1.',
-      'Favor 5 — ASCENSION. Hel’s eternal champion. Select buff to activate.'
+    buff: 'Fallen enemies have a 20% chance to rise as allied undead for 3 ticks.',
+    wrath: 'Wrath: Dead band members cannot be replaced for 5 turns.',
+    milestoneEffects: [
+      'Enemies deal -1 DMG.',
+      'Player units survive lethal hits once with 1 HP (once per battle).',
+      'Slain enemies drop +1 extra Gold.',
+      'Gold cost to recruit is reduced by 1.',
+      null
     ]
   },
   loki: {
@@ -585,17 +588,18 @@ const GOD_LORE = {
       '4. Repeat: each sacrifice grants +1 Favor toward the next milestone'
     ],
     opposites: ['Thor', 'Freya'],
-    buff: 'Champion Buff: Once per battle, your weakest unit swaps position with a random enemy.',
-    wrath: 'Wrath (favor < 0): Random event triggers each world move (ambush, resource loss, or unit injury).',
-    milestones: [
-      'Favor 1 — Loki watches. Chest loot gives +1 extra Gold.',
-      'Favor 2 — Mischief afoot. Enemy attack speed reduced by 10%.',
-      'Favor 3 — Shapeshifter. One enemy per wave spawns confused (fights allies for 2 ticks).',
-      'Favor 4 — Silver tongue. Town prices reduced by 1 Gold each.',
-      'Favor 5 — ASCENSION. Loki’s eternal champion. Select buff to activate.'
+    buff: 'Once per battle, your weakest unit swaps position with a random enemy.',
+    wrath: 'Wrath: Random event triggers each world move (ambush, resource loss, or unit injury).',
+    milestoneEffects: [
+      'Chest loot gives +1 extra Gold.',
+      'Enemy attack speed reduced by 10%.',
+      'One enemy per wave spawns confused (fights allies for 2 ticks).',
+      'Town prices reduced by 1 Gold each.',
+      null
     ]
   }
 };
+
 
 // Global tooltip delegation
 function initTooltipEvents() {
@@ -612,42 +616,38 @@ function initTooltipEvents() {
       let content = '';
 
       if (section === 'identity') {
-        const favor = STATE.godFavor[gKey];
-        const favorBar = favor >= 0
-          ? `<span style="color:${lore.color}">+${favor} ▲</span>`
-          : `<span style="color:var(--color-danger)">${favor} ▼</span>`;
-        const isChampion = STATE.godQuests[gKey].every(x => x === true);
         header = `${lore.icon} ${lore.title}`;
         const stepsHtml = lore.favorSteps.map(s => `<li style="margin:2px 0">${s}</li>`).join('');
         content = [
-          `<b style="color:${lore.color}">Current Favor:</b> ${favorBar}`,
-          `<hr style="border-color:rgba(255,255,255,0.08);margin:4px 0">`,
           `<b style="color:var(--text-accent)">📋 How to gain Favor:</b>`,
           `<ol style="margin:4px 0 4px 16px;padding:0">${stepsHtml}</ol>`,
           `<hr style="border-color:rgba(255,255,255,0.08);margin:4px 0">`,
           `<b>Opposes:</b> ${lore.opposites.join(' & ')} — pleasing ${lore.icon} drains their favor`,
-          `<b style="color:var(--color-success)">✨ ${lore.buff}</b>`,
-          `<b style="color:var(--color-danger)">⚠️ ${lore.wrath}</b>`,
-          isChampion ? `<b style="color:${lore.color}">✅ Champion unlocked! Open buff selector.</b>` : `<i>Reach 5/5 milestones to ascend.</i>`
+          `<b style="color:var(--color-danger)">⚠️ ${lore.wrath}</b>`
         ].join('<br>');
       } else if (section === 'milestone') {
         const idx = parseInt(godTarget.dataset.milestoneIdx);
         const achieved = STATE.godQuests[gKey][idx];
-        header = `${lore.icon} Milestone ${idx + 1}/5`;
-        content = [
-          `<b style="color:${lore.color}">${lore.milestones[idx]}</b>`,
-          achieved
-            ? `<span style="color:var(--color-success)">✅ Completed!</span>`
-            : `<span style="color:var(--text-muted)">🔒 Not yet reached. Sacrifice <b>${lore.relic}</b> at a Town temple to gain favor.</span>`
-        ].join('<br>');
+        if (idx === 4) {
+          // Ascension milestone
+          header = `${lore.icon} Ascension`;
+          content = achieved
+            ? `<span style="color:var(--color-success)">✅ Ascended! Visit a Town to switch buff for 5 Gold.</span>`
+            : `<span style="color:var(--text-muted)">🔒 Complete all 5 milestones to ascend and unlock the champion buff.</span>`;
+        } else {
+          header = `${lore.icon} Milestone ${idx + 1}`;
+          content = [
+            `<b style="color:${lore.color}">${lore.milestoneEffects[idx]}</b>`,
+            achieved
+              ? `<span style="color:var(--color-success)">✅ Active</span>`
+              : `<span style="color:var(--text-muted)">🔒 Not yet reached</span>`
+          ].join('<br>');
+        }
       } else if (section === 'champion') {
         header = `${lore.icon} Champion Buff`;
-        content = [
-          `<b style="color:${lore.color}">${lore.buff}</b>`,
-          `Activate by clicking <b>Select Buff</b> in the Quest Log.`,
-          `Only one god's buff can be active at a time.`
-        ].join('<br>');
+        content = `<b style="color:${lore.color}">${lore.buff}</b>`;
       }
+
 
       elTooltip.innerHTML = `
         <div class="game-tooltip-header">
@@ -1155,6 +1155,48 @@ function renderTownScreen() {
     });
   } else {
     elShrineEmpty.classList.remove('hidden');
+  }
+  // ── Divine Patron card ──────────────────────────────────────────────────────
+  // Find all gods where all 5 milestones are complete (ascended)
+  const ascendedGods = Object.keys(STATE.godQuests).filter(g => STATE.godQuests[g].every(x => x === true));
+  if (ascendedGods.length > 0) {
+    elPatronCard.classList.remove('hidden');
+    elPatronList.innerHTML = '';
+    ascendedGods.forEach(god => {
+      const lore = GOD_LORE[god];
+      const isActive = STATE.activeBlessing === god;
+      const row = document.createElement('div');
+      row.classList.add('trade-row');
+      const label = document.createElement('span');
+      label.innerHTML = isActive
+        ? `<b style="color:${lore.color}">${lore.icon} ${god.charAt(0).toUpperCase() + god.slice(1)}</b> <span style="color:var(--color-success);font-size:0.8em">● ACTIVE</span><br><i style="font-size:0.82em;opacity:0.75">${lore.buff}</i>`
+        : `${lore.icon} ${god.charAt(0).toUpperCase() + god.slice(1)}<br><i style="font-size:0.82em;opacity:0.75">${lore.buff}</i>`;
+      const btn = document.createElement('button');
+      btn.classList.add('btn', 'btn-sm');
+      if (isActive) {
+        btn.innerText = 'Active';
+        btn.disabled = true;
+      } else {
+        btn.classList.add('btn-primary');
+        btn.innerText = 'Switch (5 Gold)';
+        btn.addEventListener('click', () => {
+          if (STATE.resources.gold < 5) {
+            showToast('Not enough Gold to switch Divine Patron.', '💰');
+            return;
+          }
+          adjustResource('gold', -5);
+          STATE.activeBlessing = god;
+          notify('STATE_UPDATED');
+          showToast(`${lore.icon} ${god.charAt(0).toUpperCase() + god.slice(1)} is now your Divine Patron!`, lore.icon);
+          renderTownScreen();
+        });
+      }
+      row.appendChild(label);
+      row.appendChild(btn);
+      elPatronList.appendChild(row);
+    });
+  } else {
+    elPatronCard.classList.add('hidden');
   }
 }
 
@@ -1689,20 +1731,21 @@ function renderQuestsScreen() {
         btn.innerText = 'Active ✨';
         btn.classList.add('btn-primary');
       } else {
-        btn.innerText = 'Select Buff';
+        btn.innerText = 'Activate Buff';
         btn.addEventListener('click', () => {
           STATE.activeBlessing = gKey;
           notify('STATE_UPDATED');
+          showToast(`${GOD_LORE[gKey].icon} ${gKey.charAt(0).toUpperCase() + gKey.slice(1)} Buff activated!`, GOD_LORE[gKey].icon, true);
         });
       }
       toggleCol.appendChild(btn);
     } else {
-      // Show a locked hint that also has a tooltip explaining how to unlock
+      // Show a locked hint — clicking goes to identity tooltip info
       const locked = document.createElement('span');
       locked.style.cssText = 'font-size:0.8rem;color:var(--text-muted);cursor:help;';
       locked.innerText = '🔒 Locked';
       locked.dataset.godTooltip = gKey;
-      locked.dataset.tooltipSection = 'champion';
+      locked.dataset.tooltipSection = 'identity';
       toggleCol.appendChild(locked);
     }
     
@@ -1878,8 +1921,32 @@ export function handleStateNotification(event, data) {
     showToast(`Quest Milestone ${data.index + 1} reached for ${data.god.toUpperCase()}!`, '✨', true);
   }
   else if (event === 'ASCENSION_TRIGGERED') {
-    elModalAscension.dataset.god = data;
-    elModalAscensionText.innerText = `You have completed all 5 milestones for ${data.toUpperCase()}! You are worthy to ascend to the halls of Asgard. Do you choose to ascend now, or remain as Midgard's eternal champion?`;
+    const ascGod = data;
+    const ascLore = GOD_LORE[ascGod];
+    elModalAscension.dataset.god = ascGod;
+    elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-${ascGod}`;
+    // Build body text
+    const hasOtherActive = STATE.activeBlessing && STATE.activeBlessing !== ascGod;
+    const activeLore = hasOtherActive ? GOD_LORE[STATE.activeBlessing] : null;
+    elModalAscensionText.innerHTML = `You have completed all 5 milestones for <b style="color:${ascLore.color}">${ascGod.toUpperCase()}</b>!<br><br>${ascLore.icon} Champion Buff: <i>${ascLore.buff}</i>`;
+    // Remove any previously injected buff button
+    const prevBuff = document.getElementById('btn-ascend-buff');
+    if (prevBuff) prevBuff.remove();
+    // Inject buff activation button before "Stay in Midgard"
+    const btnContinue = document.getElementById('btn-ascend-continue');
+    const btnBuff = document.createElement('button');
+    btnBuff.id = 'btn-ascend-buff';
+    btnBuff.className = 'btn btn-primary';
+    btnBuff.innerText = hasOtherActive
+      ? `Switch to ${ascLore.icon} ${ascGod.charAt(0).toUpperCase() + ascGod.slice(1)} Buff & Stay`
+      : `Activate ${ascLore.icon} Buff & Stay`;
+    btnBuff.addEventListener('click', () => {
+      STATE.activeBlessing = ascGod;
+      notify('STATE_UPDATED');
+      showToast(`${ascLore.icon} ${ascGod.charAt(0).toUpperCase() + ascGod.slice(1)} Champion Buff activated!`, ascLore.icon, true);
+      hideOverlay(elModalAscension);
+    });
+    btnContinue.parentNode.insertBefore(btnBuff, btnContinue);
     showOverlay(elModalAscension);
   }
   else if (event === 'GAME_OVER') {
