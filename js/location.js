@@ -12,42 +12,96 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
     return STATE.locations[locationId];
   }
 
-  // 1. Build tile deck from terrain pool
   const pool = CFG.terrainPools[worldTileTerrain] || CFG.terrainPools.plains;
-  const deck = [];
-  for (let i = 0; i < CFG.deckSize; i++) {
-    deck.push(getRandomFromWeights(pool));
-  }
-  shuffle(deck);
-
-  // Guarantee at least one cave tile is in the top 99 cards (so it is reachable/drawable on the 10x10 grid)
-  if (pool.cave && pool.cave > 0) {
-    let caveIdx = deck.lastIndexOf('cave');
-    const drawLimit = Math.min(deck.length, 99);
-    if (caveIdx === -1) {
-      // If no cave tile exists in the deck, replace one within the drawable top 99 elements of array
-      const targetIdx = deck.length - 1 - Math.floor(Math.random() * drawLimit);
-      deck[targetIdx] = 'cave';
-    } else {
-      // Swap the existing cave tile into the drawable top 99 elements of the deck
-      const targetIdx = deck.length - 1 - Math.floor(Math.random() * drawLimit);
-      const temp = deck[targetIdx];
-      deck[targetIdx] = deck[caveIdx];
-      deck[caveIdx] = temp;
-    }
-  }
-
-  // 2. Initialize grid state with center starting tile drawn from the deck (must be traversable)
   const { x: sx, y: sy } = CFG.startTile;
-  let st = 'grass'; // Fallback
-  for (let i = deck.length - 1; i >= 0; i--) {
-    if (!CFG.nonTraversable.includes(deck[i])) {
-      st = deck.splice(i, 1)[0];
+
+  let preGeneratedGrid = {};
+  let reachableCoords = new Set();
+  const maxAttempts = 10;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    preGeneratedGrid = {};
+
+    // 1. Fill 10x10 grid with weighted random terrains
+    for (let y = 0; y < 10; y++) {
+      for (let x = 0; x < 10; x++) {
+        preGeneratedGrid[`${x},${y}`] = getRandomFromWeights(pool);
+      }
+    }
+
+    // 2. Select a start tile terrain from pool that is traversable
+    let st = 'grass';
+    if (!CFG.nonTraversable.includes(preGeneratedGrid[`${sx},${sy}`])) {
+      st = preGeneratedGrid[`${sx},${sy}`];
+    } else {
+      const traversables = Object.keys(pool).filter(t => !CFG.nonTraversable.includes(t));
+      st = traversables.length > 0 ? traversables[Math.floor(Math.random() * traversables.length)] : 'grass';
+    }
+    preGeneratedGrid[`${sx},${sy}`] = st;
+
+    // 3. Perform BFS from start tile (sx, sy) to find all reachable cells
+    reachableCoords = new Set();
+    const queue = [[sx, sy]];
+    reachableCoords.add(`${sx},${sy}`);
+
+    while (queue.length > 0) {
+      const [cx, cy] = queue.shift();
+      const neighbors = [
+        [cx + 1, cy],
+        [cx - 1, cy],
+        [cx, cy + 1],
+        [cx, cy - 1]
+      ];
+      for (const [nx, ny] of neighbors) {
+        if (nx >= 0 && nx < 10 && ny >= 0 && ny < 10) {
+          const nKey = `${nx},${ny}`;
+          if (!reachableCoords.has(nKey)) {
+            const terrain = preGeneratedGrid[nKey];
+            if (!CFG.nonTraversable.includes(terrain)) {
+              reachableCoords.add(nKey);
+              queue.push([nx, ny]);
+            }
+          }
+        }
+      }
+    }
+
+    // We accept the layout if there is a reasonably large reachable area (at least 35 tiles)
+    if (reachableCoords.size >= 35) {
       break;
     }
   }
 
-  // Spawn exit entity if this is a sub-cave
+  // 4. Fill all unreachable cells with non-traversable terrain to eliminate pockets
+  const defaultNonTraversable = CFG.nonTraversable[0] || 'mountain';
+  for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 10; x++) {
+      const key = `${x},${y}`;
+      if (!reachableCoords.has(key)) {
+        preGeneratedGrid[key] = defaultNonTraversable;
+      }
+    }
+  }
+
+  // 5. Ensure at least one cave tile is reachable and in the grid if cave is a possible terrain
+  if (pool.cave && pool.cave > 0) {
+    let hasReachableCave = false;
+    for (const key of reachableCoords) {
+      if (preGeneratedGrid[key] === 'cave') {
+        hasReachableCave = true;
+        break;
+      }
+    }
+    if (!hasReachableCave) {
+      const keysArray = Array.from(reachableCoords).filter(k => k !== `${sx},${sy}`);
+      if (keysArray.length > 0) {
+        const randomKey = keysArray[Math.floor(Math.random() * keysArray.length)];
+        preGeneratedGrid[randomKey] = 'cave';
+      }
+    }
+  }
+
+  // 6. Spawn exit entity if this is a sub-cave
   let startEntity = null;
   if (parentLocationId && parentCoords) {
     startEntity = {
@@ -59,13 +113,26 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
     };
   }
 
+  // 7. Initialize grid state with center starting tile drawn from the grid
   const placedTiles = {};
-  placedTiles[`${sx},${sy}`] = { terrainType: st, revealed: true, entity: startEntity };
+  const startTerrain = preGeneratedGrid[`${sx},${sy}`];
+  placedTiles[`${sx},${sy}`] = { terrainType: startTerrain, revealed: true, entity: startEntity };
+
+  // 8. Build tileStack as the remaining unplaced terrains (for the deck counter in UI)
+  const deck = [];
+  for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 10; x++) {
+      if (x !== sx || y !== sy) {
+        deck.push(preGeneratedGrid[`${x},${y}`]);
+      }
+    }
+  }
 
   const state = {
     isDiscovered: true,
     isCleared: false,
     placedTiles,
+    preGeneratedGrid,
     tileStack: deck,
     hasCaveEntranceSpawned: false
   };
@@ -77,9 +144,17 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
 // Draw a tile and place it
 export function discoverTile(locationId, x, y) {
   const locState = STATE.locations[locationId];
-  if (!locState || locState.tileStack.length === 0) return null;
+  if (!locState || !locState.preGeneratedGrid) return null;
 
-  const terrain = locState.tileStack.pop();
+  const coordKey = `${x},${y}`;
+  const terrain = locState.preGeneratedGrid[coordKey];
+  if (!terrain) return null;
+
+  // Remove one instance of this terrain from the display deck stack
+  const idx = locState.tileStack.indexOf(terrain);
+  if (idx !== -1) {
+    locState.tileStack.splice(idx, 1);
+  }
 
   // Decide entity spawn — only on traversable terrains
   let entity = null;
@@ -90,7 +165,7 @@ export function discoverTile(locationId, x, y) {
     entity = generateRandomEntity(locationId, terrain);
   }
 
-  locState.placedTiles[`${x},${y}`] = { terrainType: terrain, revealed: true, entity };
+  locState.placedTiles[coordKey] = { terrainType: terrain, revealed: true, entity };
   return terrain;
 }
 
