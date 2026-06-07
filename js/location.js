@@ -20,16 +20,17 @@ export function generateLocationMap(locationId, worldTileTerrain) {
   }
   shuffle(deck);
 
-  // Guarantee at least one cave tile is near the top of the stack (drawn early)
+  // Guarantee at least one cave tile is in the top 99 cards (so it is reachable/drawable on the 10x10 grid)
   if (pool.cave && pool.cave > 0) {
     let caveIdx = deck.lastIndexOf('cave');
+    const drawLimit = Math.min(deck.length, 99);
     if (caveIdx === -1) {
-      // If no cave tile exists in the deck, replace one near the top (last elements of array)
-      const targetIdx = deck.length - 1 - Math.floor(Math.random() * 10);
+      // If no cave tile exists in the deck, replace one within the drawable top 99 elements of array
+      const targetIdx = deck.length - 1 - Math.floor(Math.random() * drawLimit);
       deck[targetIdx] = 'cave';
     } else {
-      // Swap the existing cave tile into the top 10 elements of the deck
-      const targetIdx = deck.length - 1 - Math.floor(Math.random() * 10);
+      // Swap the existing cave tile into the drawable top 99 elements of the deck
+      const targetIdx = deck.length - 1 - Math.floor(Math.random() * drawLimit);
       const temp = deck[targetIdx];
       deck[targetIdx] = deck[caveIdx];
       deck[caveIdx] = temp;
