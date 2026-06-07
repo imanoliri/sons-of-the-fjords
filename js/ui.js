@@ -451,11 +451,35 @@ export function initUIBindings() {
           e.preventDefault();
           if (activePortalTarget.entity.type === 'cave_entrance') {
             triggerEnterCavePortal(activePortalTarget.coordKey, activePortalTarget.entity);
-          } else if (activePortalTarget.entity.type === 'burial_mound') {
-            triggerEncounterEvent(activePortalTarget.coordKey, activePortalTarget.entity);
           }
         }
         return;
+      } else if (activePortalTarget && activePortalTarget.entity.type === 'burial_mound') {
+        const key = e.key;
+        if (key === '1') {
+          e.preventDefault();
+          adjustResource('gold', 10);
+          activePortalTarget.entity.isExplored = true;
+          adjustFavor('loki', 1);
+          showToast('Plundered Burial Mound! Gained +10 Gold (Thor displeased, Loki pleased).', '🪦');
+          notify('STATE_UPDATED');
+        } else if (key === '2') {
+          e.preventDefault();
+          if (STATE.resources.sheep >= 1) {
+            adjustResource('sheep', -1);
+            activePortalTarget.entity.isExplored = true;
+            adjustFavor('hel', 1);
+            showToast('Sacrificed a sheep to appease Hel.', '🐑');
+          } else {
+            showToast('You have no sheep to sacrifice!', '⚠️');
+          }
+          notify('STATE_UPDATED');
+        } else if (key === '3') {
+          e.preventDefault();
+          elPromptPanel.classList.add('hidden');
+          activePortalTarget = null;
+          notify('STATE_UPDATED');
+        }
       }
     }
     // Check if player is on Town screen
@@ -1642,18 +1666,73 @@ function renderLocationMap() {
   if (currentTile && currentTile.entity && (currentTile.entity.type === 'cave_entrance' || (currentTile.entity.type === 'burial_mound' && !currentTile.entity.isExplored))) {
     const ent = currentTile.entity;
     elPromptPanel.classList.remove('hidden');
+    elPromptPanel.innerHTML = '';
+
+    const textSpan = document.createElement('span');
+    textSpan.id = 'portal-prompt-text';
+    elPromptPanel.appendChild(textSpan);
+
     if (ent.type === 'cave_entrance') {
       if (ent.isExit) {
-        elPromptText.innerText = '🪜 Ladder to upper level';
-        elPromptBtn.innerText = '[enter]';
+        textSpan.innerText = '🪜 Ladder to upper level ';
       } else {
-        elPromptText.innerText = '🕳️ Entrance to cave';
-        elPromptBtn.innerText = '[enter]';
+        textSpan.innerText = '🕳️ Entrance to cave ';
       }
+
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-sm btn-primary';
+      btn.id = 'btn-use-portal';
+      btn.innerText = '[enter]';
+      btn.addEventListener('click', () => {
+        triggerEnterCavePortal(`${px},${py}`, ent);
+      });
+      elPromptPanel.appendChild(btn);
+
     } else if (ent.type === 'burial_mound') {
-      elPromptText.innerText = '🪦 Ancient Burial Mound';
-      elPromptBtn.innerText = '[explore]';
+      textSpan.innerText = '🪦 Burial Mound: ';
+
+      const btn1 = document.createElement('button');
+      btn1.className = 'btn btn-sm btn-danger';
+      btn1.style.marginRight = '0.5rem';
+      btn1.innerText = '[1] Plunder';
+      btn1.addEventListener('click', () => {
+        adjustResource('gold', 10);
+        ent.isExplored = true;
+        adjustFavor('loki', 1);
+        showToast('Plundered Burial Mound! Gained +10 Gold (Thor displeased, Loki pleased).', '🪦');
+        notify('STATE_UPDATED');
+      });
+
+      const btn2 = document.createElement('button');
+      btn2.className = 'btn btn-sm btn-primary';
+      btn2.style.marginRight = '0.5rem';
+      btn2.innerText = '[2] Sacrifice';
+      btn2.addEventListener('click', () => {
+        if (STATE.resources.sheep >= 1) {
+          adjustResource('sheep', -1);
+          ent.isExplored = true;
+          adjustFavor('hel', 1);
+          showToast('Sacrificed a sheep to appease Hel.', '🐑');
+        } else {
+          showToast('You have no sheep to sacrifice!', '⚠️');
+        }
+        notify('STATE_UPDATED');
+      });
+
+      const btn3 = document.createElement('button');
+      btn3.className = 'btn btn-sm';
+      btn3.innerText = '[3] Leave';
+      btn3.addEventListener('click', () => {
+        elPromptPanel.classList.add('hidden');
+        activePortalTarget = null;
+        notify('STATE_UPDATED');
+      });
+
+      elPromptPanel.appendChild(btn1);
+      elPromptPanel.appendChild(btn2);
+      elPromptPanel.appendChild(btn3);
     }
+
     activePortalTarget = { coordKey: `${px},${py}`, entity: ent };
   } else {
     elPromptPanel.classList.add('hidden');
@@ -1743,8 +1822,11 @@ function renderLocationMap() {
             badge.innerText = '🪦';
             badge.addEventListener('click', (e) => {
               e.stopPropagation();
-              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
-              else attemptLocalPathMove(x, y);
+              if (x === px && y === py) {
+                // Do nothing: inline options [1], [2], [3] are already shown at the bottom.
+              } else {
+                attemptLocalPathMove(x, y);
+              }
             });
           } 
           else if (ent.type === 'dolmen' && !ent.isVisited) {
