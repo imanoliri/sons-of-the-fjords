@@ -901,7 +901,7 @@ function attemptLocalMove(targetX, targetY) {
     } else if (ent.type === 'dolmen' && !ent.isVisited) {
       triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'cave_entrance') {
-      triggerEnterCavePortal(coordKey, ent);
+      promptEnterCavePortal(coordKey, ent);
     }
   } else {
     // Normal empty tile movement
@@ -1367,7 +1367,7 @@ function renderLocationMap() {
                 badge.classList.add('visited-portal');
               }
             }
-            badge.addEventListener('click', () => triggerEnterCavePortal(coordKey, ent));
+            badge.addEventListener('click', () => promptEnterCavePortal(coordKey, ent));
           }
 
           elCell.appendChild(badge);
@@ -1454,6 +1454,44 @@ function getAdjacentUnplacedSlots(placed) {
   });
 
   return Array.from(slots);
+}
+
+// Prompt Cave Sub-Dungeon Portal
+function promptEnterCavePortal(coordKey, entity) {
+  showOverlay(elModalEvent);
+  elModalEventChoices.innerHTML = '';
+  
+  if (entity.isExit) {
+    elModalEventTitle.innerText = 'Cave Exit';
+    elModalEventBody.innerText = 'Do you want to climb the ladder and return to the surface?';
+  } else {
+    elModalEventTitle.innerText = 'Cave Entrance';
+    elModalEventBody.innerText = 'Do you want to step down into the dark cave chambers?';
+  }
+
+  // Option 1: Travel
+  const travelBtn = document.createElement('button');
+  travelBtn.classList.add('btn', 'btn-primary');
+  travelBtn.innerText = entity.isExit ? 'Climb Up (Enter)' : 'Enter Cave (Enter)';
+  travelBtn.addEventListener('click', () => {
+    hideOverlay(elModalEvent);
+    triggerEnterCavePortal(coordKey, entity);
+  });
+
+  // Option 2: Cancel
+  const cancelBtn = document.createElement('button');
+  cancelBtn.classList.add('btn', 'btn-danger');
+  cancelBtn.innerText = 'Stay here (Esc)';
+  cancelBtn.addEventListener('click', () => {
+    hideOverlay(elModalEvent);
+  });
+
+  elModalEventChoices.appendChild(travelBtn);
+  elModalEventChoices.appendChild(cancelBtn);
+  
+  // Set focus index to 0 so "Enter" triggers travelBtn
+  activeModalFocusIndex = 0;
+  updateModalKeyboardNavigation();
 }
 
 // Enter Cave Sub-Dungeon Portal
