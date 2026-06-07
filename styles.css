@@ -151,6 +151,18 @@ body {
   box-shadow: 0 0 12px var(--color-danger);
 }
 
+.btn-warning {
+  background: rgba(255, 215, 0, 0.15);
+  border-color: var(--color-thor);
+  color: var(--color-thor);
+}
+
+.btn-warning:hover {
+  background: var(--color-thor);
+  color: #0b0e11;
+  box-shadow: 0 0 12px var(--color-thor);
+}
+
 .btn-sm {
   padding: 0.35rem 0.75rem;
   font-size: 0.85rem;

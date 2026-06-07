@@ -1696,17 +1696,13 @@ function renderLocationMap() {
       const btnExplore = document.createElement('button');
       btnExplore.className = 'btn btn-sm btn-primary';
       btnExplore.style.marginRight = '0.5rem';
-      btnExplore.innerText = '[explore]';
+      btnExplore.innerText = '[enter]';
       btnExplore.addEventListener('click', () => {
         triggerEncounterEvent(`${px},${py}`, ent);
       });
 
       const btn1 = document.createElement('button');
-      btn1.className = 'btn btn-sm';
-      btn1.style.backgroundColor = 'var(--color-thor)';
-      btn1.style.color = '#111';
-      btn1.style.borderColor = 'var(--color-thor)';
-      btn1.style.fontWeight = 'bold';
+      btn1.className = 'btn btn-sm btn-warning';
       btn1.style.marginRight = '0.5rem';
       btn1.innerText = '[1] Plunder';
       btn1.addEventListener('click', () => {
@@ -2004,11 +2000,7 @@ function triggerEncounterEvent(coordKey, entity) {
       elModalEventBody.innerText = `You uncover an ancient viking Barrow Grave. Deep markings suggest a warrior tomb. Defile the grave to look for relics, or perform a sacrifice of Sheep to please Hel?`;
 
       const choice1 = document.createElement('button');
-      choice1.classList.add('btn');
-      choice1.style.backgroundColor = 'var(--color-thor)';
-      choice1.style.color = '#111';
-      choice1.style.borderColor = 'var(--color-thor)';
-      choice1.style.fontWeight = 'bold';
+      choice1.classList.add('btn', 'btn-warning');
       choice1.innerText = 'Plunder Mound (+10 Gold, pleases Loki, angers Thor)';
       choice1.addEventListener('click', () => {
         adjustResource('gold', 10);
