@@ -744,18 +744,6 @@ function initTooltipEvents() {
         if (danger && locationType === 'raid') {
           contents.push(`💀 Danger Level: ${'💀'.repeat(danger)} (Level ${danger})`);
         }
-        if (locationType === 'raid') {
-          const biome = locationBiome || 'default';
-          const poolMap = {
-            forest: 'Spiders & Wolves',
-            mountain: 'Wolves & Trolls',
-            cave: 'Spiders & Trolls',
-            burial_mound: 'Draugr Warriors',
-            default: 'Spiders & Wolves'
-          };
-          const list = poolMap[biome] || poolMap.default;
-          contents.push(`<span style="color:var(--color-danger);font-size:0.82em;display:block;margin-top:2px;">👹 Enemies: ${list}</span>`);
-        }
       }
       
       if (contents.length === 0) {
@@ -769,6 +757,22 @@ function initTooltipEvents() {
           contents.push('Rugged land. Slow travel, costs 3 Food per step. Dangerous creature attacks!');
         }
       }
+
+      // Add concrete enemy description for any land/raid tiles on world map
+      if (locationType === 'raid' || (terrain !== 'water' && terrain !== 'deep_water' && terrain !== 'river')) {
+        const biome = locationType === 'raid' ? (locationBiome || 'default') : terrain;
+        const poolMap = {
+          forest: 'Spiders & Wolves',
+          mountain: 'Wolves & Trolls',
+          snow: 'Spiders & Trolls',
+          plains: 'Spiders & Wolves',
+          burial_mound: 'Draugr Warriors',
+          default: 'Spiders & Wolves'
+        };
+        const list = poolMap[biome] || poolMap.default;
+        contents.push(`<span style="color:var(--color-danger);font-size:0.82em;display:block;margin-top:2px;">👹 Enemies: ${list}</span>`);
+      }
+
       contentsText = contents.join('<br>');
     } else {
       elTooltip.classList.add('tooltip-discrete');
