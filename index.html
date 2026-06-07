@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sons of the Fjords</title>
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
   <!-- Google Fonts for Runic and Premium Styling -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -96,21 +97,8 @@
             <!-- BUY/SELL OUTPOST -->
             <div class="town-card">
               <h3>Market Stall</h3>
-              <div class="trade-row">
-                <span>Buy 5 Food (-2 Gold)</span>
-                <button class="btn btn-sm" id="btn-buy-food">Buy [F]</button>
-              </div>
-              <div class="trade-row">
-                <span>Buy 2 Wood (-2 Gold)</span>
-                <button class="btn btn-sm" id="btn-buy-wood">Buy [W]</button>
-              </div>
-              <div class="trade-row">
-                <span>Sell 1 Sheep (+4 Gold)</span>
-                <button class="btn btn-sm" id="btn-sell-sheep">Sell [G]</button>
-              </div>
-              <div class="trade-row">
-                <span>Buy 1 Sheep (-6 Gold)</span>
-                <button class="btn btn-sm" id="btn-buy-sheep">Buy [S]</button>
+              <div id="town-market-list">
+                <!-- Populated dynamically based on surrounding geography -->
               </div>
             </div>
 
@@ -119,15 +107,15 @@
               <h3>Great Hall</h3>
               <p class="card-desc">Hire warriors to fill your deployment roster. (Max Band: 8)</p>
               <div class="trade-row">
-                <span>Hire Shieldmaiden (-5 Gold)</span>
+                <span>Hire Shieldmaiden (-5 Gold, -10 Food)</span>
                 <button class="btn btn-sm" id="btn-recruit-shieldmaiden">Hire [1]</button>
               </div>
               <div class="trade-row">
-                <span>Hire Berserker (-7 Gold)</span>
+                <span>Hire Berserker (-7 Gold, -1 Sheep)</span>
                 <button class="btn btn-sm" id="btn-recruit-berserker">Hire [2]</button>
               </div>
               <div class="trade-row">
-                <span>Hire Huntsman (-6 Gold)</span>
+                <span>Hire Huntsman (-6 Gold, -3 Wood)</span>
                 <button class="btn btn-sm" id="btn-recruit-huntsman">Hire [3]</button>
               </div>
             </div>
@@ -212,7 +200,7 @@
                 <div style="width: 2px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 0.25rem;"></div>
                 
                 <button class="btn btn-sm btn-warning" id="btn-combat-pause">Pause / Deploy</button>
-                <button class="btn btn-sm btn-danger" id="btn-combat-flee">Flee Mode: OFF</button>
+                <button class="btn btn-sm btn-danger" id="btn-combat-flee">Flee Combat</button>
               </div>
             </div>
             

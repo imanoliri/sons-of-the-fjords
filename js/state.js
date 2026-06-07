@@ -55,11 +55,20 @@ export const STATE = {
   // Deity Quest Milestones (5 steps per god)
   godQuests: makeGodQuests(),
 
+  // Counters for alternate favor gains
+  odinWolvesKilled: 0,
+  odinGiantsKilled: 0,
+  thorDraugrsKilled: 0,
+  thorLindwurmsKilled: 0,
+  freyaSheepSold: 0,
+  freyaWoodSold: 0,
+
   // Current global game day
   day: 1,
 
   // Active Champion Buff
   activeBlessing: null,
+  permanentlyActivatedBlessings: [],
 
   // Combat details
   combat: {
@@ -117,8 +126,9 @@ export function recruitSoldier(type) {
   let maxHp = base.maxHp;
   let hp = base.hp;
   if (STATE.godFavor.freya === -5) {
-    maxHp = Math.max(10, maxHp - 10);
-    hp = Math.max(10, hp - 10);
+    const penalty = Math.abs(GC.modifiers.wrath.freya.maxHpPenalty || -10);
+    maxHp = Math.max(10, maxHp - penalty);
+    hp = Math.max(10, hp - penalty);
   }
   STATE.band.push({ id, name: rName, type, ...base, maxHp, hp });
   notify('RESOURCES_UPDATED');
@@ -138,7 +148,7 @@ export function sacrificeRelic(relicId, godName) {
 export function adjustFavor(godName, amt) {
   const opposites = GC.pentagramOpposites;
   const current = STATE.godFavor[godName];
-  if (current >= GC.favorMax) return;
+  if (current >= GC.favorMax && amt > 0) return;
 
   const nextFavor = Math.min(GC.favorMax, Math.max(GC.favorMin, current + amt));
   STATE.godFavor[godName] = nextFavor;
@@ -172,6 +182,81 @@ export function adjustFavor(godName, amt) {
   notify('FAVOR_UPDATED');
 }
 
+// Record monster kills to award alternative favor
+export function recordMonsterKill(monsterType) {
+  const nameLower = monsterType.toLowerCase();
+  const targets = GC.alternativeFavor;
+
+  if (nameLower.includes('wolf')) {
+    STATE.odinWolvesKilled = (STATE.odinWolvesKilled || 0) + 1;
+    if (STATE.odinWolvesKilled >= targets.odin.wolvesTarget) {
+      STATE.odinWolvesKilled = 0;
+      adjustFavor('odin', 1);
+      notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: `slaying ${targets.odin.wolvesTarget} wolves` });
+    }
+  } else if (nameLower.includes('giant')) {
+    STATE.odinGiantsKilled = (STATE.odinGiantsKilled || 0) + 1;
+    if (STATE.odinGiantsKilled >= targets.odin.giantsTarget) {
+      STATE.odinGiantsKilled = 0;
+      adjustFavor('odin', 1);
+      notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: 'slaying a giant' });
+    }
+  }
+
+  if (nameLower.includes('draugr')) {
+    STATE.thorDraugrsKilled = (STATE.thorDraugrsKilled || 0) + 1;
+    if (STATE.thorDraugrsKilled >= targets.thor.draugrsTarget) {
+      STATE.thorDraugrsKilled = 0;
+      adjustFavor('thor', 1);
+      notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: `slaying ${targets.thor.draugrsTarget} draugrs` });
+    }
+  } else if (nameLower.includes('lindwurm')) {
+    STATE.thorLindwurmsKilled = (STATE.thorLindwurmsKilled || 0) + 1;
+    if (STATE.thorLindwurmsKilled >= targets.thor.lindwurmsTarget) {
+      STATE.thorLindwurmsKilled = 0;
+      adjustFavor('thor', 1);
+      notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: 'slaying a Lindwurm' });
+    }
+  }
+}
+
+// Sell sheep and update Freya favor
+export function sellSheep() {
+  const targets = GC.alternativeFavor.freya;
+  if (STATE.resources.sheep >= 1) {
+    adjustResource('sheep', -1);
+    adjustResource('gold', 4);
+
+    STATE.freyaSheepSold = (STATE.freyaSheepSold || 0) + 1;
+    if (STATE.freyaSheepSold >= targets.sheepTarget) {
+      STATE.freyaSheepSold = 0;
+      adjustFavor('freya', 1);
+      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.sheepTarget} sheep` });
+    }
+    return true;
+  }
+  return false;
+}
+
+// Sell wood and update Freya favor
+export function sellWood() {
+  const targets = GC.alternativeFavor.freya;
+  if (STATE.resources.wood >= targets.woodTarget) {
+    adjustResource('wood', -targets.woodTarget);
+    adjustResource('gold', 4);
+
+    STATE.freyaWoodSold = (STATE.freyaWoodSold || 0) + targets.woodTarget;
+    if (STATE.freyaWoodSold >= targets.woodTarget) {
+      const favorGained = Math.floor(STATE.freyaWoodSold / targets.woodTarget);
+      STATE.freyaWoodSold = STATE.freyaWoodSold % targets.woodTarget;
+      adjustFavor('freya', favorGained);
+      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.woodTarget} wood` });
+    }
+    return true;
+  }
+  return false;
+}
+
 // Starvation damage
 export function triggerStarvationDamage() {
   if (STATE.band.length > 0) {
@@ -195,11 +280,128 @@ export function resetGame() {
   STATE.party = { worldX: WC.partyStart.x, worldY: WC.partyStart.y, currentLocationId: null, localX: 0, localY: 0 };
   STATE.godFavor = makeGodFavor();
   STATE.godQuests = makeGodQuests();
+  STATE.odinWolvesKilled = 0;
+  STATE.odinGiantsKilled = 0;
+  STATE.thorDraugrsKilled = 0;
+  STATE.thorLindwurmsKilled = 0;
+  STATE.freyaSheepSold = 0;
+  STATE.freyaWoodSold = 0;
   STATE.day = 1;
   STATE.activeBlessing = null;
+  STATE.permanentlyActivatedBlessings = [];
   STATE.combat = {
     active: false, grid: [], pool: [], paused: true,
     ticker: null, selectedPoolIndex: null, spawnTimer: 0,
     locationId: null, entityCoordKey: null, waveMonsters: []
   };
+}
+
+// Execute plundering a burial mound
+export function executePlunderMound(entity) {
+  const action = GC.encounterActions.plunderMound;
+  adjustResource('gold', action.gain.gold);
+  entity.isExplored = true;
+  Object.entries(action.favorChanges).forEach(([god, amt]) => adjustFavor(god, amt));
+  return action;
+}
+
+// Execute sacrifice sheep to Hel
+export function executeSacrificeSheep(entity) {
+  const action = GC.encounterActions.sacrificeSheep;
+  const sheepCost = Math.abs(action.cost.sheep);
+  if (STATE.resources.sheep >= sheepCost) {
+    adjustResource('sheep', -sheepCost);
+    entity.isExplored = true;
+    Object.entries(action.favorChanges).forEach(([god, amt]) => adjustFavor(god, amt));
+    return action;
+  }
+  return null;
+}
+
+/* --- Town Transaction state methods --- */
+
+export function buyFood(cost, amount) {
+  if (STATE.resources.gold >= cost) {
+    adjustResource('gold', -cost);
+    adjustResource('food', amount);
+    return { success: true, message: `Bought ${amount} food supplies for ${cost} gold.` };
+  }
+  return { success: false, message: 'Not enough gold to trade food!' };
+}
+
+export function buyWood(cost, amount) {
+  if (STATE.resources.gold >= cost) {
+    adjustResource('gold', -cost);
+    adjustResource('wood', amount);
+    return { success: true, message: `Bought ${amount} wood planks for ${cost} gold.` };
+  }
+  return { success: false, message: 'Not enough gold to buy wood!' };
+}
+
+export function sellSheepDynamic(gain, amount = 1) {
+  if (STATE.resources.sheep >= amount) {
+    adjustResource('sheep', -amount);
+    adjustResource('gold', gain);
+    const targets = GC.alternativeFavor.freya;
+    STATE.freyaSheepSold = (STATE.freyaSheepSold || 0) + amount;
+    if (STATE.freyaSheepSold >= targets.sheepTarget) {
+      STATE.freyaSheepSold = 0;
+      adjustFavor('freya', 1);
+      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.sheepTarget} sheep` });
+    }
+    return { success: true, message: `Sold ${amount} livestock sheep for ${gain} gold.` };
+  }
+  return { success: false, message: 'No sheep available to trade!' };
+}
+
+export function sellWoodDynamic(gain, amount = 10) {
+  if (STATE.resources.wood >= amount) {
+    adjustResource('wood', -amount);
+    adjustResource('gold', gain);
+    const targets = GC.alternativeFavor.freya;
+    STATE.freyaWoodSold = (STATE.freyaWoodSold || 0) + amount;
+    if (STATE.freyaWoodSold >= targets.woodTarget) {
+      const favorGained = Math.floor(STATE.freyaWoodSold / targets.woodTarget);
+      STATE.freyaWoodSold = STATE.freyaWoodSold % targets.woodTarget;
+      adjustFavor('freya', favorGained);
+      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.woodTarget} wood` });
+    }
+    return { success: true, message: `Sold ${amount} wood planks for ${gain} gold.` };
+  }
+  return { success: false, message: `Not enough wood to sell (requires ${amount} wood)!` };
+}
+
+export function buySheepDynamic(cost, amount = 1) {
+  if (STATE.resources.gold >= cost) {
+    adjustResource('gold', -cost);
+    adjustResource('sheep', amount);
+    return { success: true, message: `Bought ${amount} sheep for ${cost} gold.` };
+  }
+  return { success: false, message: 'Not enough gold to purchase sheep!' };
+}
+
+export function buyRecruit(type, cost) {
+  if (STATE.godFavor.hel === -5) {
+    return { success: false, message: "Hel's Wrath: Dead band members cannot be replaced!" };
+  }
+  if (STATE.band.length >= SC.maxBandSize) {
+    return { success: false, message: `Your Drakkar deck is full (max ${SC.maxBandSize} soldiers)!` };
+  }
+  
+  // Check all resource requirements
+  for (const [res, amt] of Object.entries(cost)) {
+    if ((STATE.resources[res] || 0) < amt) {
+      const resLabel = res.charAt(0).toUpperCase() + res.slice(1);
+      return { success: false, message: `Not enough ${resLabel} to hire recruit!` };
+    }
+  }
+
+  // Deduct resources
+  for (const [res, amt] of Object.entries(cost)) {
+    adjustResource(res, -amt);
+  }
+
+  recruitSoldier(type);
+  const label = type.charAt(0).toUpperCase() + type.slice(1);
+  return { success: true, message: `Enrolled a ${label} to your band!` };
 }

@@ -2,9 +2,10 @@
    COMBAT MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, notify, adjustResource } from './state.js';
+import { STATE, notify, adjustResource, recordMonsterKill } from './state.js';
 import { COMBAT_CONFIG as CFG } from './config/combat.js';
 import { SOLDIERS_CONFIG } from './config/soldiers.js';
+import { GODS_CONFIG as GC } from './config/gods.js';
 
 let combatTimer = null;
 
@@ -19,6 +20,10 @@ export function sortPoolByPoints() {
 
 // Initialize combat map grid & pool
 export function startCombat(locationId, coordKey, enemyData) {
+  if (combatTimer) {
+    clearInterval(combatTimer);
+    combatTimer = null;
+  }
   STATE.combat.active = true;
   STATE.combat.paused = true;
   STATE.combat.locationId = locationId;
@@ -98,6 +103,9 @@ function combatTick() {
       if (target.hp <= 0) {
         grid[target.row][target.col] = null;
         removeUnitFromRegistry(target);
+        if (target.alliance === 'enemy') {
+          recordMonsterKill(target.type);
+        }
         notify('COMBAT_DEATH', target);
       }
     } else {
@@ -185,9 +193,31 @@ function handleUnitReachEnd(unit) {
     const resTypes = ['gold', 'food', 'wood', 'sheep'];
     const rType = resTypes[Math.floor(Math.random() * resTypes.length)];
     adjustResource(rType, -CFG.enemyBreachDrain);
-    const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
-    if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
     notify('COMBAT_BREACH', { unit, stolen: rType });
+
+    // Reappear in a random lane on the side opposite to you
+    const sizeR = CFG.gridRows;
+    const sizeC = CFG.gridCols;
+    const grid = STATE.combat.grid;
+
+    const startLanes = Array.from({ length: sizeR }, (_, i) => i);
+    startLanes.sort(() => Math.random() - 0.5);
+
+    let relocated = false;
+    for (const lane of startLanes) {
+      if (!grid[lane][sizeC - 1]) {
+        unit.row = lane;
+        unit.col = sizeC - 1;
+        grid[lane][sizeC - 1] = unit;
+        relocated = true;
+        break;
+      }
+    }
+
+    if (!relocated) {
+      const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
+      if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
+    }
   }
 }
 
@@ -272,6 +302,36 @@ export function endCombat(isVictory) {
   }
 }
 
+export function fleeCombat() {
+  STATE.combat.active = false;
+  STATE.combat.paused = true;
+  clearInterval(combatTimer);
+  combatTimer = null;
+
+  const resTypes = ['gold', 'food', 'wood', 'sheep'];
+  const stolen = {};
+  for (const monster of STATE.combat.waveMonsters) {
+    const rType = resTypes[Math.floor(Math.random() * resTypes.length)];
+    adjustResource(rType, -CFG.enemyBreachDrain);
+    stolen[rType] = (stolen[rType] || 0) + CFG.enemyBreachDrain;
+  }
+
+  const boardUnits = [];
+  for (let r = 0; r < CFG.gridRows; r++)
+    for (let c = 0; c < CFG.gridCols; c++) {
+      const cell = STATE.combat.grid[r][c];
+      if (cell && cell.alliance === 'player') boardUnits.push(cell);
+    }
+
+  for (const member of STATE.band) {
+    const activeUnit = boardUnits.find(u => u.id === member.id) || STATE.combat.pool.find(u => u.id === member.id);
+    if (activeUnit) member.hp = Math.min(member.maxHp, activeUnit.hp);
+  }
+
+  notify('COMBAT_FLEE', { stolen });
+}
+
+
 function getMonsterStats(mClass) {
   return CFG.monsters[mClass] || CFG.monsterFallback;
 }
@@ -314,47 +374,42 @@ export function getEffectiveStats(unit) {
   let bonusRange = 0;
 
   if (isPlayer) {
-    // Thor milestone 4: All units gain +1 max HP
-    if (STATE.godQuests.thor?.[3]) {
-      bonusMaxHp += 1;
+    // Apply Active and Permanently Activated Blessing modifiers
+    const activeBlessings = new Set();
+    if (STATE.activeBlessing) {
+      activeBlessings.add(STATE.activeBlessing);
+    }
+    if (STATE.permanentlyActivatedBlessings) {
+      STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
     }
 
-    if (unit.type === 'shieldmaiden') {
-      // Freya milestone 1: Shieldmaidens gain +5 max HP
-      if (STATE.godQuests.freya?.[0]) {
-        bonusMaxHp += 5;
+    for (const blessing of activeBlessings) {
+      if (GC.modifiers.blessings[blessing]) {
+        const bMod = GC.modifiers.blessings[blessing];
+        if (bMod.targetType === 'all' || bMod.targetType === unit.type) {
+          if (bMod.maxHp) bonusMaxHp += bMod.maxHp;
+          if (bMod.dmg) bonusDmg += bMod.dmg;
+          if (bMod.speed) bonusSpeed += bMod.speed;
+          if (bMod.range) bonusRange += bMod.range;
+        }
       }
-      // Freya milestone 3: Shieldmaidens gain +2 DMG
-      if (STATE.godQuests.freya?.[2]) {
-        bonusDmg += 2;
-      }
-    } else if (unit.type === 'berserker') {
-      // Odin milestone 4: Berserkers gain +1 DMG per combat tick
-      if (STATE.godQuests.odin?.[3]) {
-        bonusDmg += 1;
-      }
-      // Thor milestone 1: Berserkers gain +1 DMG in combat
-      if (STATE.godQuests.thor?.[0]) {
-        bonusDmg += 1;
-      }
-      // Thor buff (active blessing): Berserkers gain +3 DMG and +1 Speed
-      if (STATE.activeBlessing === 'thor') {
-        bonusDmg += 3;
-        bonusSpeed += 1;
-      }
-      // Thor milestone 2: Berserkers move +1 Speed per tick
-      if (STATE.godQuests.thor?.[1]) {
-        bonusSpeed += 1;
-      }
-    } else if (unit.type === 'huntsman') {
-      // Odin milestone 3: All Huntsmen gain +1 Attack Range
-      if (STATE.godQuests.odin?.[2]) {
-        bonusRange += 1;
-      }
-      // Odin buff: Huntsmen gain +2 Attack Range & +1 DMG per turn
-      if (STATE.activeBlessing === 'odin') {
-        bonusRange += 2;
-        bonusDmg += 1;
+    }
+
+    // Apply Quest Milestone modifiers
+    for (const godName of Object.keys(STATE.godQuests)) {
+      const track = STATE.godQuests[godName];
+      const godMiles = GC.modifiers.milestones[godName];
+      if (godMiles) {
+        for (const mMod of godMiles) {
+          if (track[mMod.index]) {
+            if (mMod.targetType === 'all' || mMod.targetType === unit.type) {
+              if (mMod.maxHp) bonusMaxHp += mMod.maxHp;
+              if (mMod.dmg) bonusDmg += mMod.dmg;
+              if (mMod.speed) bonusSpeed += mMod.speed;
+              if (mMod.range) bonusRange += mMod.range;
+            }
+          }
+        }
       }
     }
   } else {

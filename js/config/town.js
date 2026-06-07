@@ -8,6 +8,7 @@ export const TOWN_CONFIG = {
     { id: 'buy-food',  label: 'Buy 5 Food',   cost: { gold: -2 }, gain: { food:  5  } },
     { id: 'buy-wood',  label: 'Buy 2 Wood',   cost: { gold: -2 }, gain: { wood:  2  } },
     { id: 'sell-sheep',label: 'Sell 1 Sheep', cost: { sheep: -1}, gain: { gold:  4  } },
+    { id: 'sell-wood', label: 'Sell 10 Wood', cost: { wood: -10}, gain: { gold:  4  } },
     { id: 'buy-sheep', label: 'Buy 1 Sheep',  cost: { gold: -6 }, gain: { sheep: 1  } }
   ],
 
@@ -16,20 +17,45 @@ export const TOWN_CONFIG = {
 
   // Great Hall recruit costs (gold only)
   recruitCosts: {
-    shieldmaiden: 5,
-    berserker:    7,
-    huntsman:     6
+    shieldmaiden: { gold: 5, food: 10 },
+    berserker:    { gold: 7, sheep: 1 },
+    huntsman:     { gold: 6, wood: 3 }
   },
 
-  // Divine Patron switch cost
-  patronSwitchCost: 5,
-
-  // Seidr Shrine: which relic belongs to which god
-  shrineRelics: {
-    'Shard of Gungnir':       'odin',
-    "Mjolnir's Core":         'thor',
-    "Freya's Amber Tear":     'freya',
-    "Hel's Urn of Ash":       'hel',
-    "Loki's Trickster Coin":  'loki'
+  // Dynamic pricing coefficients and limits based on surrounding geography
+  dynamicPricing: {
+    food: {
+      baseCost: 2,
+      minCost: 1,
+      maxCost: 5,
+      foodGained: 5
+    },
+    woodBuy: {
+      baseCost: 2,
+      minCost: 1,
+      maxCost: 5,
+      woodGained: 2,
+      scarceBonus: 2
+    },
+    sheepBuy: {
+      baseCost: 6,
+      minCost: 3,
+      maxCost: 10,
+      sheepGained: 1
+    },
+    sheepSell: {
+      baseGain: 4,
+      minGain: 1,
+      maxGain: 8,
+      sheepSold: 1,
+      scarceBonus: 2
+    },
+    woodSell: {
+      baseGain: 4,
+      minGain: 1,
+      maxGain: 8,
+      woodSold: 10,
+      scarceBonus: 2
+    }
   }
 };
