@@ -331,7 +331,7 @@ export function initUIBindings() {
     const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
     if (visibleOverlay) {
       const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'))
-        .filter(btn => !btn.classList.contains('btn-close-x'));
+        .filter(btn => !btn.classList.contains('btn-close-x') && !btn.classList.contains('modal-close-btn'));
       if (buttons.length > 0) {
         // Number keys (1 to buttons.length)
         const keyNum = parseInt(e.key);
@@ -2710,7 +2710,7 @@ function updateModalKeyboardNavigation() {
   }
 
   const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'))
-    .filter(btn => !btn.classList.contains('btn-close-x'));
+    .filter(btn => !btn.classList.contains('btn-close-x') && !btn.classList.contains('modal-close-btn'));
   if (buttons.length === 0) return;
 
   if (activeModalFocusIndex >= buttons.length) {
