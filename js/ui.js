@@ -855,6 +855,8 @@ function initTooltipEvents() {
     if (tile.classList.contains('world-tile')) {
       showWorldTileTooltip(tile, e.clientX, e.clientY);
       return;
+    }
+
     let headerText = '';
     let coordsText = '';
     let contentsText = '';
