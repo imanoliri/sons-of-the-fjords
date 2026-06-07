@@ -55,6 +55,7 @@ const elShrineEmpty = document.getElementById('shrine-empty-message');
 // Location elements
 const elLocMap = document.getElementById('location-map');
 const elLocTitle = document.getElementById('location-title');
+const elLocThreat = document.getElementById('location-threat-display');
 const elLocDeckCount = document.getElementById('location-deck-count');
 const elLocLog = document.getElementById('location-event-log');
 const elPromptPanel = document.getElementById('portal-prompt-panel');
@@ -1651,9 +1652,19 @@ function renderLocationMap() {
   const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
   const locName = locData ? locData.name : (locState.isSubCave ? 'Sub-Cave Chamber' : 'Exploring Site');
   const dangerVal = locState.dangerLevel || 3;
-  const diffVal = (locState.difficulty || 1.0).toFixed(2);
+  const diffValNum = locState.difficulty || 1.0;
+  const diffVal = diffValNum.toFixed(2);
 
-  elLocTitle.innerText = `${locName} (${diffVal}x Threat)`;
+  elLocTitle.innerText = locName;
+  
+  let threatColor = 'var(--color-success)'; // green
+  if (diffValNum >= 1.0 && diffValNum <= 1.5) {
+    threatColor = 'var(--color-loki)'; // orange
+  } else if (diffValNum > 1.5) {
+    threatColor = 'var(--color-danger)'; // red
+  }
+  elLocThreat.innerHTML = `<span style="color:${threatColor}">(${diffVal}x Threat)</span>`;
+
   elLocDeckCount.innerText = locState.tileStack.length;
 
   const stars = '💀'.repeat(dangerVal) + '⬜'.repeat(Math.max(0, 5 - dangerVal));
