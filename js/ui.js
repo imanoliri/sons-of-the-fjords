@@ -853,7 +853,7 @@ function initTooltipEvents() {
       } else {
         hoverTimeout = setTimeout(() => {
           showWorldTileTooltip(tile, lastClientX, lastClientY, false);
-        }, 400);
+        }, 1200);
       }
       return;
     }
