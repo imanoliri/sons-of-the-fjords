@@ -49,27 +49,48 @@ export function startCombat(locationId, coordKey, enemyData) {
   const startLanes = Array.from({ length: CFG.gridRows }, (_, i) => i);
   shuffleArray(startLanes);
 
+  const activeBlessings = new Set();
+  if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
+  if (STATE.permanentlyActivatedBlessings) {
+    STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
+  }
+  const hasLokiBlessing = activeBlessings.has('loki');
+
   let spawnIndex = 0;
   for (const m of enemyData.monsters) {
     for (let i = 0; i < m.count; i++) {
       const lane = startLanes[spawnIndex % CFG.gridRows];
       spawnIndex++;
       const stats = getMonsterStats(m.monsterClass);
+
+      const isCharmed = hasLokiBlessing && Math.random() < 0.25;
+      let spawnCol = isCharmed ? 0 : CFG.gridCols - 1;
+      if (isCharmed) {
+        // Find first unoccupied column from the left
+        for (let c = 0; c < CFG.gridCols; c++) {
+          if (!grid[lane][c]) {
+            spawnCol = c;
+            break;
+          }
+        }
+      }
+
       const mUnit = {
-        id: Date.now() + Math.floor(Math.random() * 1000),
-        name: m.monsterClass,
+        id: Date.now() + Math.floor(Math.random() * 1000) + i,
+        name: m.monsterClass + (isCharmed ? ' 🌀' : ''),
         type: m.monsterClass,
         hp: stats.hp,
         maxHp: stats.hp,
         dmg: stats.dmg,
         speed: stats.speed,
         range: stats.range,
-        alliance: 'enemy',
+        alliance: isCharmed ? 'player' : 'enemy',
+        isCharmed: isCharmed,
         row: lane,
-        col: CFG.gridCols - 1
+        col: spawnCol
       };
       monsters.push(mUnit);
-      grid[lane][CFG.gridCols - 1] = mUnit;
+      grid[lane][spawnCol] = mUnit;
     }
   }
 
@@ -172,7 +193,7 @@ function findTargetInLane(unit) {
 }
 
 function removeUnitFromRegistry(unit) {
-  if (unit.alliance === 'player') {
+  if (unit.alliance === 'player' && !unit.isCharmed) {
     const idx = STATE.band.findIndex(u => u.id === unit.id);
     if (idx !== -1) STATE.band.splice(idx, 1);
   } else {
@@ -183,6 +204,13 @@ function removeUnitFromRegistry(unit) {
 
 function handleUnitReachEnd(unit) {
   if (unit.alliance === 'player') {
+    if (unit.isCharmed) {
+      const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
+      if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
+      notify('COMBAT_UPDATE');
+      checkCombatEndConditions();
+      return;
+    }
     const reward = CFG.playerCrossReward;
     Object.entries(reward).forEach(([res, amt]) => adjustResource(res, amt));
     const poolUnit = { ...unit, hp: unit.maxHp, row: undefined, col: undefined };

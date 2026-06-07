@@ -64,8 +64,8 @@ export const GODS_CONFIG = {
   // Combat blessings, milestones, and wrath modifiers
   modifiers: {
     blessings: {
-      thor: { targetType: 'berserker', dmg: 3, speed: 1 },
-      odin: { targetType: 'huntsman', range: 2, dmg: 1 }
+      odin: { targetType: 'huntsman', range: 2, dmg: 1 },
+      thor: { targetType: 'berserker', dmg: 3, speed: 1 }
     },
     milestones: {
       odin: [
@@ -75,7 +75,7 @@ export const GODS_CONFIG = {
       thor: [
         { index: 0, targetType: 'berserker', dmg: 1 },
         { index: 1, targetType: 'berserker', speed: 1 },
-        { index: 3, targetType: 'all', maxHp: 1 }
+        { index: 3, targetType: 'all', maxHp: 5 }
       ],
       freya: [
         { index: 0, targetType: 'shieldmaiden', maxHp: 5 },
@@ -131,7 +131,7 @@ export const GODS_CONFIG = {
         'Berserkers gain +1 DMG in combat.',
         'Berserkers move +1 Speed per tick.',
         'Enemy spawn rate slowed by 10%.',
-        'All units gain +1 max HP.',
+        'All units gain +5 max HP.',
         null
       ]
     },
@@ -192,7 +192,7 @@ export const GODS_CONFIG = {
         '3. Open the Town screen → Temple section → click <b>Appease Loki</b>',
         '4. Repeat: each sacrifice grants +1 Favor toward the next milestone'
       ],
-      buff: 'Once per battle, your weakest unit swaps position with a random enemy.',
+      buff: 'Chaos Mirror: 25% chance for spawning monsters to be Charmed, spawning on the left and fighting for you.',
       wrath: 'Wrath: Random event triggers each world move (ambush, resource loss, or unit injury).',
       milestoneEffects: [
         'Chest loot gives +1 extra Gold.',
