@@ -394,7 +394,9 @@ function generateRandomEntity(locationId, terrain, x = null, y = null, locationT
   }
   else if (w.ore_deposit !== undefined && roll < w.ore_deposit)   type = 'ore_deposit';
   else if (w.enemy_army !== undefined && roll < w.enemy_army)     type = 'enemy_army';
-  else if (w.burial_mound !== undefined && roll < w.burial_mound) type = 'burial_mound';
+  else if (w.burial_mound !== undefined && roll < w.burial_mound) {
+    type = locationId.startsWith('raid_') ? 'burial_mound' : 'treasure';
+  }
   else                                                            type = 'dolmen';
 
   // Cave terrain override
