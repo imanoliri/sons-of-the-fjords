@@ -72,6 +72,15 @@ const elModalGameOver = document.getElementById('modal-gameover');
 const elPatronCard = document.getElementById('town-patron-card');
 const elPatronList = document.getElementById('town-patron-list');
 
+const MONSTER_EMOJIS = {
+  'Giant Brood-Spider': '🕷️',
+  'Fenrir Pack Wolf': '🐺',
+  'Draugr Warrior': '🧟',
+  'Cave Troll': '👹',
+  'Frost Giant (Jotunn)': '❄️',
+  'Lindwurm': '🐉'
+};
+
 // Initialize UI binding event listeners
 export function initUIBindings() {
   
@@ -1379,7 +1388,8 @@ function renderLocationMap() {
             badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
           } 
           else if (ent.type === 'enemy_army' && !ent.isDefeated) {
-            badge.innerText = '👹';
+            const firstMonster = ent.monsters && ent.monsters[0] ? ent.monsters[0].monsterClass : '';
+            badge.innerText = MONSTER_EMOJIS[firstMonster] || '👹';
             badge.addEventListener('click', () => triggerCombatTransition(coordKey, ent));
           } 
           else if (ent.type === 'burial_mound' && !ent.isExplored) {
