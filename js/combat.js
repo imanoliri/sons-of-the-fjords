@@ -20,6 +20,10 @@ export function sortPoolByPoints() {
 
 // Initialize combat map grid & pool
 export function startCombat(locationId, coordKey, enemyData) {
+  if (combatTimer) {
+    clearInterval(combatTimer);
+    combatTimer = null;
+  }
   STATE.combat.active = true;
   STATE.combat.paused = true;
   STATE.combat.locationId = locationId;
