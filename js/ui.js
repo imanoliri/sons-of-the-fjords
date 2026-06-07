@@ -731,6 +731,7 @@ function initTooltipEvents() {
     let contentsText = '';
 
     if (isDetailed) {
+      elTooltip.classList.remove('tooltip-discrete');
       let contents = [];
       if (hasPlayer) {
         contents.push('🚢 Drakkar Longship');
@@ -756,6 +757,8 @@ function initTooltipEvents() {
         }
       }
       contentsText = contents.join('<br>');
+    } else {
+      elTooltip.classList.add('tooltip-discrete');
     }
 
     elTooltip.innerHTML = `
@@ -775,6 +778,7 @@ function initTooltipEvents() {
   document.body.addEventListener('mouseover', (e) => {
     const godTarget = e.target.closest('[data-god-tooltip]');
     if (godTarget) {
+      elTooltip.classList.remove('tooltip-discrete');
       const gKey = godTarget.dataset.godTooltip;
       const section = godTarget.dataset.tooltipSection;
       const lore = GOD_LORE[gKey];
@@ -853,11 +857,12 @@ function initTooltipEvents() {
       } else {
         hoverTimeout = setTimeout(() => {
           showWorldTileTooltip(tile, lastClientX, lastClientY, false);
-        }, 1200);
+        }, 800);
       }
       return;
     }
 
+    elTooltip.classList.remove('tooltip-discrete');
     let headerText = '';
     let coordsText = '';
     let contentsText = '';

@@ -1192,3 +1192,25 @@ body {
   0% { opacity: 0; transform: translate(-50%, 15px); }
   100% { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* Discrete hover tooltip styles */
+.game-tooltip.tooltip-discrete {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  border-left: 3px solid rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;
+  color: #111 !important;
+  font-size: 0.75rem !important;
+  padding: 0.4rem 0.6rem !important;
+  max-width: 200px !important;
+  backdrop-filter: blur(4px) !important;
+}
+.game-tooltip.tooltip-discrete .game-tooltip-header {
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: #111 !important;
+}
+.game-tooltip.tooltip-discrete .game-tooltip-coords {
+  color: #666 !important;
+  font-size: 0.7rem !important;
+}
