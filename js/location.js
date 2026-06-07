@@ -281,17 +281,37 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
 
   STATE.locations[locationId] = state;
 
+  // 8.5. If not a sub-cave, randomly choose a reachable cave tile to host the first cave entrance
+  if (!state.isSubCave) {
+    const caveCoords = Array.from(reachableCoords).filter(key => {
+      const [x, y] = key.split(',').map(Number);
+      if (x === sx && y === sy) return false;
+      return preGeneratedGrid[key] === 'cave';
+    });
+    if (caveCoords.length > 0) {
+      const chosenCaveKey = caveCoords[Math.floor(Math.random() * caveCoords.length)];
+      const [cx, cy] = chosenCaveKey.split(',').map(Number);
+      const entranceEntity = generateRandomEntity(locationId, 'cave', cx, cy);
+      if (entranceEntity) {
+        state.preGeneratedEntities[chosenCaveKey] = entranceEntity;
+      }
+    }
+  }
+
   // 9. Pre-generate all entities on the rest of the traversable tiles
   for (let y = 0; y < 10; y++) {
     for (let x = 0; x < 10; x++) {
       if (x === sx && y === sy) continue;
       const coordKey = `${x},${y}`;
+
+      // Skip if we already pre-placed the primary cave entrance here
+      if (state.preGeneratedEntities[coordKey]) continue;
+
       const terrain = preGeneratedGrid[coordKey];
       const isTraversable = !CFG.nonTraversable.includes(terrain);
-      const isFirstCaveEntranceNeeded = terrain === 'cave' && !state.isSubCave && !state.hasCaveEntranceSpawned;
 
       let entity = null;
-      if (isTraversable && (isFirstCaveEntranceNeeded || Math.random() < CFG.entitySpawnChance)) {
+      if (isTraversable && Math.random() < CFG.entitySpawnChance) {
         entity = generateRandomEntity(locationId, terrain, x, y);
       }
       if (entity) {
