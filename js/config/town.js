@@ -17,9 +17,9 @@ export const TOWN_CONFIG = {
 
   // Great Hall recruit costs (gold only)
   recruitCosts: {
-    shieldmaiden: 5,
-    berserker:    7,
-    huntsman:     6
+    shieldmaiden: { gold: 5, food: 10 },
+    berserker:    { gold: 7, sheep: 1 },
+    huntsman:     { gold: 6, wood: 3 }
   },
 
   // Dynamic pricing coefficients and limits based on surrounding geography

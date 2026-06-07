@@ -387,11 +387,21 @@ export function buyRecruit(type, cost) {
   if (STATE.band.length >= SC.maxBandSize) {
     return { success: false, message: `Your Drakkar deck is full (max ${SC.maxBandSize} soldiers)!` };
   }
-  if (STATE.resources.gold >= cost) {
-    adjustResource('gold', -cost);
-    recruitSoldier(type);
-    const label = type.charAt(0).toUpperCase() + type.slice(1);
-    return { success: true, message: `Enrolled a ${label} to your band!` };
+  
+  // Check all resource requirements
+  for (const [res, amt] of Object.entries(cost)) {
+    if ((STATE.resources[res] || 0) < amt) {
+      const resLabel = res.charAt(0).toUpperCase() + res.slice(1);
+      return { success: false, message: `Not enough ${resLabel} to hire recruit!` };
+    }
   }
-  return { success: false, message: 'Not enough gold to hire recruit!' };
+
+  // Deduct resources
+  for (const [res, amt] of Object.entries(cost)) {
+    adjustResource(res, -amt);
+  }
+
+  recruitSoldier(type);
+  const label = type.charAt(0).toUpperCase() + type.slice(1);
+  return { success: true, message: `Enrolled a ${label} to your band!` };
 }
