@@ -38,6 +38,7 @@
       <div class="active-blessing" id="active-blessing-display" title="Active Champion Buff">
         <span>No Active Buff</span>
       </div>
+      <button class="btn btn-menu" id="btn-toggle-party" style="margin-right: 0.5rem;">Party Band</button>
       <button class="btn btn-menu" id="btn-toggle-quests">Quest Log</button>
     </header>
 
@@ -262,6 +263,28 @@
         <div class="modal-choices">
           <button class="btn btn-primary" id="btn-ascend-victory">Ascend to Asgard</button>
           <button class="btn" id="btn-ascend-continue">Stay in Midgard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY MODAL: PARTY PANEL -->
+    <div class="modal-overlay hidden" id="modal-party">
+      <div class="modal-box glass-panel animate-glow" style="max-width: 600px; position: relative;">
+        <button class="btn-close-x" id="btn-close-party" title="Close Panel">✕</button>
+        <h2 class="logo-text">Viking Band & Cargo</h2>
+        
+        <div class="party-panel-tabs" style="display: flex; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem; justify-content: center;">
+          <button class="btn btn-sm btn-primary tab-btn" id="tab-party-band">Warriors</button>
+          <button class="btn btn-sm tab-btn" id="tab-party-inventory">Inventory</button>
+        </div>
+
+        <div class="modal-body" style="text-align: left; max-height: 350px; overflow-y: auto;">
+          <div id="party-band-content" class="tab-content">
+            <!-- Rendered dynamically -->
+          </div>
+          <div id="party-inventory-content" class="tab-content hidden">
+            <!-- Rendered dynamically -->
+          </div>
         </div>
       </div>
     </div>

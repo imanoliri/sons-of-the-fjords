@@ -25,6 +25,13 @@ const elDay = document.getElementById('res-day').querySelector('.val');
 const elWorldDifficultyStatus = document.getElementById('world-difficulty-status');
 const elLocationDifficultyStatus = document.getElementById('location-difficulty-status');
 
+// Party Panel Modals
+const elPartyModal = document.getElementById('modal-party');
+const elPartyBandContent = document.getElementById('party-band-content');
+const elPartyInventoryContent = document.getElementById('party-inventory-content');
+const elTabPartyBand = document.getElementById('tab-party-band');
+const elTabPartyInventory = document.getElementById('tab-party-inventory');
+
 // Screens
 const screens = {
   menu: document.getElementById('screen-menu'),
@@ -113,6 +120,30 @@ export function initUIBindings() {
 
   document.getElementById('btn-close-quests').addEventListener('click', () => {
     setScreen(screenAfterOverlay());
+  });
+
+  // Toggle Party Screen
+  bindButton('btn-toggle-party', () => {
+    renderPartyPanel();
+    showOverlay(elPartyModal);
+  });
+
+  bindButton('btn-close-party', () => {
+    hideOverlay(elPartyModal);
+  });
+
+  bindButton('tab-party-band', () => {
+    elTabPartyBand.classList.add('btn-primary');
+    elTabPartyInventory.classList.remove('btn-primary');
+    elPartyBandContent.classList.remove('hidden');
+    elPartyInventoryContent.classList.add('hidden');
+  });
+
+  bindButton('tab-party-inventory', () => {
+    elTabPartyInventory.classList.add('btn-primary');
+    elTabPartyBand.classList.remove('btn-primary');
+    elPartyInventoryContent.classList.remove('hidden');
+    elPartyBandContent.classList.add('hidden');
   });
 
   // Town leave button
@@ -282,8 +313,18 @@ export function initUIBindings() {
 
   // Keyboard Arrow Movement
   window.addEventListener('keydown', (e) => {
-    // 0. Handle Escape key to leave Location (Raid or Town)
+    // 0. Handle Escape key to leave Location (Raid or Town) or close panels
     if (e.key === 'Escape') {
+      if (!elPartyModal.classList.contains('hidden')) {
+        e.preventDefault();
+        document.getElementById('btn-close-party')?.click();
+        return;
+      }
+      if (STATE.activeScreen === 'quests') {
+        e.preventDefault();
+        document.getElementById('btn-close-quests')?.click();
+        return;
+      }
       if (STATE.activeScreen === 'location') {
         e.preventDefault();
         document.getElementById('btn-leave-location')?.click();
@@ -295,10 +336,11 @@ export function initUIBindings() {
       }
     }
 
-    // 1. Handle modal overlay shortcuts if an overlay is open
+    // 1. Handle modal overlay shortcuts if an overlay is open (excluding close buttons)
     const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
     if (visibleOverlay) {
-      const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'));
+      const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'))
+        .filter(btn => !btn.classList.contains('btn-close-x'));
       if (buttons.length > 0) {
         // Number keys (1 to buttons.length)
         const keyNum = parseInt(e.key);
@@ -1994,6 +2036,101 @@ function renderQuestsScreen() {
   });
 }
 
+// Render the active band roster and inventory items in the party panel
+function renderPartyPanel() {
+  // 1. Render Band Warriors
+  elPartyBandContent.innerHTML = '';
+  if (STATE.band.length === 0) {
+    elPartyBandContent.innerHTML = '<p style="color:var(--text-muted);">Your band has no warriors recruited.</p>';
+  } else {
+    STATE.band.forEach(unit => {
+      const row = document.createElement('div');
+      row.className = 'trade-row';
+      row.style.alignItems = 'center';
+      row.style.padding = '0.5rem 0';
+      
+      const details = document.createElement('div');
+      details.style.display = 'flex';
+      details.style.flexDirection = 'column';
+      details.style.gap = '2px';
+      
+      const name = document.createElement('span');
+      const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
+      name.innerHTML = `<b>${icons[unit.type] || '⚔️'} ${unit.name}</b> (${unit.type.toUpperCase()})`;
+      
+      const stats = document.createElement('span');
+      stats.style.fontSize = '0.75rem';
+      stats.style.color = 'var(--text-muted)';
+      stats.innerText = `ATK: ${unit.dmg} | SPD: ${unit.speed} | RNG: ${unit.range}`;
+      
+      details.appendChild(name);
+      details.appendChild(stats);
+
+      const hpSection = document.createElement('div');
+      hpSection.style.display = 'flex';
+      hpSection.style.flexDirection = 'column';
+      hpSection.style.alignItems = 'flex-end';
+      hpSection.style.gap = '4px';
+      hpSection.style.width = '120px';
+
+      const hpText = document.createElement('span');
+      hpText.style.fontSize = '0.8rem';
+      hpText.innerHTML = `HP: <b>${unit.hp}</b> / ${unit.maxHp}`;
+
+      const hbContainer = document.createElement('div');
+      hbContainer.className = 'health-bar-container';
+      hbContainer.style.position = 'relative';
+      hbContainer.style.width = '100%';
+      hbContainer.style.height = '6px';
+      hbContainer.style.background = '#222';
+      hbContainer.style.borderRadius = '3px';
+      hbContainer.style.overflow = 'hidden';
+
+      const hbFill = document.createElement('div');
+      hbFill.className = 'health-bar-fill';
+      hbFill.style.height = '100%';
+      hbFill.style.width = `${(unit.hp / unit.maxHp) * 100}%`;
+      hbFill.style.background = 'var(--color-success)';
+
+      hbContainer.appendChild(hbFill);
+      hpSection.appendChild(hpText);
+      hpSection.appendChild(hbContainer);
+
+      row.appendChild(details);
+      row.appendChild(hpSection);
+      elPartyBandContent.appendChild(row);
+    });
+  }
+
+  // 2. Render Inventory
+  elPartyInventoryContent.innerHTML = '';
+  if (STATE.inventory.length === 0) {
+    elPartyInventoryContent.innerHTML = '<p style="color:var(--text-muted);">Your cargo holds no items.</p>';
+  } else {
+    const counts = {};
+    STATE.inventory.forEach(item => {
+      counts[item] = (counts[item] || 0) + 1;
+    });
+
+    Object.entries(counts).forEach(([item, count]) => {
+      const row = document.createElement('div');
+      row.className = 'trade-row';
+      row.style.padding = '0.5rem 0';
+      
+      const label = document.createElement('span');
+      label.innerHTML = `💎 <b>${item}</b>`;
+      
+      const qty = document.createElement('span');
+      qty.style.fontWeight = 'bold';
+      qty.innerText = `x${count}`;
+      
+      row.appendChild(label);
+      row.appendChild(qty);
+      elPartyInventoryContent.appendChild(row);
+    });
+  }
+}
+
 /* --- Logging & Overlays helpers --- */
 
 export function logWorld(msg, typeClass = 'system-message') {
@@ -2051,7 +2188,8 @@ function updateModalKeyboardNavigation() {
     return;
   }
 
-  const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'));
+  const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'))
+    .filter(btn => !btn.classList.contains('btn-close-x'));
   if (buttons.length === 0) return;
 
   if (activeModalFocusIndex >= buttons.length) {
@@ -2168,17 +2306,50 @@ export function handleStateNotification(event, data) {
   else if (event === 'GOD_QUESTS_COMPLETE') {
     const godName = data;
     const lore = GOD_LORE[godName];
-    showToast(`Unlocked permanent favor of ${godName.toUpperCase()}! Blessing available at town Seidr Shrines.`, lore.icon || '✨', true);
-  }
-  else if (event === 'ASCENSION_TRIGGERED') {
-    const ascGod = data;
-    elModalAscension.dataset.god = 'odin';
-    elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-odin`;
-    elModalAscensionText.innerHTML = `You have completed all milestones for <b>ALL 5 GODS</b>!<br><br>The gates of Valhalla are open. You have achieved final ascension!`;
+    elModalAscension.dataset.god = godName;
+    elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-${godName}`;
+    elModalAscension.querySelector('.logo-text').innerText = `⚡ ${godName.toUpperCase()} CHAMPION ⚡`;
+    elModalAscensionText.innerHTML = `You have completed all Milestones for <b>${lore.title}</b>!<br><br><b>Patron Buff unlocked:</b><br><i style="color: var(--color-${godName})">${lore.buff}</i>`;
     
+    // Hide final ascension button
+    document.getElementById('btn-ascend-victory').classList.add('hidden');
+    document.getElementById('btn-ascend-continue').innerText = 'Continue';
+
     // Remove any previously injected buff button
     const prevBuff = document.getElementById('btn-ascend-buff');
     if (prevBuff) prevBuff.remove();
+
+    // Inject active buff button
+    const btnBuff = document.createElement('button');
+    btnBuff.id = 'btn-ascend-buff';
+    btnBuff.className = 'btn btn-primary';
+    btnBuff.innerText = `Activate ${godName.charAt(0).toUpperCase() + godName.slice(1)}'s Blessing`;
+    btnBuff.addEventListener('click', () => {
+      STATE.activeBlessing = godName;
+      notify('STATE_UPDATED');
+      showToast(`${lore.icon} ${godName.charAt(0).toUpperCase() + godName.slice(1)}'s Blessing activated!`, lore.icon, true);
+      hideOverlay(elModalAscension);
+    });
+
+    const btnContinue = document.getElementById('btn-ascend-continue');
+    btnContinue.parentNode.insertBefore(btnBuff, btnContinue);
+
+    showOverlay(elModalAscension);
+  }
+  else if (event === 'ASCENSION_TRIGGERED') {
+    elModalAscension.dataset.god = 'odin';
+    elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-odin`;
+    elModalAscension.querySelector('.logo-text').innerText = 'A S C E N S I O N';
+    elModalAscensionText.innerHTML = `You have completed all milestones for <b>ALL 5 GODS</b>!<br><br>The gates of Valhalla are open. You have achieved final ascension!`;
+    
+    // Unhide final ascension button
+    document.getElementById('btn-ascend-victory').classList.remove('hidden');
+    document.getElementById('btn-ascend-continue').innerText = 'Stay in Midgard';
+
+    // Remove any previously injected buff button
+    const prevBuff = document.getElementById('btn-ascend-buff');
+    if (prevBuff) prevBuff.remove();
+    
     showOverlay(elModalAscension);
   }
   else if (event === 'GAME_OVER') {
