@@ -139,8 +139,13 @@ export function sacrificeRelic(relicId, godName) {
   const idx = STATE.inventory.indexOf(relicId);
   if (idx !== -1) {
     STATE.inventory.splice(idx, 1);
-    adjustFavor(godName, 1);
-    notify('RELIC_SACRIFICED', { relicId, godName });
+    if (STATE.godFavor[godName] >= 5) {
+      adjustResource('gold', 5);
+      notify('RELIC_SACRIFICED_GOLD', { relicId, godName, goldGained: 5 });
+    } else {
+      adjustFavor(godName, 1);
+      notify('RELIC_SACRIFICED', { relicId, godName });
+    }
   }
 }
 

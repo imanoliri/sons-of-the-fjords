@@ -1584,9 +1584,14 @@ function renderTownScreen() {
       
       const btn = document.createElement('button');
       btn.classList.add('btn', 'btn-sm', 'btn-primary');
-      btn.innerText = `Appease ${mapName}`;
+      if (STATE.godFavor[god] >= 5) {
+        btn.innerText = `Sacrifice (+5 Gold)`;
+      } else {
+        btn.innerText = `Appease ${mapName}`;
+      }
       btn.addEventListener('click', () => {
         sacrificeRelic(relic, god);
+        renderTownScreen();
       });
 
       row.appendChild(label);
@@ -2723,6 +2728,10 @@ export function handleStateNotification(event, data) {
   }
   else if (event === 'RELIC_SACRIFICED') {
     logWorld(`You sacrificed a ${data.relicId} relic to appease ${data.godName.toUpperCase()}.`, 'gain-message');
+  }
+  else if (event === 'RELIC_SACRICES_GOLD' || event === 'RELIC_SACRIFICED_GOLD') {
+    logWorld(`Sacrificed a ${data.relicId} relic to maxed god ${data.godName.toUpperCase()}. Gained +5 Gold!`, 'gain-message');
+    showToast(`Gained +5 Gold from sacrifice!`, '🪙');
   }
   else if (event === 'FAVOR_GAIN_ACTION') {
     logWorld(`Action Pleased the Gods: Gained 1 Favor with ${data.god.toUpperCase()} by ${data.reason}!`, 'gain-message');
