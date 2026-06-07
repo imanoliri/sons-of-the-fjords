@@ -154,48 +154,7 @@ export function initUIBindings() {
     setScreen('world');
   });
 
-  // Trade actions
-  bindButton('btn-buy-food', () => {
-    const t = TOWN_CONFIG.trades.find(x => x.id === 'buy-food');
-    const goldCost = Math.abs(t.cost.gold);
-    if (STATE.resources.gold >= goldCost) {
-      Object.entries(t.cost).forEach(([r, d]) => adjustResource(r, d));
-      Object.entries(t.gain).forEach(([r, d]) => adjustResource(r, d));
-      logWorld(`Bought ${t.gain.food} food supplies.`, 'gain-message');
-    } else { logWorld('Not enough gold to trade food!', 'warn-message'); }
-  });
-
-  bindButton('btn-buy-wood', () => {
-    const t = TOWN_CONFIG.trades.find(x => x.id === 'buy-wood');
-    const goldCost = Math.abs(t.cost.gold);
-    if (STATE.resources.gold >= goldCost) {
-      Object.entries(t.cost).forEach(([r, d]) => adjustResource(r, d));
-      Object.entries(t.gain).forEach(([r, d]) => adjustResource(r, d));
-      logWorld(`Bought ${t.gain.wood} wood planks.`, 'gain-message');
-    } else { logWorld('Not enough gold to buy wood!', 'warn-message'); }
-  });
-
-  bindButton('btn-sell-sheep', () => {
-    if (sellSheep()) {
-      logWorld('Sold 1 livestock sheep.', 'gain-message');
-    } else { logWorld('No sheep available to trade!', 'warn-message'); }
-  });
-
-  bindButton('btn-sell-wood', () => {
-    if (sellWood()) {
-      logWorld('Sold 10 wood planks.', 'gain-message');
-    } else { logWorld('Not enough wood to sell (requires 10 wood)!', 'warn-message'); }
-  });
-
-  bindButton('btn-buy-sheep', () => {
-    const t = TOWN_CONFIG.trades.find(x => x.id === 'buy-sheep');
-    const goldCost = Math.abs(t.cost.gold);
-    if (STATE.resources.gold >= goldCost) {
-      Object.entries(t.cost).forEach(([r, d]) => adjustResource(r, d));
-      Object.entries(t.gain).forEach(([r, d]) => adjustResource(r, d));
-      logWorld('Bought 1 sheep.', 'gain-message');
-    } else { logWorld('Not enough gold to purchase sheep!', 'warn-message'); }
-  });
+  // Trade actions are now handled dynamically in renderTownScreen() to support geographical pricing.
 
   // Recruiting action handlers
   bindButton('btn-recruit-shieldmaiden', () => {
@@ -1527,6 +1486,115 @@ function renderTownScreen() {
   const locId = STATE.party.currentLocationId;
   const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
   elTownName.innerText = locData ? locData.name : 'Viking Kaufang';
+
+  // Compute local trade rates based on 3x3 surrounding tiles
+  let plainsCount = 0;
+  let forestCount = 0;
+  let waterCount = 0;
+  let snowCount = 0;
+  let mountainCount = 0;
+
+  const locKey = Object.keys(WORLD_CONFIG.locations).find(k => WORLD_CONFIG.locations[k].id === locId);
+  if (locKey) {
+    const [tx, ty] = locKey.split(',').map(Number);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = tx + dx;
+        const ny = ty + dy;
+        if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15) {
+          const terrain = STATE.worldMap.tiles[ny][nx];
+          if (terrain === 'forest') forestCount++;
+          else if (terrain === 'water' || terrain === 'river') waterCount++;
+          else if (terrain === 'plains') plainsCount++;
+          else if (terrain === 'snow') snowCount++;
+          else if (terrain === 'mountain') mountainCount++;
+        }
+      }
+    }
+  }
+
+  const foodCost = Math.max(1, Math.min(5, 2 + Math.floor((snowCount + mountainCount) / 2) - Math.floor((waterCount + plainsCount) / 2)));
+  const woodCost = Math.max(1, Math.min(5, 2 + (forestCount === 0 ? 2 : 0) - Math.floor(forestCount / 3)));
+  const sheepBuyCost = Math.max(3, Math.min(10, 6 - Math.floor(plainsCount / 2) + Math.floor((snowCount + mountainCount + waterCount) / 3)));
+  const sheepSellGain = Math.max(1, Math.min(8, 4 + (plainsCount <= 1 ? 2 : 0) - Math.floor(plainsCount / 3)));
+  const woodSellGain = Math.max(1, Math.min(8, 4 + (forestCount <= 1 ? 2 : 0) - Math.floor(forestCount / 3)));
+
+  const marketList = document.getElementById('town-market-list');
+  if (marketList) {
+    marketList.innerHTML = '';
+    const trades = [
+      { id: 'btn-buy-food', label: `Buy 5 Food (-${foodCost} Gold)`, btnText: 'Buy [F]', action: () => {
+        if (STATE.resources.gold >= foodCost) {
+          adjustResource('gold', -foodCost);
+          adjustResource('food', 5);
+          logWorld(`Bought 5 food supplies for ${foodCost} gold.`, 'gain-message');
+          renderTownScreen();
+        } else { logWorld('Not enough gold to trade food!', 'warn-message'); }
+      }},
+      { id: 'btn-buy-wood', label: `Buy 2 Wood (-${woodCost} Gold)`, btnText: 'Buy [W]', action: () => {
+        if (STATE.resources.gold >= woodCost) {
+          adjustResource('gold', -woodCost);
+          adjustResource('wood', 2);
+          logWorld(`Bought 2 wood planks for ${woodCost} gold.`, 'gain-message');
+          renderTownScreen();
+        } else { logWorld('Not enough gold to buy wood!', 'warn-message'); }
+      }},
+      { id: 'btn-sell-sheep', label: `Sell 1 Sheep (+${sheepSellGain} Gold)`, btnText: 'Sell [G]', action: () => {
+        if (STATE.resources.sheep >= 1) {
+          adjustResource('sheep', -1);
+          adjustResource('gold', sheepSellGain);
+          const targets = GODS_CONFIG.alternativeFavor.freya;
+          STATE.freyaSheepSold = (STATE.freyaSheepSold || 0) + 1;
+          if (STATE.freyaSheepSold >= targets.sheepTarget) {
+            STATE.freyaSheepSold = 0;
+            adjustFavor('freya', 1);
+            notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.sheepTarget} sheep` });
+          }
+          logWorld(`Sold 1 livestock sheep for ${sheepSellGain} gold.`, 'gain-message');
+          renderTownScreen();
+        } else { logWorld('No sheep available to trade!', 'warn-message'); }
+      }},
+      { id: 'btn-sell-wood', label: `Sell 10 Wood (+${woodSellGain} Gold)`, btnText: 'Sell [H]', action: () => {
+        const targets = GODS_CONFIG.alternativeFavor.freya;
+        if (STATE.resources.wood >= 10) {
+          adjustResource('wood', -10);
+          adjustResource('gold', woodSellGain);
+          STATE.freyaWoodSold = (STATE.freyaWoodSold || 0) + 10;
+          if (STATE.freyaWoodSold >= targets.woodTarget) {
+            const favorGained = Math.floor(STATE.freyaWoodSold / targets.woodTarget);
+            STATE.freyaWoodSold = STATE.freyaWoodSold % targets.woodTarget;
+            adjustFavor('freya', favorGained);
+            notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.woodTarget} wood` });
+          }
+          logWorld(`Sold 10 wood planks for ${woodSellGain} gold.`, 'gain-message');
+          renderTownScreen();
+        } else { logWorld('Not enough wood to sell (requires 10 wood)!', 'warn-message'); }
+      }},
+      { id: 'btn-buy-sheep', label: `Buy 1 Sheep (-${sheepBuyCost} Gold)`, btnText: 'Buy [S]', action: () => {
+        if (STATE.resources.gold >= sheepBuyCost) {
+          adjustResource('gold', -sheepBuyCost);
+          adjustResource('sheep', 1);
+          logWorld(`Bought 1 sheep for ${sheepBuyCost} gold.`, 'gain-message');
+          renderTownScreen();
+        } else { logWorld('Not enough gold to purchase sheep!', 'warn-message'); }
+      }}
+    ];
+
+    trades.forEach(t => {
+      const row = document.createElement('div');
+      row.classList.add('trade-row');
+      const span = document.createElement('span');
+      span.innerText = t.label;
+      const btn = document.createElement('button');
+      btn.classList.add('btn', 'btn-sm');
+      btn.id = t.id;
+      btn.innerText = t.btnText;
+      btn.addEventListener('click', t.action);
+      row.appendChild(span);
+      row.appendChild(btn);
+      marketList.appendChild(row);
+    });
+  }
 
   // Build relic lists for temple offerings
   elShrineList.innerHTML = '';
