@@ -1105,8 +1105,6 @@ function attemptLocalMove(targetX, targetY) {
       triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'dolmen' && !ent.isVisited) {
       triggerEncounterEvent(coordKey, ent);
-    } else if (ent.type === 'cave_entrance') {
-      promptEnterCavePortal(coordKey, ent);
     }
   } else {
     // Normal empty tile movement
