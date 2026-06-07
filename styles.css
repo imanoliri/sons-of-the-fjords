@@ -1036,8 +1036,8 @@ body {
 
 .game-tooltip-header {
   font-family: var(--font-logo);
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 600;
   letter-spacing: 0.5px;
   display: flex;
   justify-content: space-between;
@@ -1049,7 +1049,7 @@ body {
 .game-tooltip-coords {
   font-family: var(--font-runes);
   color: #555;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
 }
 
 .game-tooltip-contents {
@@ -1199,11 +1199,4 @@ body {
   font-size: 0.75rem !important;
   padding: 0.4rem 0.6rem !important;
   max-width: 200px !important;
-}
-.game-tooltip.tooltip-discrete .game-tooltip-header {
-  font-size: 0.8rem !important;
-  font-weight: 600 !important;
-}
-.game-tooltip.tooltip-discrete .game-tooltip-coords {
-  font-size: 0.7rem !important;
 }

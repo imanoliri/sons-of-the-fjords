@@ -714,6 +714,7 @@ function initTooltipEvents() {
     const terrain = tile.dataset.terrain;
     const locationName = tile.dataset.locationName;
     const locationType = tile.dataset.locationType;
+    const locationBiome = tile.dataset.locationBiome;
     const hasPlayer = tile.dataset.hasPlayer === 'true';
 
     const headerText = `${terrain ? terrain.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Terrain'}`;
@@ -742,6 +743,17 @@ function initTooltipEvents() {
         const danger = tile.dataset.dangerLevel;
         if (danger && locationType === 'raid') {
           contents.push(`💀 Danger Level: ${'💀'.repeat(danger)} (Level ${danger})`);
+        }
+        if (locationType === 'raid') {
+          const biome = locationBiome || 'default';
+          const poolMap = {
+            forest: 'Fenrir Pack Wolves, Giant Brood-Spiders',
+            mountain: 'Cave Trolls, Fenrir Pack Wolves',
+            burial_mound: 'Draugr Warriors',
+            default: 'Giant Brood-Spiders, Fenrir Pack Wolves'
+          };
+          const list = poolMap[biome] || poolMap.default;
+          contents.push(`<span style="color:var(--color-danger);font-size:0.82em;display:block;margin-top:2px;">👹 Enemies: ${list}</span>`);
         }
       }
       
@@ -1194,6 +1206,7 @@ function renderWorldMap() {
         if (hasLocation) {
           elCell.dataset.locationName = hasLocation.name;
           elCell.dataset.locationType = hasLocation.type;
+          elCell.dataset.locationBiome = hasLocation.locationType || '';
           elCell.dataset.dangerLevel = hasLocation.dangerLevel || '';
         }
 
