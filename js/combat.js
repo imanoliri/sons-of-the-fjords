@@ -268,13 +268,46 @@ function combatTick() {
 function findTargetInLane(unit) {
   const grid = STATE.combat.grid;
   const dir = unit.alliance === 'player' ? 1 : -1;
-  for (let r = 1; r <= getEffectiveStats(unit).range.total; r++) {
-    const checkCol = unit.col + (r * dir);
-    if (checkCol >= 0 && checkCol < CFG.gridCols) {
-      const cell = grid[unit.row][checkCol];
-      if (cell && cell.alliance !== unit.alliance) return cell;
+  const range = getEffectiveStats(unit).range.total;
+
+  if (unit.alliance === 'player' && STATE.godQuests.odin?.[0]) {
+    let bestTarget = null;
+    let bestPriority = Infinity;
+
+    const targetRows = [unit.row, unit.row - 1, unit.row + 1].filter(r => r >= 0 && r < CFG.gridRows);
+
+    for (const rToCheck of targetRows) {
+      for (let cToCheck = 0; cToCheck < CFG.gridCols; cToCheck++) {
+        const colDist = (cToCheck - unit.col) * dir;
+        if (colDist > 0 && colDist <= range) {
+          const cell = grid[rToCheck][cToCheck];
+          if (cell && cell.alliance !== unit.alliance) {
+            const manhattan = Math.abs(unit.row - rToCheck) + Math.abs(unit.col - cToCheck);
+            const priorityDist = (rToCheck === unit.row) ? (manhattan - 1) : manhattan;
+
+            if (priorityDist < bestPriority) {
+              bestPriority = priorityDist;
+              bestTarget = cell;
+            } else if (priorityDist === bestPriority) {
+              if (rToCheck === unit.row) {
+                bestTarget = cell;
+              }
+            }
+          }
+        }
+      }
+    }
+    if (bestTarget) return bestTarget;
+  } else {
+    for (let r = 1; r <= range; r++) {
+      const checkCol = unit.col + (r * dir);
+      if (checkCol >= 0 && checkCol < CFG.gridCols) {
+        const cell = grid[unit.row][checkCol];
+        if (cell && cell.alliance !== unit.alliance) return cell;
+      }
     }
   }
+
   const nextCol = unit.col + dir;
   if (nextCol >= 0 && nextCol < CFG.gridCols) {
     const nextCell = grid[unit.row][nextCol];

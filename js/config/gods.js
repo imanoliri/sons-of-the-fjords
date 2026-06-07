@@ -103,7 +103,7 @@ export const GODS_CONFIG = {
       ],
       wrath: 'Wrath: Random unit loses 1 HP every 3 world steps.',
       milestoneEffects: [
-        'Fog of war reveals 1 extra tile on each move.',
+        'Strategist/Master of War: Soldiers can attack adjacent lanes (prioritizing closest by Manhattan distance, same-lane counts as -1).',
         'Scouts reveal a 2-tile radius instead of 1.',
         'All Huntsmen gain +1 Attack Range.',
         'Berserkers gain +1 DMG.',

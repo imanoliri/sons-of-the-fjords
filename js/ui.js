@@ -896,8 +896,6 @@ function autoDiscoverAdjacent(locId) {
   let radius = 1;
   if (STATE.godQuests.odin?.[1]) {
     radius = 2; // Odin Milestone 2: Scouts reveal a 2-tile radius instead of 1
-  } else if (STATE.godQuests.odin?.[0]) {
-    radius = 2; // Odin Milestone 1: Fog of war reveals 1 extra tile on each move (radius 2 cardinal)
   }
 
   const neighbors = [];
