@@ -1980,8 +1980,12 @@ export function handleStateNotification(event, data) {
     
     {
       const locId = STATE.party.currentLocationId;
-      const locData = locId ? Object.values(STATE.worldMap.locations).find(l => l.id === locId) : null;
-      setScreen(locData && locData.type !== 'town' ? 'location' : 'world');
+      if (!locId) {
+        setScreen('world');
+      } else {
+        const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
+        setScreen((locData && locData.type === 'town') ? 'world' : 'location');
+      }
     }
   }
   else if (event === 'COMBAT_DEFEAT') {
