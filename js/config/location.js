@@ -71,7 +71,7 @@ export const LOCATION_CONFIG = {
   },
 
   // Chance a cave terrain cell spawns a cave_entrance instead of normal entity
-  caveEntranceChance: 0.5,
+  caveEntranceChance: 0.05,
 
   // Treasure loot settings
   treasure: {
