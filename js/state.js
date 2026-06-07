@@ -125,8 +125,9 @@ export function recruitSoldier(type) {
   let maxHp = base.maxHp;
   let hp = base.hp;
   if (STATE.godFavor.freya === -5) {
-    maxHp = Math.max(10, maxHp - 10);
-    hp = Math.max(10, hp - 10);
+    const penalty = Math.abs(GC.modifiers.wrath.freya.maxHpPenalty || -10);
+    maxHp = Math.max(10, maxHp - penalty);
+    hp = Math.max(10, hp - penalty);
   }
   STATE.band.push({ id, name: rName, type, ...base, maxHp, hp });
   notify('RESOURCES_UPDATED');
@@ -183,17 +184,18 @@ export function adjustFavor(godName, amt) {
 // Record monster kills to award alternative favor
 export function recordMonsterKill(monsterType) {
   const nameLower = monsterType.toLowerCase();
+  const targets = GC.alternativeFavor;
 
   if (nameLower.includes('wolf')) {
     STATE.odinWolvesKilled = (STATE.odinWolvesKilled || 0) + 1;
-    if (STATE.odinWolvesKilled >= 3) {
+    if (STATE.odinWolvesKilled >= targets.odin.wolvesTarget) {
       STATE.odinWolvesKilled = 0;
       adjustFavor('odin', 1);
-      notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: 'slaying 3 wolves' });
+      notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: `slaying ${targets.odin.wolvesTarget} wolves` });
     }
   } else if (nameLower.includes('giant')) {
     STATE.odinGiantsKilled = (STATE.odinGiantsKilled || 0) + 1;
-    if (STATE.odinGiantsKilled >= 1) {
+    if (STATE.odinGiantsKilled >= targets.odin.giantsTarget) {
       STATE.odinGiantsKilled = 0;
       adjustFavor('odin', 1);
       notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: 'slaying a giant' });
@@ -202,14 +204,14 @@ export function recordMonsterKill(monsterType) {
 
   if (nameLower.includes('draugr')) {
     STATE.thorDraugrsKilled = (STATE.thorDraugrsKilled || 0) + 1;
-    if (STATE.thorDraugrsKilled >= 3) {
+    if (STATE.thorDraugrsKilled >= targets.thor.draugrsTarget) {
       STATE.thorDraugrsKilled = 0;
       adjustFavor('thor', 1);
-      notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: 'slaying 3 draugrs' });
+      notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: `slaying ${targets.thor.draugrsTarget} draugrs` });
     }
   } else if (nameLower.includes('lindwurm')) {
     STATE.thorLindwurmsKilled = (STATE.thorLindwurmsKilled || 0) + 1;
-    if (STATE.thorLindwurmsKilled >= 1) {
+    if (STATE.thorLindwurmsKilled >= targets.thor.lindwurmsTarget) {
       STATE.thorLindwurmsKilled = 0;
       adjustFavor('thor', 1);
       notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: 'slaying a Lindwurm' });
@@ -219,15 +221,16 @@ export function recordMonsterKill(monsterType) {
 
 // Sell sheep and update Freya favor
 export function sellSheep() {
+  const targets = GC.alternativeFavor.freya;
   if (STATE.resources.sheep >= 1) {
     adjustResource('sheep', -1);
     adjustResource('gold', 4);
 
     STATE.freyaSheepSold = (STATE.freyaSheepSold || 0) + 1;
-    if (STATE.freyaSheepSold >= 3) {
+    if (STATE.freyaSheepSold >= targets.sheepTarget) {
       STATE.freyaSheepSold = 0;
       adjustFavor('freya', 1);
-      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: 'selling 3 sheep' });
+      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.sheepTarget} sheep` });
     }
     return true;
   }
@@ -236,16 +239,17 @@ export function sellSheep() {
 
 // Sell wood and update Freya favor
 export function sellWood() {
-  if (STATE.resources.wood >= 10) {
-    adjustResource('wood', -10);
+  const targets = GC.alternativeFavor.freya;
+  if (STATE.resources.wood >= targets.woodTarget) {
+    adjustResource('wood', -targets.woodTarget);
     adjustResource('gold', 4);
 
-    STATE.freyaWoodSold = (STATE.freyaWoodSold || 0) + 10;
-    if (STATE.freyaWoodSold >= 10) {
-      const favorGained = Math.floor(STATE.freyaWoodSold / 10);
-      STATE.freyaWoodSold = STATE.freyaWoodSold % 10;
+    STATE.freyaWoodSold = (STATE.freyaWoodSold || 0) + targets.woodTarget;
+    if (STATE.freyaWoodSold >= targets.woodTarget) {
+      const favorGained = Math.floor(STATE.freyaWoodSold / targets.woodTarget);
+      STATE.freyaWoodSold = STATE.freyaWoodSold % targets.woodTarget;
       adjustFavor('freya', favorGained);
-      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: 'selling 10 wood' });
+      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.woodTarget} wood` });
     }
     return true;
   }

@@ -5,6 +5,7 @@
 import { STATE, notify, adjustResource, recordMonsterKill } from './state.js';
 import { COMBAT_CONFIG as CFG } from './config/combat.js';
 import { SOLDIERS_CONFIG } from './config/soldiers.js';
+import { GODS_CONFIG as GC } from './config/gods.js';
 
 let combatTimer = null;
 
@@ -317,47 +318,33 @@ export function getEffectiveStats(unit) {
   let bonusRange = 0;
 
   if (isPlayer) {
-    // Thor milestone 4: All units gain +1 max HP
-    if (STATE.godQuests.thor?.[3]) {
-      bonusMaxHp += 1;
+    // Apply Active Blessing modifiers
+    const blessing = STATE.activeBlessing;
+    if (blessing && GC.modifiers.blessings[blessing]) {
+      const bMod = GC.modifiers.blessings[blessing];
+      if (bMod.targetType === 'all' || bMod.targetType === unit.type) {
+        if (bMod.maxHp) bonusMaxHp += bMod.maxHp;
+        if (bMod.dmg) bonusDmg += bMod.dmg;
+        if (bMod.speed) bonusSpeed += bMod.speed;
+        if (bMod.range) bonusRange += bMod.range;
+      }
     }
 
-    if (unit.type === 'shieldmaiden') {
-      // Freya milestone 1: Shieldmaidens gain +5 max HP
-      if (STATE.godQuests.freya?.[0]) {
-        bonusMaxHp += 5;
-      }
-      // Freya milestone 3: Shieldmaidens gain +2 DMG
-      if (STATE.godQuests.freya?.[2]) {
-        bonusDmg += 2;
-      }
-    } else if (unit.type === 'berserker') {
-      // Odin milestone 4: Berserkers gain +1 DMG per combat tick
-      if (STATE.godQuests.odin?.[3]) {
-        bonusDmg += 1;
-      }
-      // Thor milestone 1: Berserkers gain +1 DMG in combat
-      if (STATE.godQuests.thor?.[0]) {
-        bonusDmg += 1;
-      }
-      // Thor buff (active blessing): Berserkers gain +3 DMG and +1 Speed
-      if (STATE.activeBlessing === 'thor') {
-        bonusDmg += 3;
-        bonusSpeed += 1;
-      }
-      // Thor milestone 2: Berserkers move +1 Speed per tick
-      if (STATE.godQuests.thor?.[1]) {
-        bonusSpeed += 1;
-      }
-    } else if (unit.type === 'huntsman') {
-      // Odin milestone 3: All Huntsmen gain +1 Attack Range
-      if (STATE.godQuests.odin?.[2]) {
-        bonusRange += 1;
-      }
-      // Odin buff: Huntsmen gain +2 Attack Range & +1 DMG per turn
-      if (STATE.activeBlessing === 'odin') {
-        bonusRange += 2;
-        bonusDmg += 1;
+    // Apply Quest Milestone modifiers
+    for (const godName of Object.keys(STATE.godQuests)) {
+      const track = STATE.godQuests[godName];
+      const godMiles = GC.modifiers.milestones[godName];
+      if (godMiles) {
+        for (const mMod of godMiles) {
+          if (track[mMod.index]) {
+            if (mMod.targetType === 'all' || mMod.targetType === unit.type) {
+              if (mMod.maxHp) bonusMaxHp += mMod.maxHp;
+              if (mMod.dmg) bonusDmg += mMod.dmg;
+              if (mMod.speed) bonusSpeed += mMod.speed;
+              if (mMod.range) bonusRange += mMod.range;
+            }
+          }
+        }
       }
     }
   } else {

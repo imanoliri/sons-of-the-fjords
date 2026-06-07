@@ -5,6 +5,7 @@
 import { STATE } from './state.js';
 import { LOCATION_CONFIG as CFG } from './config/location.js';
 import { WORLD_CONFIG } from './config/world.js';
+import { GODS_CONFIG } from './config/gods.js';
 
 // Spawns/Initializes the Carcassonne stack for a location
 export function generateLocationMap(locationId, worldTileTerrain, parentLocationId = null, parentCoords = null) {
@@ -550,11 +551,11 @@ function buildEntityOfType(locationId, type, terrain, x, y, locationType, diffic
   }
 
   if (type === 'dolmen') {
-    const keys = Object.keys(CFG.magicObjects);
+    const keys = Object.keys(GODS_CONFIG.magicObjects);
     const godKey = keys[Math.floor(Math.random() * keys.length)];
     return {
       type: 'dolmen',
-      magicObjectId: CFG.magicObjects[godKey],
+      magicObjectId: GODS_CONFIG.magicObjects[godKey],
       godName: godKey,
       isVisited: false
     };

@@ -20,17 +20,5 @@ export const TOWN_CONFIG = {
     shieldmaiden: 5,
     berserker:    7,
     huntsman:     6
-  },
-
-  // Divine Patron switch cost
-  patronSwitchCost: 5,
-
-  // Seidr Shrine: which relic belongs to which god
-  shrineRelics: {
-    'Shard of Gungnir':       'odin',
-    "Mjolnir's Core":         'thor',
-    "Freya's Amber Tear":     'freya',
-    "Hel's Urn of Ash":       'hel',
-    "Loki's Trickster Coin":  'loki'
   }
 };

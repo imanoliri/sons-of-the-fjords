@@ -252,14 +252,7 @@ export const LOCATION_CONFIG = {
     monsterPool: ['Giant Brood-Spider', 'Fenrir Pack Wolf', 'Draugr Warrior', 'Cave Troll']
   },
 
-  // Magic objects awarded by dolmens (god key → relic name)
-  magicObjects: {
-    odin: "Shard of Gungnir",
-    thor: "Mjolnir's Core",
-    freya: "Freya's Amber Tear",
-    hel: "Hel's Urn of Ash",
-    loki: "Loki's Trickster Coin"
-  },
+
 
   // Difficulty scaling parameters
   difficultyScaling: {
