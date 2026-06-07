@@ -6,6 +6,9 @@ import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjus
 import { getAdjacentCoords } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
 import { togglePause, deployUnit, undeployUnit, startCombat } from './combat.js';
+import { TOWN_CONFIG } from './config/town.js';
+import { MOVEMENT_CONFIG } from './config/movement.js';
+import { GODS_CONFIG } from './config/gods.js';
 
 // DOM Selectors
 const elHeader = document.getElementById('game-header');
@@ -103,90 +106,79 @@ export function initUIBindings() {
 
   // Trade actions
   bindButton('btn-buy-food', () => {
-    if (STATE.resources.gold >= 2) {
-      adjustResource('gold', -2);
-      adjustResource('food', 5);
-      logWorld('Bought 5 food supplies.', 'gain-message');
-    } else {
-      logWorld('Not enough gold to trade food!', 'warn-message');
-    }
+    const t = TOWN_CONFIG.trades.find(x => x.id === 'buy-food');
+    const goldCost = Math.abs(t.cost.gold);
+    if (STATE.resources.gold >= goldCost) {
+      Object.entries(t.cost).forEach(([r, d]) => adjustResource(r, d));
+      Object.entries(t.gain).forEach(([r, d]) => adjustResource(r, d));
+      logWorld(`Bought ${t.gain.food} food supplies.`, 'gain-message');
+    } else { logWorld('Not enough gold to trade food!', 'warn-message'); }
   });
 
   bindButton('btn-buy-wood', () => {
-    if (STATE.resources.gold >= 2) {
-      adjustResource('gold', -2);
-      adjustResource('wood', 2);
-      logWorld('Bought 2 wood planks.', 'gain-message');
-    } else {
-      logWorld('Not enough gold to buy wood!', 'warn-message');
-    }
+    const t = TOWN_CONFIG.trades.find(x => x.id === 'buy-wood');
+    const goldCost = Math.abs(t.cost.gold);
+    if (STATE.resources.gold >= goldCost) {
+      Object.entries(t.cost).forEach(([r, d]) => adjustResource(r, d));
+      Object.entries(t.gain).forEach(([r, d]) => adjustResource(r, d));
+      logWorld(`Bought ${t.gain.wood} wood planks.`, 'gain-message');
+    } else { logWorld('Not enough gold to buy wood!', 'warn-message'); }
   });
 
   bindButton('btn-sell-sheep', () => {
+    const t = TOWN_CONFIG.trades.find(x => x.id === 'sell-sheep');
     if (STATE.resources.sheep >= 1) {
-      adjustResource('sheep', -1);
-      adjustResource('gold', 4);
+      Object.entries(t.cost).forEach(([r, d]) => adjustResource(r, d));
+      Object.entries(t.gain).forEach(([r, d]) => adjustResource(r, d));
       logWorld('Sold 1 livestock sheep.', 'gain-message');
-    } else {
-      logWorld('No sheep available to trade!', 'warn-message');
-    }
+    } else { logWorld('No sheep available to trade!', 'warn-message'); }
   });
 
   bindButton('btn-buy-sheep', () => {
-    if (STATE.resources.gold >= 6) {
-      adjustResource('gold', -6);
-      adjustResource('sheep', 1);
+    const t = TOWN_CONFIG.trades.find(x => x.id === 'buy-sheep');
+    const goldCost = Math.abs(t.cost.gold);
+    if (STATE.resources.gold >= goldCost) {
+      Object.entries(t.cost).forEach(([r, d]) => adjustResource(r, d));
+      Object.entries(t.gain).forEach(([r, d]) => adjustResource(r, d));
       logWorld('Bought 1 sheep.', 'gain-message');
-    } else {
-      logWorld('Not enough gold to purchase sheep!', 'warn-message');
-    }
+    } else { logWorld('Not enough gold to purchase sheep!', 'warn-message'); }
   });
 
   // Recruiting action handlers
   bindButton('btn-recruit-shieldmaiden', () => {
-    if (STATE.resources.gold >= 5 && STATE.band.length < 8) {
-      adjustResource('gold', -5);
-      recruitSoldier('shieldmaiden');
+    const cost = TOWN_CONFIG.recruitCosts.shieldmaiden;
+    if (STATE.resources.gold >= cost && STATE.band.length < 8) {
+      adjustResource('gold', -cost); recruitSoldier('shieldmaiden');
       logWorld('Enrolled a Shieldmaiden to your band!', 'gain-message');
-    } else if (STATE.band.length >= 8) {
-      logWorld('Your Drakkar deck is full (max 8 soldiers)!', 'warn-message');
-    } else {
-      logWorld('Not enough gold to hire recruit!', 'warn-message');
-    }
+    } else if (STATE.band.length >= 8) { logWorld('Your Drakkar deck is full (max 8 soldiers)!', 'warn-message');
+    } else { logWorld('Not enough gold to hire recruit!', 'warn-message'); }
   });
 
   bindButton('btn-recruit-berserker', () => {
-    if (STATE.resources.gold >= 7 && STATE.band.length < 8) {
-      adjustResource('gold', -7);
-      recruitSoldier('berserker');
+    const cost = TOWN_CONFIG.recruitCosts.berserker;
+    if (STATE.resources.gold >= cost && STATE.band.length < 8) {
+      adjustResource('gold', -cost); recruitSoldier('berserker');
       logWorld('Enrolled a Berserker to your band!', 'gain-message');
-    } else if (STATE.band.length >= 8) {
-      logWorld('Your Drakkar deck is full!', 'warn-message');
-    } else {
-      logWorld('Not enough gold!', 'warn-message');
-    }
+    } else if (STATE.band.length >= 8) { logWorld('Your Drakkar deck is full!', 'warn-message');
+    } else { logWorld('Not enough gold!', 'warn-message'); }
   });
 
   bindButton('btn-recruit-huntsman', () => {
-    if (STATE.resources.gold >= 6 && STATE.band.length < 8) {
-      adjustResource('gold', -6);
-      recruitSoldier('huntsman');
+    const cost = TOWN_CONFIG.recruitCosts.huntsman;
+    if (STATE.resources.gold >= cost && STATE.band.length < 8) {
+      adjustResource('gold', -cost); recruitSoldier('huntsman');
       logWorld('Enrolled a Huntsman to your band!', 'gain-message');
-    } else if (STATE.band.length >= 8) {
-      logWorld('Your Drakkar is full!', 'warn-message');
-    } else {
-      logWorld('Not enough gold!', 'warn-message');
-    }
+    } else if (STATE.band.length >= 8) { logWorld('Your Drakkar is full!', 'warn-message');
+    } else { logWorld('Not enough gold!', 'warn-message'); }
   });
 
   // Repair Drakkar
   bindButton('btn-repair-ship', () => {
-    if (STATE.resources.wood >= 3) {
-      adjustResource('wood', -3);
+    const cost = Math.abs(TOWN_CONFIG.repairHullCost.wood);
+    if (STATE.resources.wood >= cost) {
+      adjustResource('wood', -cost);
       logWorld('Drakkar ship hull reinforced and repaired.', 'gain-message');
-    } else {
-      logWorld('Not enough timber logs to repair!', 'warn-message');
-    }
+    } else { logWorld('Not enough timber logs to repair!', 'warn-message'); }
   });
 
   // Carcassonne escape button

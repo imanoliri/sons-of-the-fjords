@@ -3,46 +3,28 @@
    ========================================================================== */
 
 import { STATE } from './state.js';
+import { LOCATION_CONFIG as CFG } from './config/location.js';
 
 // Spawns/Initializes the Carcassonne stack for a location
 export function generateLocationMap(locationId, worldTileTerrain) {
-  // Check if location already has state, if so, return it
+  // Return existing state if already initialized
   if (STATE.locations[locationId]) {
     return STATE.locations[locationId];
   }
 
-  // 1. Generate Tile Stack Deck based on world tile class
+  // 1. Build tile deck from terrain pool
+  const pool = CFG.terrainPools[worldTileTerrain] || CFG.terrainPools.plains;
   const deck = [];
-  const terrainPools = {
-    water: ['grass', 'grass', 'forest', 'water', 'water', 'chasm', 'chasm', 'deep_water'],
-    forest: ['grass', 'forest', 'forest', 'forest', 'rock', 'chasm', 'grass'],
-    snow: ['snow', 'snow', 'snow', 'mountain', 'rock', 'chasm', 'cave'],
-    mountain: ['rock', 'rock', 'mountain', 'mountain', 'cave', 'cave', 'chasm'],
-    plains: ['grass', 'grass', 'grass', 'forest', 'rock', 'water', 'chasm', 'deep_water']
-  };
-
-  const pool = terrainPools[worldTileTerrain] || terrainPools.plains;
-  
-  // Create a deck of 120 tiles (large enough to cover the 10x10 grid exploration)
-  for (let i = 0; i < 120; i++) {
-    const randomTerrain = pool[Math.floor(Math.random() * pool.length)];
-    deck.push(randomTerrain);
+  for (let i = 0; i < CFG.deckSize; i++) {
+    deck.push(pool[Math.floor(Math.random() * pool.length)]);
   }
-
-  // Shuffler
   shuffle(deck);
 
-  // 2. Initialize 10x10 grid state
+  // 2. Initialize grid state with center starting tile
+  const { x: sx, y: sy, terrain: st } = CFG.startTile;
   const placedTiles = {};
-  
-  // Spawn starting tile at center 5,5
-  placedTiles["5,5"] = {
-    terrainType: 'grass',
-    revealed: true,
-    entity: null
-  };
+  placedTiles[`${sx},${sy}`] = { terrainType: st, revealed: true, entity: null };
 
-  // Build local state
   const state = {
     isDiscovered: true,
     isCleared: false,
@@ -60,89 +42,76 @@ export function discoverTile(locationId, x, y) {
   if (!locState || locState.tileStack.length === 0) return null;
 
   const terrain = locState.tileStack.pop();
-  
-  // Decide entity spawn (35% chance) - only on traversable terrains (not chasm or mountain)
+
+  // Decide entity spawn — only on traversable terrains
   let entity = null;
-  const isTraversable = terrain !== 'chasm' && terrain !== 'mountain' && terrain !== 'deep_water';
-  if (isTraversable && Math.random() < 0.35) {
+  const isTraversable = !CFG.nonTraversable.includes(terrain);
+  if (isTraversable && Math.random() < CFG.entitySpawnChance) {
     entity = generateRandomEntity(locationId, terrain);
   }
 
-  locState.placedTiles[`${x},${y}`] = {
-    terrainType: terrain,
-    revealed: true,
-    entity
-  };
-
+  locState.placedTiles[`${x},${y}`] = { terrainType: terrain, revealed: true, entity };
   return terrain;
 }
 
-// Generate random entity for location
+// Generate random entity for location tile
 function generateRandomEntity(locationId, terrain) {
-  const types = ['treasure', 'enemy_army', 'burial_mound', 'dolmen'];
   const roll = Math.random();
+  const w = CFG.entityWeights;
 
-  let type = 'treasure';
-  if (roll < 0.25) type = 'treasure';
-  else if (roll < 0.65) type = 'enemy_army';
-  else if (roll < 0.85) type = 'burial_mound';
-  else type = 'dolmen';
+  let type;
+  if      (roll < w.treasure)     type = 'treasure';
+  else if (roll < w.enemy_army)   type = 'enemy_army';
+  else if (roll < w.burial_mound) type = 'burial_mound';
+  else                            type = 'dolmen';
 
-  // Override cave portal inside mountains/cave cells
-  if (terrain === 'cave' && Math.random() < 0.5) {
+  // Cave terrain override
+  if (terrain === 'cave' && Math.random() < CFG.caveEntranceChance) {
     type = 'cave_entrance';
   }
 
-  const magicObjects = {
-    odin: 'Shard of Gungnir',
-    thor: 'Mjolnir\'s Core',
-    freya: 'Freya\'s Amber Tear',
-    hel: 'Hel\'s Urn of Ash',
-    loki: 'Loki\'s Trickster Coin'
-  };
-
   if (type === 'treasure') {
+    const t = CFG.treasure;
     return {
       type: 'treasure',
-      silver: Math.floor(Math.random() * 12) + 5,
-      items: Math.random() < 0.4 ? ['Mead Horn', 'Valkyrie Herb'] : [],
+      silver: Math.floor(Math.random() * (t.goldMax - t.goldMin)) + t.goldMin,
+      items: Math.random() < t.itemChance ? [...t.itemPool] : [],
       isLooted: false
     };
-  } 
-  else if (type === 'enemy_army') {
-    // Determine monster difficulty based on location ID or type
-    const monstersPool = ['Giant Brood-Spider', 'Fenrir Pack Wolf', 'Draugr Warrior', 'Cave Troll'];
-    const selectedMonster = monstersPool[Math.floor(Math.random() * monstersPool.length)];
-    const count = Math.floor(Math.random() * 2) + 1; // 1-2 monsters
+  }
 
+  if (type === 'enemy_army') {
+    const e = CFG.enemyArmy;
+    const selectedMonster = e.monsterPool[Math.floor(Math.random() * e.monsterPool.length)];
+    const count = Math.floor(Math.random() * (e.countMax - e.countMin + 1)) + e.countMin;
     return {
       type: 'enemy_army',
       monsters: [{ monsterClass: selectedMonster, count }],
       isDefeated: false
     };
-  } 
-  else if (type === 'burial_mound') {
+  }
+
+  if (type === 'burial_mound') {
     return {
       type: 'burial_mound',
       relicItemName: 'Ancient Burial Shield',
       isExplored: false
     };
-  } 
-  else if (type === 'dolmen') {
-    const keys = Object.keys(magicObjects);
+  }
+
+  if (type === 'dolmen') {
+    const keys = Object.keys(CFG.magicObjects);
     const godKey = keys[Math.floor(Math.random() * keys.length)];
     return {
       type: 'dolmen',
-      magicObjectId: magicObjects[godKey],
+      magicObjectId: CFG.magicObjects[godKey],
       godName: godKey,
       isVisited: false
     };
   }
-  else if (type === 'cave_entrance') {
-    return {
-      type: 'cave_entrance',
-      targetLocationId: `${locationId}_sub_cave`
-    };
+
+  if (type === 'cave_entrance') {
+    return { type: 'cave_entrance', targetLocationId: `${locationId}_sub_cave` };
   }
 
   return null;
