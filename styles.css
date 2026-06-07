@@ -1015,16 +1015,16 @@ body {
   position: fixed;
   z-index: 10000;
   pointer-events: none;
-  background: rgba(11, 14, 17, 0.95);
-  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   border-left: 3px solid var(--text-accent);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 10px rgba(0, 240, 255, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   padding: 0.6rem 0.9rem;
   border-radius: 4px;
   max-width: 280px;
   font-family: var(--font-body);
   font-size: 0.85rem;
-  color: var(--text-primary);
+  color: #111;
   display: none;
   flex-direction: column;
   gap: 0.25rem;
@@ -1043,16 +1043,17 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  color: #111;
 }
 
 .game-tooltip-coords {
   font-family: var(--font-runes);
-  color: var(--text-accent);
+  color: #555;
   font-size: 0.75rem;
 }
 
 .game-tooltip-contents {
-  color: var(--text-muted);
+  color: #333;
   font-size: 0.8rem;
   line-height: 1.35;
 }
@@ -1193,24 +1194,16 @@ body {
   100% { opacity: 1; transform: translate(-50%, 0); }
 }
 
-/* Discrete hover tooltip styles */
+/* Discrete hover tooltip sizing */
 .game-tooltip.tooltip-discrete {
-  background: rgba(255, 255, 255, 0.85) !important;
-  border: 1px solid rgba(0, 0, 0, 0.15) !important;
-  border-left: 3px solid rgba(0, 0, 0, 0.3) !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;
-  color: #111 !important;
   font-size: 0.75rem !important;
   padding: 0.4rem 0.6rem !important;
   max-width: 200px !important;
-  backdrop-filter: blur(4px) !important;
 }
 .game-tooltip.tooltip-discrete .game-tooltip-header {
   font-size: 0.8rem !important;
   font-weight: 600 !important;
-  color: #111 !important;
 }
 .game-tooltip.tooltip-discrete .game-tooltip-coords {
-  color: #666 !important;
   font-size: 0.7rem !important;
 }
