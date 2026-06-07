@@ -770,7 +770,7 @@ function initTooltipEvents() {
           default: 'Spiders & Wolves'
         };
         const list = poolMap[biome] || poolMap.default;
-        contents.push(`<span style="color:var(--color-danger);font-size:0.82em;display:block;margin-top:2px;">👹 Enemies: ${list}</span>`);
+        contents.push(`Enemies: ${list}`);
       }
 
       contentsText = contents.join('<br>');
