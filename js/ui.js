@@ -14,8 +14,11 @@ import { GODS_CONFIG } from './config/gods.js';
 import { SOLDIERS_CONFIG } from './config/soldiers.js';
 
 function formatStat(statObj) {
-  const sign = statObj.bonus >= 0 ? '+' : '';
-  return `${statObj.base} (${sign}${statObj.bonus})`;
+  if (statObj.bonus === 0) {
+    return `${statObj.base}`;
+  }
+  const sign = statObj.bonus > 0 ? '+' : '';
+  return `${statObj.base} ${sign}${statObj.bonus}`;
 }
 
 // DOM Selectors
