@@ -512,9 +512,14 @@ function buildEntityOfType(locationId, type, terrain, x, y, locationType, diffic
   if (type === 'enemy_army') {
     const e = CFG.enemyArmy;
     const pools = CFG.monsterPoolsByBiome || {};
-    let pool = resolvedPool
-      ? [...resolvedPool]
-      : [...(pools[locationType] || pools.default || e.monsterPool)];
+    let pool;
+    if (locationType && locationType !== 'default' && pools[locationType]) {
+      pool = [...pools[locationType]];
+    } else if (resolvedPool) {
+      pool = [...resolvedPool];
+    } else {
+      pool = [...(pools.default || e.monsterPool)];
+    }
 
     const ds = CFG.difficultyScaling || {};
     if (difficulty >= (ds.bossThreshold || 1.40)) {
