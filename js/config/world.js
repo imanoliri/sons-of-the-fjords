@@ -25,10 +25,10 @@ export const WORLD_CONFIG = {
     "3,6":   { id: "town_1", name: "Fjordgard Kaufang",      type: "town", terrain: "plains"   },
     "8,4":   { id: "town_2", name: "Heimdall Sogn",          type: "town", terrain: "plains"   },
     "12,11": { id: "town_3", name: "Ullsgard Outpost",       type: "town", terrain: "plains"   },
-    "4,3":   { id: "raid_1", name: "St. Alban Monastery",    type: "raid", terrain: "forest"   },
-    "3,9":   { id: "raid_2", name: "Lindisfarne Shore",      type: "raid", terrain: "plains"   },
-    "10,1":  { id: "raid_3", name: "Barrow Mound of Balder", type: "raid", terrain: "snow"     },
-    "13,12": { id: "raid_4", name: "Jotunn Crag Cave",       type: "raid", terrain: "mountain" },
-    "8,12":  { id: "raid_5", name: "Thjazi Keep Ruins",      type: "raid", terrain: "forest"   }
+    "4,3":   { id: "raid_1", name: "St. Alban Monastery",    type: "raid", terrain: "forest",   locationType: "forest",   dangerLevel: 1 },
+    "3,9":   { id: "raid_2", name: "Lindisfarne Shore",      type: "raid", terrain: "plains",   locationType: "default",  dangerLevel: 2 },
+    "10,1":  { id: "raid_3", name: "Barrow Mound of Balder", type: "raid", terrain: "snow",     locationType: "burial_mound", dangerLevel: 3 },
+    "13,12": { id: "raid_4", name: "Jotunn Crag Cave",       type: "raid", terrain: "mountain", locationType: "mountain", dangerLevel: 4 },
+    "8,12":  { id: "raid_5", name: "Thjazi Keep Ruins",      type: "raid", terrain: "forest",   locationType: "forest",   dangerLevel: 5 }
   }
 };

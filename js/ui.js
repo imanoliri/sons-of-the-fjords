@@ -8,6 +8,8 @@ import { discoverTile, generateLocationMap } from './location.js';
 import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats } from './combat.js';
 import { TOWN_CONFIG } from './config/town.js';
 import { MOVEMENT_CONFIG } from './config/movement.js';
+import { LOCATION_CONFIG } from './config/location.js';
+import { WORLD_CONFIG } from './config/world.js';
 import { GODS_CONFIG } from './config/gods.js';
 
 // DOM Selectors
@@ -19,6 +21,16 @@ const elSheep = document.getElementById('res-sheep').querySelector('.val');
 const elBand = document.getElementById('res-band').querySelector('.val');
 const elBlessing = document.getElementById('active-blessing-display');
 const elTooltip = document.getElementById('game-tooltip');
+const elDay = document.getElementById('res-day').querySelector('.val');
+const elWorldDifficultyStatus = document.getElementById('world-difficulty-status');
+const elLocationDifficultyStatus = document.getElementById('location-difficulty-status');
+
+// Party Panel Modals
+const elPartyModal = document.getElementById('modal-party');
+const elPartyBandContent = document.getElementById('party-band-content');
+const elPartyInventoryContent = document.getElementById('party-inventory-content');
+const elTabPartyBand = document.getElementById('tab-party-band');
+const elTabPartyInventory = document.getElementById('tab-party-inventory');
 
 // Screens
 const screens = {
@@ -43,8 +55,12 @@ const elShrineEmpty = document.getElementById('shrine-empty-message');
 // Location elements
 const elLocMap = document.getElementById('location-map');
 const elLocTitle = document.getElementById('location-title');
+const elLocThreat = document.getElementById('location-threat-display');
 const elLocDeckCount = document.getElementById('location-deck-count');
 const elLocLog = document.getElementById('location-event-log');
+const elPromptPanel = document.getElementById('portal-prompt-panel');
+const elPromptText = document.getElementById('portal-prompt-text');
+const elPromptBtn = document.getElementById('btn-use-portal');
 
 // Combat elements
 const elCombatGrid = document.getElementById('combat-grid');
@@ -68,6 +84,15 @@ const elModalGameOver = document.getElementById('modal-gameover');
 
 const elPatronCard = document.getElementById('town-patron-card');
 const elPatronList = document.getElementById('town-patron-list');
+
+const MONSTER_EMOJIS = {
+  'Giant Brood-Spider': '🕷️',
+  'Fenrir Pack Wolf': '🐺',
+  'Draugr Warrior': '🧟',
+  'Cave Troll': '👹',
+  'Frost Giant (Jotunn)': '❄️',
+  'Lindwurm': '🐉'
+};
 
 // Initialize UI binding event listeners
 export function initUIBindings() {
@@ -96,6 +121,30 @@ export function initUIBindings() {
 
   document.getElementById('btn-close-quests').addEventListener('click', () => {
     setScreen(screenAfterOverlay());
+  });
+
+  // Toggle Party Screen
+  bindButton('btn-toggle-party', () => {
+    renderPartyPanel();
+    showOverlay(elPartyModal);
+  });
+
+  bindButton('btn-close-party', () => {
+    hideOverlay(elPartyModal);
+  });
+
+  bindButton('tab-party-band', () => {
+    elTabPartyBand.classList.add('btn-primary');
+    elTabPartyInventory.classList.remove('btn-primary');
+    elPartyBandContent.classList.remove('hidden');
+    elPartyInventoryContent.classList.add('hidden');
+  });
+
+  bindButton('tab-party-inventory', () => {
+    elTabPartyInventory.classList.add('btn-primary');
+    elTabPartyBand.classList.remove('btn-primary');
+    elPartyInventoryContent.classList.remove('hidden');
+    elPartyBandContent.classList.add('hidden');
   });
 
   // Town leave button
@@ -200,6 +249,17 @@ export function initUIBindings() {
     logWorld('Escaped from raid site back to the open sea.');
   });
 
+  // Use portal or explore button
+  bindButton('btn-use-portal', () => {
+    if (activePortalTarget) {
+      if (activePortalTarget.entity.type === 'cave_entrance') {
+        triggerEnterCavePortal(activePortalTarget.coordKey, activePortalTarget.entity);
+      } else if (activePortalTarget.entity.type === 'burial_mound') {
+        triggerEncounterEvent(activePortalTarget.coordKey, activePortalTarget.entity);
+      }
+    }
+  });
+
   // Combat controls
   bindButton('btn-combat-pause', () => {
     togglePause();
@@ -258,8 +318,45 @@ export function initUIBindings() {
 
   // Keyboard Arrow Movement
   window.addEventListener('keydown', (e) => {
-    // 0. Handle Escape key to leave Location (Raid or Town)
+    // Handle B to toggle Band, Q to toggle Quests (only if not in combat screen)
+    if (STATE.activeScreen !== 'combat') {
+      if (e.key === 'b' || e.key === 'B') {
+        const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
+        if (!visibleOverlay || visibleOverlay === elPartyModal) {
+          e.preventDefault();
+          if (!elPartyModal.classList.contains('hidden')) {
+            document.getElementById('btn-close-party')?.click();
+          } else {
+            document.getElementById('btn-toggle-party')?.click();
+          }
+          return;
+        }
+      }
+      if (e.key === 'q' || e.key === 'Q') {
+        const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
+        if (!visibleOverlay || visibleOverlay === elPartyModal) {
+          e.preventDefault();
+          if (!elPartyModal.classList.contains('hidden')) {
+            document.getElementById('btn-close-party')?.click();
+          }
+          document.getElementById('btn-toggle-quests')?.click();
+          return;
+        }
+      }
+    }
+
+    // 0. Handle Escape key to leave Location (Raid or Town) or close panels
     if (e.key === 'Escape') {
+      if (!elPartyModal.classList.contains('hidden')) {
+        e.preventDefault();
+        document.getElementById('btn-close-party')?.click();
+        return;
+      }
+      if (STATE.activeScreen === 'quests') {
+        e.preventDefault();
+        document.getElementById('btn-close-quests')?.click();
+        return;
+      }
       if (STATE.activeScreen === 'location') {
         e.preventDefault();
         document.getElementById('btn-leave-location')?.click();
@@ -271,10 +368,11 @@ export function initUIBindings() {
       }
     }
 
-    // 1. Handle modal overlay shortcuts if an overlay is open
+    // 1. Handle modal overlay shortcuts if an overlay is open (excluding close buttons)
     const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
     if (visibleOverlay) {
-      const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'));
+      const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'))
+        .filter(btn => !btn.classList.contains('btn-close-x'));
       if (buttons.length > 0) {
         // Number keys (1 to buttons.length)
         const keyNum = parseInt(e.key);
@@ -349,6 +447,42 @@ export function initUIBindings() {
         const targetX = STATE.party.localX + dx;
         const targetY = STATE.party.localY + dy;
         attemptLocalMove(targetX, targetY);
+      } else if (e.key === 'Enter') {
+        if (activePortalTarget) {
+          e.preventDefault();
+          if (activePortalTarget.entity.type === 'cave_entrance') {
+            triggerEnterCavePortal(activePortalTarget.coordKey, activePortalTarget.entity);
+          } else if (activePortalTarget.entity.type === 'burial_mound') {
+            triggerEncounterEvent(activePortalTarget.coordKey, activePortalTarget.entity);
+          }
+        }
+        return;
+      } else if (activePortalTarget && activePortalTarget.entity.type === 'burial_mound') {
+        const key = e.key;
+        if (key === '1') {
+          e.preventDefault();
+          adjustResource('gold', 10);
+          activePortalTarget.entity.isExplored = true;
+          adjustFavor('loki', 1);
+          showToast('Plundered Burial Mound! Gained +10 Gold (Thor displeased, Loki pleased).', '🪦');
+          notify('STATE_UPDATED');
+        } else if (key === '2') {
+          e.preventDefault();
+          if (STATE.resources.sheep >= 1) {
+            adjustResource('sheep', -1);
+            activePortalTarget.entity.isExplored = true;
+            adjustFavor('hel', 1);
+            showToast('Sacrificed a sheep to appease Hel.', '🐑');
+          } else {
+            showToast('You have no sheep to sacrifice!', '⚠️');
+          }
+          notify('STATE_UPDATED');
+        } else if (key === '3') {
+          e.preventDefault();
+          elPromptPanel.classList.add('hidden');
+          activePortalTarget = null;
+          notify('STATE_UPDATED');
+        }
       }
     }
     // Check if player is on Town screen
@@ -605,8 +739,131 @@ const GOD_LORE = {
 };
 
 
-// Global tooltip delegation
 function initTooltipEvents() {
+  let hoverTimeout = null;
+  let lastClientX = 0;
+  let lastClientY = 0;
+
+  function showLocationTileTooltip(tile, clientX, clientY) {
+    const x = tile.dataset.x;
+    const y = tile.dataset.y;
+    const terrain = tile.dataset.terrain;
+    const hasPlayer = tile.dataset.hasPlayer === 'true';
+    const entityType = tile.dataset.entityType;
+    const entityState = tile.dataset.entityState;
+
+    const headerText = `${terrain ? terrain.charAt(0).toUpperCase() + terrain.slice(1) : 'Tile'}`;
+    const coordsText = `X: ${x}, Y: ${y}`;
+
+    let contents = [];
+    if (hasPlayer) {
+      contents.push('⚔️ Viking Expedition Band');
+    }
+    if (entityState) {
+      contents.push(entityState);
+    }
+
+    if (contents.length === 0) {
+      if (tile.classList.contains('discovery-edge')) {
+        headerText = 'Unexplored Boundary';
+        contents.push('Step here to draw and discover a new tile from the deck.');
+      } else if (terrain === 'deep_water' || terrain === 'chasm' || terrain === 'mountain') {
+        contents.push(`Rough ${terrain === 'deep_water' ? 'deep water' : terrain}. Impassable obstacle!`);
+      } else {
+        contents.push('Empty ground. Safe to cross.');
+      }
+    }
+    const contentsText = contents.join('<br>');
+
+    elTooltip.innerHTML = `
+      <div class="game-tooltip-header">
+        <span>${headerText}</span>
+        <span class="game-tooltip-coords">${coordsText}</span>
+      </div>
+      <div class="game-tooltip-contents">${contentsText}</div>
+    `;
+    elTooltip.style.borderLeftColor = 'var(--text-accent)';
+    elTooltip.style.display = 'flex';
+    elTooltip.style.left = (clientX + 15) + 'px';
+    elTooltip.style.top = (clientY + 15) + 'px';
+  }
+
+  function showWorldTileTooltip(tile, clientX, clientY) {
+    const x = tile.dataset.x;
+    const y = tile.dataset.y;
+    const terrain = tile.dataset.terrain;
+    const locationName = tile.dataset.locationName;
+    const locationType = tile.dataset.locationType;
+    const locationBiome = tile.dataset.locationBiome;
+    const hasPlayer = tile.dataset.hasPlayer === 'true';
+
+    const headerText = `${terrain ? terrain.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Terrain'}`;
+    const coordsText = `X: ${x}, Y: ${y}`;
+    
+    let borderAccent = 'var(--text-accent)';
+    if (terrain === 'water') borderAccent = 'var(--tile-water)';
+    else if (terrain === 'deep_water') borderAccent = 'var(--tile-deep-water)';
+    else if (terrain === 'river') borderAccent = 'var(--tile-river)';
+    else if (terrain === 'plains') borderAccent = 'var(--tile-plains)';
+    else if (terrain === 'forest') borderAccent = 'var(--tile-forest)';
+    else if (terrain === 'snow') borderAccent = 'var(--tile-snow)';
+    else if (terrain === 'mountain') borderAccent = 'var(--tile-mountain)';
+
+    let contents = [];
+    if (hasPlayer) {
+      contents.push('🚢 Drakkar Longship');
+    }
+    if (locationName) {
+      const typeLabel = locationType === 'town' ? 'Town' : 'Raid Site';
+      contents.push(`🏘️ ${locationName} (${typeLabel})`);
+      const danger = tile.dataset.dangerLevel;
+      if (danger && locationType === 'raid') {
+        contents.push(`💀 Danger Level: ${'💀'.repeat(danger)} (Level ${danger})`);
+      }
+    }
+    
+    if (contents.length === 0) {
+      if (terrain === 'deep_water') {
+        contents.push('🌊 Deep Water. Extremely dangerous, non-traversable.');
+      } else if (terrain === 'water') {
+        contents.push('Open water. Safe sailing, costs 1 Food per step.');
+      } else if (terrain === 'river') {
+        contents.push('River stream. Fast sailing, costs 1 Food per step.');
+      } else {
+        contents.push('Rugged land. Slow travel, costs 3 Food per step.');
+      }
+    }
+
+    // Add concrete enemy description for any land/raid tiles on world map
+    if (locationType === 'raid' || (terrain !== 'water' && terrain !== 'deep_water' && terrain !== 'river')) {
+      const biome = locationType === 'raid' ? (locationBiome || 'default') : terrain;
+      const poolMap = {
+        forest: 'spiders and wolves',
+        mountain: 'wolves and trolls',
+        snow: 'spiders and trolls',
+        plains: 'spiders and wolves',
+        burial_mound: 'draugr warriors',
+        default: 'spiders and wolves'
+      };
+      const list = poolMap[biome] || poolMap.default;
+      contents.push(`You will find ${list} here.`);
+    }
+
+    const contentsText = contents.join('<br>');
+
+    elTooltip.innerHTML = `
+      <div class="game-tooltip-header">
+        <span>${headerText}</span>
+        <span class="game-tooltip-coords">${coordsText}</span>
+      </div>
+      ${contentsText ? `<div class="game-tooltip-contents">${contentsText}</div>` : ''}
+    `;
+    elTooltip.style.borderLeftColor = borderAccent;
+    elTooltip.style.display = 'flex';
+    elTooltip.style.left = (clientX + 15) + 'px';
+    elTooltip.style.top = (clientY + 15) + 'px';
+  }
+
   // ── God quest / .has-tooltip elements ──
   document.body.addEventListener('mouseover', (e) => {
     const godTarget = e.target.closest('[data-god-tooltip]');
@@ -631,21 +888,27 @@ function initTooltipEvents() {
       } else if (section === 'milestone') {
         const idx = parseInt(godTarget.dataset.milestoneIdx);
         const achieved = STATE.godQuests[gKey][idx];
+        header = `${lore.icon} Milestone ${['I', 'II', 'III', 'IV', 'V'][idx]}`;
+        
+        let statusHtml = achieved 
+          ? `<span style="color:var(--color-success)">✅ Completed</span>` 
+          : `<span style="color:var(--text-muted)">🔒 Unlocked at Favor +${idx + 1}</span>`;
+          
+        let effectHtml = '';
         if (idx === 4) {
-          // Ascension milestone
-          header = `${lore.icon} Ascension`;
-          content = achieved
-            ? `<span style="color:var(--color-success)">✅ Ascended! Visit a Town to switch buff for 5 Gold.</span>`
-            : `<span style="color:var(--text-muted)">🔒 Complete all 5 milestones to ascend and unlock the champion buff.</span>`;
+          effectHtml = `<span style="color:var(--text-muted)">🔒 Unlocks this god's secret Blessing!</span>`;
         } else {
-          header = '';
-          content = '<b style="color:' + lore.color + '">' + lore.milestoneEffects[idx] + '</b>';
+          effectHtml = `<b style="color:${lore.color}">${lore.milestoneEffects[idx]}</b>`;
         }
+        
+        content = `${statusHtml}<br><div style="margin-top:4px;">${effectHtml}</div>`;
       } else if (section === 'champion') {
         header = `${lore.icon} Champion Buff`;
         content = `<b style="color:${lore.color}">${lore.buff}</b>`;
+      } else if (section === 'champion_locked') {
+        header = `${lore.icon} Champion Buff`;
+        content = `<span style="color:var(--text-muted)">reach Milestone 5 to unlock the champion buff of this god</span>`;
       }
-
 
       elTooltip.innerHTML = `
         <div class="game-tooltip-header">
@@ -659,10 +922,10 @@ function initTooltipEvents() {
     }
   });
 
+  // World, location, and combat tooltips
   document.body.addEventListener('mouseover', (e) => {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
     if (!tile) {
-      // Only hide if not hovering a god tooltip target
       if (!e.target.closest('[data-god-tooltip]')) {
         elTooltip.style.display = 'none';
       }
@@ -674,83 +937,37 @@ function initTooltipEvents() {
       return;
     }
 
+    if (tile.classList.contains('world-tile')) {
+      if (hoverTimeout) clearTimeout(hoverTimeout);
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+      hoverTimeout = setTimeout(() => {
+        showWorldTileTooltip(tile, lastClientX, lastClientY);
+      }, 800);
+      return;
+    }
+
+    if (tile.classList.contains('location-tile')) {
+      if (hoverTimeout) clearTimeout(hoverTimeout);
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+      const entityType = tile.dataset.entityType;
+      if (entityType === 'burial_mound') {
+        hoverTimeout = setTimeout(() => {
+          showLocationTileTooltip(tile, lastClientX, lastClientY);
+        }, 800);
+      } else {
+        showLocationTileTooltip(tile, lastClientX, lastClientY);
+      }
+      return;
+    }
+
     let headerText = '';
     let coordsText = '';
     let contentsText = '';
     let borderAccent = 'var(--text-accent)';
 
-    if (tile.classList.contains('world-tile')) {
-      const x = tile.dataset.x;
-      const y = tile.dataset.y;
-      const terrain = tile.dataset.terrain;
-      const locationName = tile.dataset.locationName;
-      const locationType = tile.dataset.locationType;
-      const hasPlayer = tile.dataset.hasPlayer === 'true';
-
-      headerText = `${terrain ? terrain.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Terrain'}`;
-      coordsText = `X: ${x}, Y: ${y}`;
-      
-      let contents = [];
-      if (hasPlayer) {
-        contents.push('🚢 Drakkar Longship');
-      }
-      if (locationName) {
-        const typeLabel = locationType === 'town' ? 'Town' : 'Raid Site';
-        contents.push(`🏘️ ${locationName} (${typeLabel})`);
-      }
-      
-      if (contents.length === 0) {
-        if (terrain === 'deep_water') {
-          contents.push('🌊 Deep Water. Extremely dangerous, non-traversable.');
-        } else if (terrain === 'water') {
-          contents.push('Open water. Safe sailing, costs 1 Food per step.');
-        } else if (terrain === 'river') {
-          contents.push('River stream. Fast sailing, costs 1 Food per step.');
-        } else {
-          contents.push('Rugged land. Slow travel, costs 3 Food per step. Dangerous creature attacks!');
-        }
-      }
-      contentsText = contents.join('<br>');
-
-      if (terrain === 'water') borderAccent = 'var(--tile-water)';
-      else if (terrain === 'deep_water') borderAccent = 'var(--tile-deep-water)';
-      else if (terrain === 'river') borderAccent = 'var(--tile-river)';
-      else if (terrain === 'plains') borderAccent = 'var(--tile-plains)';
-      else if (terrain === 'forest') borderAccent = 'var(--tile-forest)';
-      else if (terrain === 'snow') borderAccent = 'var(--tile-snow)';
-      else if (terrain === 'mountain') borderAccent = 'var(--tile-mountain)';
-
-    } else if (tile.classList.contains('location-tile')) {
-      const x = tile.dataset.x;
-      const y = tile.dataset.y;
-      const terrain = tile.dataset.terrain;
-      const hasPlayer = tile.dataset.hasPlayer === 'true';
-      const entityType = tile.dataset.entityType;
-      const entityState = tile.dataset.entityState;
-
-      headerText = `${terrain ? terrain.charAt(0).toUpperCase() + terrain.slice(1) : 'Tile'}`;
-      coordsText = `X: ${x}, Y: ${y}`;
-
-      let contents = [];
-      if (hasPlayer) {
-        contents.push('⚔️ Viking Expedition Band');
-      }
-      if (entityState) {
-        contents.push(entityState);
-      }
-
-      if (contents.length === 0) {
-        if (tile.classList.contains('discovery-edge')) {
-          headerText = 'Unexplored Boundary';
-          contents.push('Step here to draw and discover a new tile from the deck.');
-        } else if (terrain === 'deep_water' || terrain === 'chasm' || terrain === 'mountain') {
-          contents.push(`Rough ${terrain === 'deep_water' ? 'deep water' : terrain}. Impassable obstacle!`);
-        } else {
-          contents.push('Empty ground. Safe to cross.');
-        }
-      }
-      contentsText = contents.join('<br>');
-    } else if (tile.classList.contains('combat-cell')) {
+    if (tile.classList.contains('combat-cell')) {
       const r = Number(tile.dataset.row);
       const c = Number(tile.dataset.col);
       headerText = `Combat Grid Lane ${r+1}`;
@@ -809,14 +1026,27 @@ function initTooltipEvents() {
       elTooltip.style.left = (e.clientX + 15) + 'px';
       elTooltip.style.top = (e.clientY + 15) + 'px';
     }
+    const tile = e.target.closest('.world-tile, .location-tile');
+    if (tile) {
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+    }
   });
 
   document.body.addEventListener('mouseout', (e) => {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
     const godTarget = e.target.closest('[data-god-tooltip]');
-    if (tile && !e.relatedTarget?.closest('.world-tile, .location-tile, .combat-cell')) {
+    
+    if (tile && (tile.classList.contains('world-tile') || tile.dataset.entityType === 'burial_mound')) {
+      const enteringTile = e.relatedTarget?.closest('.world-tile, .location-tile');
+      if (enteringTile !== tile) {
+        if (hoverTimeout) clearTimeout(hoverTimeout);
+        elTooltip.style.display = 'none';
+      }
+    } else if (tile && !e.relatedTarget?.closest('.world-tile, .location-tile, .combat-cell')) {
       elTooltip.style.display = 'none';
     }
+    
     if (godTarget && !e.relatedTarget?.closest('[data-god-tooltip]')) {
       elTooltip.style.display = 'none';
     }
@@ -848,32 +1078,118 @@ function autoDiscoverAdjacent(locId) {
   });
 }
 
+function findLocalPath(startX, startY, targetX, targetY, locState) {
+  if (startX === targetX && startY === targetY) return [];
+
+  const queue = [{ x: startX, y: startY, path: [] }];
+  const visited = new Set();
+  visited.add(`${startX},${startY}`);
+
+  const directions = [
+    { dx: 0, dy: -1 },
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 },
+    { dx: 1, dy: 0 }
+  ];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+
+    if (current.x === targetX && current.y === targetY) {
+      return current.path;
+    }
+
+    for (const dir of directions) {
+      const nx = current.x + dir.dx;
+      const ny = current.y + dir.dy;
+      const nKey = `${nx},${ny}`;
+
+      if (nx >= 0 && nx < 10 && ny >= 0 && ny < 10 && !visited.has(nKey)) {
+        const tile = locState.placedTiles[nKey];
+        if (tile) {
+          const terrainType = locState.preGeneratedGrid[nKey];
+          const isPassable = terrainType !== 'chasm' && terrainType !== 'mountain' && terrainType !== 'deep_water';
+          if (isPassable) {
+            visited.add(nKey);
+            queue.push({
+              x: nx,
+              y: ny,
+              path: [...current.path, { x: nx, y: ny }]
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function attemptLocalPathMove(targetX, targetY) {
+  const locId = STATE.party.currentLocationId;
+  const locState = STATE.locations[locId];
+  if (!locState) return;
+
+  if (localPathMovementTimeout) {
+    clearTimeout(localPathMovementTimeout);
+    localPathMovementTimeout = null;
+  }
+
+  const path = findLocalPath(STATE.party.localX, STATE.party.localY, targetX, targetY, locState);
+  if (!path || path.length === 0) {
+    return;
+  }
+
+  let stepIndex = 0;
+  function nextStep() {
+    if (STATE.activeScreen !== 'location') return;
+    if (document.querySelector('.modal-overlay:not(.hidden)')) return;
+
+    const step = path[stepIndex];
+    attemptLocalMove(step.x, step.y);
+
+    if (STATE.party.localX === step.x && STATE.party.localY === step.y && !document.querySelector('.modal-overlay:not(.hidden)')) {
+      stepIndex++;
+      if (stepIndex < path.length) {
+        localPathMovementTimeout = setTimeout(nextStep, 150);
+      }
+    }
+  }
+
+  nextStep();
+}
+
 // Attempt to move player locally, auto-discovering tiles and gathering contents or triggering combat
 function attemptLocalMove(targetX, targetY) {
   const locId = STATE.party.currentLocationId;
   const locState = STATE.locations[locId];
   if (!locState) return;
 
-  const coordKey = `${targetX},${targetY}`;
-  let tile = locState.placedTiles[coordKey];
+  // Bounds check
+  if (targetX < 0 || targetX >= 10 || targetY < 0 || targetY >= 10) return;
 
-  // If tile is unplaced but adjacent, auto-discover it
+  // Check if it's adjacent to the current player position
+  const isAdjacent = Math.abs(targetX - STATE.party.localX) + Math.abs(targetY - STATE.party.localY) === 1;
+  if (!isAdjacent) return;
+
+  const coordKey = `${targetX},${targetY}`;
+  const terrainType = locState.preGeneratedGrid[coordKey];
+
+  // Impassable terrain block
+  const isImpassable = terrainType === 'chasm' || terrainType === 'mountain' || terrainType === 'deep_water';
+  if (isImpassable) {
+    logLocation(`The rugged ${terrainType === 'deep_water' ? 'deep water' : terrainType} is impassable!`, 'warn-message');
+    return;
+  }
+
+  // If tile is unplaced, reveal it
+  let tile = locState.placedTiles[coordKey];
   if (!tile) {
-    const isAdjacent = Math.abs(targetX - STATE.party.localX) + Math.abs(targetY - STATE.party.localY) === 1;
-    const adjacentUnplaced = getAdjacentUnplacedSlots(locState.placedTiles);
-    if (isAdjacent && adjacentUnplaced.includes(coordKey)) {
-      discoverTile(locId, targetX, targetY);
-      tile = locState.placedTiles[coordKey];
-    }
+    discoverTile(locId, targetX, targetY);
+    tile = locState.placedTiles[coordKey];
   }
 
   if (!tile) return;
-
-  // Impassable terrain block
-  if (tile.terrainType === 'chasm' || tile.terrainType === 'mountain' || tile.terrainType === 'deep_water') {
-    logLocation(`The rugged ${tile.terrainType === 'deep_water' ? 'deep water' : tile.terrainType} is impassable!`, 'warn-message');
-    return;
-  }
 
   // Check tile entities
   if (tile.entity) {
@@ -896,12 +1212,14 @@ function attemptLocalMove(targetX, targetY) {
     // Automatically trigger interactions
     if (ent.type === 'treasure' && !ent.isLooted) {
       triggerEncounterEvent(coordKey, ent);
-    } else if (ent.type === 'burial_mound' && !ent.isExplored) {
+    } else if (ent.type === 'wood_source' && !ent.isLooted) {
+      triggerEncounterEvent(coordKey, ent);
+    } else if (ent.type === 'ore_deposit' && !ent.isLooted) {
       triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'dolmen' && !ent.isVisited) {
       triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'cave_entrance') {
-      triggerEnterCavePortal(coordKey, ent);
+      promptEnterCavePortal(coordKey, ent);
     }
   } else {
     // Normal empty tile movement
@@ -959,11 +1277,22 @@ function renderResourceBar() {
   elWood.innerText = STATE.resources.wood;
   elSheep.innerText = STATE.resources.sheep;
   elBand.innerText = STATE.band.length;
+  elDay.innerText = STATE.day || 1;
 
+  const activeWraths = Object.keys(STATE.godFavor).filter(g => STATE.godFavor[g] <= -4);
+  let blessingHtml = '';
   if (STATE.activeBlessing) {
-    elBlessing.innerHTML = `<span class="icon">✨</span> <span style="color: var(--color-${STATE.activeBlessing})">${STATE.activeBlessing.toUpperCase()}'S BLESSING</span>`;
+    const lore = GOD_LORE[STATE.activeBlessing];
+    blessingHtml = `<span class="icon">${lore.icon}</span> <span style="color: var(--color-${STATE.activeBlessing})">${STATE.activeBlessing.toUpperCase()}'S BLESSING</span>`;
   } else {
-    elBlessing.innerHTML = `<span>No Active Buff</span>`;
+    blessingHtml = `<span>No Active Buff</span>`;
+  }
+
+  if (activeWraths.length > 0) {
+    const wrathNames = activeWraths.map(g => `<span style="color:var(--color-danger); font-weight:bold;">${g.toUpperCase()}'S WRATH ⚡</span>`).join(', ');
+    elBlessing.innerHTML = `${blessingHtml} | <span style="font-size:0.85em;">Active Curses: ${wrathNames}</span>`;
+  } else {
+    elBlessing.innerHTML = blessingHtml;
   }
 }
 
@@ -971,6 +1300,11 @@ function renderResourceBar() {
 function renderWorldMap() {
   elWorldMap.innerHTML = '';
   elWorldCoords.innerText = `Longship Pos - X: ${STATE.party.worldX}, Y: ${STATE.party.worldY}`;
+
+  const timeFactor = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.timeFactor) || 0.02;
+  const dayValue = STATE.day || 1;
+  const dayMulti = (dayValue * timeFactor).toFixed(2);
+  elWorldDifficultyStatus.innerText = `Day Multiplier: +${dayMulti}x (Day ${dayValue})`;
 
   const tiles = STATE.worldMap.tiles;
   const revealed = STATE.worldMap.revealed;
@@ -997,6 +1331,8 @@ function renderWorldMap() {
         if (hasLocation) {
           elCell.dataset.locationName = hasLocation.name;
           elCell.dataset.locationType = hasLocation.type;
+          elCell.dataset.locationBiome = hasLocation.locationType || '';
+          elCell.dataset.dangerLevel = hasLocation.dangerLevel || '';
         }
 
         if (hasLocation) {
@@ -1079,17 +1415,43 @@ function movePartyOnWorld(x, y) {
   }
 
   // Deduct food
-  if (STATE.resources.food > 0) {
+  if (STATE.resources.food >= cost) {
     adjustResource('food', -cost);
   } else {
-    // Starving: moving kills a random soldier
-    triggerStarvationDamage();
-    logWorld('STARVING! Starvation claimed a member of your band.', 'warn-message');
+    // We don't have enough food for this movement step. Try consuming sheep first.
+    if (STATE.resources.sheep > 0) {
+      adjustResource('sheep', -1);
+      const yieldAmt = MOVEMENT_CONFIG.sheepFoodYield || 15;
+      adjustResource('food', yieldAmt);
+      logWorld(`HUNGERING! Slaughtered 1 Sheep to harvest emergency rations (+${yieldAmt} Food).`, 'warn-message');
+      adjustResource('food', -cost);
+    } else {
+      // Starving: units lose 3 hp per movement
+      const dmg = MOVEMENT_CONFIG.starvationHpDamage || 3;
+      let deadUnits = [];
+      for (let i = STATE.band.length - 1; i >= 0; i--) {
+        const u = STATE.band[i];
+        u.hp -= dmg;
+        if (u.hp <= 0) {
+          deadUnits.push(u.name);
+          STATE.band.splice(i, 1);
+        }
+      }
+      logWorld(`STARVING! No sheep left. Your units lost ${dmg} HP from hunger.`, 'warn-message');
+      if (deadUnits.length > 0) {
+        logWorld(`Starvation claimed: ${deadUnits.join(', ')}.`, 'warn-message');
+      }
+      if (STATE.band.length === 0 && STATE.resources.gold === 0) {
+        notify('GAME_OVER');
+      }
+    }
   }
 
   // Set position
   STATE.party.worldX = x;
   STATE.party.worldY = y;
+  STATE.day = (STATE.day || 1) + 1;
+  renderResourceBar();
 
   // Reveal fog in a 2-tile radius around player
   revealWorldFog(x, y);
@@ -1287,15 +1649,117 @@ function renderLocationMap() {
   const locState = STATE.locations[locId];
   if (!locState) return;
 
-  elLocTitle.innerText = `Exploring Site`;
+  const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
+  const locName = locData ? locData.name : (locState.isSubCave ? 'Sub-Cave Chamber' : 'Exploring Site');
+  const dangerVal = locState.dangerLevel || 3;
+  const diffValNum = locState.difficulty || 1.0;
+  const diffVal = diffValNum.toFixed(2);
+
+  elLocTitle.innerText = locName;
+  
+  let threatColor = 'var(--color-success)'; // green
+  if (diffValNum >= 1.0 && diffValNum <= 1.5) {
+    threatColor = 'var(--color-loki)'; // orange
+  } else if (diffValNum > 1.5) {
+    threatColor = 'var(--color-danger)'; // red
+  }
+  elLocThreat.innerHTML = `<span style="color:${threatColor}">(${diffVal}x Threat)</span>`;
+
   elLocDeckCount.innerText = locState.tileStack.length;
+
+  const stars = '💀'.repeat(dangerVal);
+  elLocationDifficultyStatus.innerHTML = `Danger: <span style="color:var(--color-danger)">${stars}</span>`;
 
   const placed = locState.placedTiles;
   const px = STATE.party.localX;
   const py = STATE.party.localY;
 
-  // We gather adjacent tiles to verify discovery slots
-  const adjacentUnplaced = getAdjacentUnplacedSlots(placed);
+  // Check if player is standing on a cave entrance/exit or burial mound
+  const currentTile = placed[`${px},${py}`];
+  if (currentTile && currentTile.entity && (currentTile.entity.type === 'cave_entrance' || (currentTile.entity.type === 'burial_mound' && !currentTile.entity.isExplored))) {
+    const ent = currentTile.entity;
+    elPromptPanel.classList.remove('hidden');
+    elPromptPanel.innerHTML = '';
+
+    const textSpan = document.createElement('span');
+    textSpan.id = 'portal-prompt-text';
+    elPromptPanel.appendChild(textSpan);
+
+    if (ent.type === 'cave_entrance') {
+      if (ent.isExit) {
+        textSpan.innerText = '🪜 Ladder to upper level ';
+      } else {
+        textSpan.innerText = '🕳️ Entrance to cave ';
+      }
+
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-sm btn-primary';
+      btn.id = 'btn-use-portal';
+      btn.innerText = '[enter]';
+      btn.addEventListener('click', () => {
+        triggerEnterCavePortal(`${px},${py}`, ent);
+      });
+      elPromptPanel.appendChild(btn);
+
+    } else if (ent.type === 'burial_mound') {
+      textSpan.innerText = '🪦 Burial Mound: ';
+
+      const btnExplore = document.createElement('button');
+      btnExplore.className = 'btn btn-sm btn-primary';
+      btnExplore.style.marginRight = '0.5rem';
+      btnExplore.innerText = '[enter]';
+      btnExplore.addEventListener('click', () => {
+        triggerEncounterEvent(`${px},${py}`, ent);
+      });
+
+      const btn1 = document.createElement('button');
+      btn1.className = 'btn btn-sm btn-warning';
+      btn1.style.marginRight = '0.5rem';
+      btn1.innerText = '[1] Plunder';
+      btn1.addEventListener('click', () => {
+        adjustResource('gold', 10);
+        ent.isExplored = true;
+        adjustFavor('loki', 1);
+        showToast('Plundered Burial Mound! Gained +10 Gold (Thor displeased, Loki pleased).', '🪦');
+        notify('STATE_UPDATED');
+      });
+
+      const btn2 = document.createElement('button');
+      btn2.className = 'btn btn-sm btn-primary';
+      btn2.style.marginRight = '0.5rem';
+      btn2.innerText = '[2] Sacrifice';
+      btn2.addEventListener('click', () => {
+        if (STATE.resources.sheep >= 1) {
+          adjustResource('sheep', -1);
+          ent.isExplored = true;
+          adjustFavor('hel', 1);
+          showToast('Sacrificed a sheep to appease Hel.', '🐑');
+        } else {
+          showToast('You have no sheep to sacrifice!', '⚠️');
+        }
+        notify('STATE_UPDATED');
+      });
+
+      const btn3 = document.createElement('button');
+      btn3.className = 'btn btn-sm';
+      btn3.innerText = '[3] Leave';
+      btn3.addEventListener('click', () => {
+        elPromptPanel.classList.add('hidden');
+        activePortalTarget = null;
+        notify('STATE_UPDATED');
+      });
+
+      elPromptPanel.appendChild(btnExplore);
+      elPromptPanel.appendChild(btn1);
+      elPromptPanel.appendChild(btn2);
+      elPromptPanel.appendChild(btn3);
+    }
+
+    activePortalTarget = { coordKey: `${px},${py}`, entity: ent };
+  } else {
+    elPromptPanel.classList.add('hidden');
+    activePortalTarget = null;
+  }
 
   for (let y = 0; y < 10; y++) {
     for (let x = 0; x < 10; x++) {
@@ -1306,6 +1770,7 @@ function renderLocationMap() {
       
       const coordKey = `${x},${y}`;
       const tile = placed[coordKey];
+      const isNeighbor = Math.abs(x - px) + Math.abs(y - py) === 1;
 
       if (tile) {
         // Render terrain
@@ -1316,10 +1781,20 @@ function renderLocationMap() {
         if (tile.entity) {
           const ent = tile.entity;
           if (ent.type === 'treasure' && !ent.isLooted) entityDesc = '🪙 Treasure Chest (Loot Gold)';
+          else if (ent.type === 'wood_source' && !ent.isLooted) entityDesc = '🪵 Wood Source (Harvest Wood)';
+          else if (ent.type === 'ore_deposit' && !ent.isLooted) entityDesc = '🪨 Ore Deposit (Mine Gold)';
           else if (ent.type === 'enemy_army' && !ent.isDefeated) entityDesc = `👹 Monster Nest (${ent.monsters[0].monsterClass})`;
           else if (ent.type === 'burial_mound' && !ent.isExplored) entityDesc = '🪦 Ancient Burial Mound';
           else if (ent.type === 'dolmen' && !ent.isVisited) entityDesc = `🏆 Sacred Dolmen Stone (Appease ${ent.godName.toUpperCase()})`;
-          else if (ent.type === 'cave_entrance') entityDesc = '🕳️ Cave Sub-Dungeon Portal';
+          else if (ent.type === 'cave_entrance') {
+            if (ent.isExit) {
+              entityDesc = '🪜 Cave Exit Portal (Return to surface)';
+            } else if (ent.visited) {
+              entityDesc = '🕳️ Active Cave Entrance (Visited)';
+            } else {
+              entityDesc = '🕳️ Cave Sub-Dungeon Portal';
+            }
+          }
           
           if (entityDesc) {
             elCell.dataset.entityType = ent.type;
@@ -1335,23 +1810,73 @@ function renderLocationMap() {
 
           if (ent.type === 'treasure' && !ent.isLooted) {
             badge.innerText = '🪙';
-            badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
+              else attemptLocalPathMove(x, y);
+            });
           } 
+          else if (ent.type === 'wood_source' && !ent.isLooted) {
+            badge.innerText = '🪵';
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
+              else attemptLocalPathMove(x, y);
+            });
+          }
+          else if (ent.type === 'ore_deposit' && !ent.isLooted) {
+            badge.innerText = '🪨';
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
+              else attemptLocalPathMove(x, y);
+            });
+          }
           else if (ent.type === 'enemy_army' && !ent.isDefeated) {
-            badge.innerText = '👹';
-            badge.addEventListener('click', () => triggerCombatTransition(coordKey, ent));
+            const firstMonster = ent.monsters && ent.monsters[0] ? ent.monsters[0].monsterClass : '';
+            badge.innerText = MONSTER_EMOJIS[firstMonster] || '👹';
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              attemptLocalPathMove(x, y);
+            });
           } 
           else if (ent.type === 'burial_mound' && !ent.isExplored) {
             badge.innerText = '🪦';
-            badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) {
+                triggerEncounterEvent(coordKey, ent);
+              } else {
+                attemptLocalPathMove(x, y);
+              }
+            });
           } 
           else if (ent.type === 'dolmen' && !ent.isVisited) {
             badge.innerText = '🏆';
-            badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
+              else attemptLocalPathMove(x, y);
+            });
           }
           else if (ent.type === 'cave_entrance') {
-            badge.innerText = '🕳️';
-            badge.addEventListener('click', () => triggerEnterCavePortal(coordKey, ent));
+            if (ent.isExit) {
+              badge.innerText = '🪜';
+              badge.classList.add('exit-portal');
+            } else {
+              badge.innerText = '🕳️';
+              if (ent.visited) {
+                badge.classList.add('visited-portal');
+              }
+            }
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) {
+                triggerEnterCavePortal(coordKey, ent);
+              } else {
+                attemptLocalPathMove(x, y);
+              }
+            });
           }
 
           elCell.appendChild(badge);
@@ -1366,30 +1891,27 @@ function renderLocationMap() {
           elCell.appendChild(marker);
         }
 
-        // Click to move player locally to adjacent placed tiles
-        const isNeighbor = Math.abs(x - px) + Math.abs(y - py) === 1;
+        // Click to move player locally to any visible placed tiles
+        elCell.style.cursor = 'pointer';
+        elCell.addEventListener('click', () => {
+          attemptLocalPathMove(x, y);
+        });
+
+        if (isNeighbor) {
+          elCell.classList.add('tile-border-highlight');
+        }
+
+      } else {
+        // Render fog of war
+        elCell.classList.add('fog');
+        
+        // Adjacent tiles are clickable to move/discover
         if (isNeighbor) {
           elCell.classList.add('tile-border-highlight');
           elCell.addEventListener('click', () => {
             attemptLocalMove(x, y);
           });
         }
-
-      } 
-      // If cell is unplaced but adjacent to a placed tile, make it a discovery edge
-      else if (adjacentUnplaced.includes(coordKey)) {
-        const isNeighborToPlayer = Math.abs(x - px) + Math.abs(y - py) === 1;
-        if (isNeighborToPlayer) {
-          elCell.classList.add('discovery-edge');
-          elCell.addEventListener('click', () => {
-            attemptLocalMove(x, y);
-          });
-        } else {
-          elCell.classList.add('fog');
-        }
-      } 
-      else {
-        elCell.classList.add('fog');
       }
 
       elLocMap.appendChild(elCell);
@@ -1413,41 +1935,44 @@ function renderLocationMap() {
   }, 50);
 }
 
-// Find unplaced tiles sharing an edge with any placed tile
-function getAdjacentUnplacedSlots(placed) {
-  const keys = Object.keys(placed);
-  const slots = new Set();
-  
-  keys.forEach(k => {
-    const [x, y] = k.split(',').map(Number);
-    const neighbors = [
-      { x: x + 1, y },
-      { x: x - 1, y },
-      { x, y: y + 1 },
-      { x, y: y - 1 }
-    ];
-
-    neighbors.forEach(n => {
-      if (n.x >= 0 && n.x < 10 && n.y >= 0 && n.y < 10) {
-        const nKey = `${n.x},${n.y}`;
-        if (!placed[nKey]) {
-          slots.add(nKey);
-        }
-      }
-    });
-  });
-
-  return Array.from(slots);
-}
 
 // Enter Cave Sub-Dungeon Portal
 function triggerEnterCavePortal(coordKey, entity) {
-  STATE.party.currentLocationId = entity.targetLocationId;
-  generateLocationMap(entity.targetLocationId, 'mountain');
-  STATE.party.localX = 5;
-  STATE.party.localY = 5;
-  notify('STATE_UPDATED');
-  logLocation('Stepped down into the deep Jotunn Crag Cave chambers.');
+  if (entity.isExit) {
+    // Going back to parent location
+    STATE.party.currentLocationId = entity.targetLocationId;
+    const [px, py] = entity.targetCoords.split(',').map(Number);
+    STATE.party.localX = px;
+    STATE.party.localY = py;
+
+    // Mark the parent cave entrance as visited (if it exists)
+    const parentLoc = STATE.locations[entity.targetLocationId];
+    if (parentLoc) {
+      const parentTile = parentLoc.placedTiles[entity.targetCoords];
+      if (parentTile && parentTile.entity) {
+        parentTile.entity.visited = true;
+      }
+    }
+
+    autoDiscoverAdjacent(entity.targetLocationId);
+    notify('STATE_UPDATED');
+    logLocation('Climbed back up from the damp cave chambers.');
+  } else {
+    // Going down to sub-cave
+    const parentLocationId = STATE.party.currentLocationId;
+    const parentCoords = coordKey;
+
+    entity.visited = true; // Mark entrance in parent as visited
+
+    STATE.party.currentLocationId = entity.targetLocationId;
+    generateLocationMap(entity.targetLocationId, 'cave', parentLocationId, parentCoords);
+    STATE.party.localX = 5;
+    STATE.party.localY = 5;
+
+    autoDiscoverAdjacent(entity.targetLocationId);
+    notify('STATE_UPDATED');
+    logLocation('Stepped down into the deep Jotunn Crag Cave chambers.');
+  }
 }
 
 // Renders choice dialogs for location interactions
@@ -1458,6 +1983,18 @@ function triggerEncounterEvent(coordKey, entity) {
     showToast(`Uncovered buried chest! Looted +${entity.silver} Gold.`, '🪙');
     notify('STATE_UPDATED');
   } 
+  else if (entity.type === 'wood_source') {
+    adjustResource('wood', entity.wood);
+    entity.isLooted = true;
+    showToast(`Harvested wood source! Gathered +${entity.wood} Wood.`, '🪵');
+    notify('STATE_UPDATED');
+  }
+  else if (entity.type === 'ore_deposit') {
+    adjustResource('gold', entity.gold);
+    entity.isLooted = true;
+    showToast(`Mined ore deposit! Gained +${entity.gold} Gold.`, '🪨');
+    notify('STATE_UPDATED');
+  }
   else if (entity.type === 'dolmen') {
     STATE.inventory.push(entity.magicObjectId);
     entity.isVisited = true;
@@ -1474,7 +2011,7 @@ function triggerEncounterEvent(coordKey, entity) {
       elModalEventBody.innerText = `You uncover an ancient viking Barrow Grave. Deep markings suggest a warrior tomb. Defile the grave to look for relics, or perform a sacrifice of Sheep to please Hel?`;
 
       const choice1 = document.createElement('button');
-      choice1.classList.add('btn', 'btn-danger');
+      choice1.classList.add('btn', 'btn-warning');
       choice1.innerText = 'Plunder Mound (+10 Gold, pleases Loki, angers Thor)';
       choice1.addEventListener('click', () => {
         adjustResource('gold', 10);
@@ -1820,18 +2357,117 @@ function renderQuestsScreen() {
       }
       toggleCol.appendChild(btn);
     } else {
-      // Show a locked hint — clicking goes to identity tooltip info
+      // Show a locked hint — hovering shows locked info
       const locked = document.createElement('span');
       locked.style.cssText = 'font-size:0.8rem;color:var(--text-muted);cursor:help;';
       locked.innerText = '🔒 Locked';
       locked.dataset.godTooltip = gKey;
-      locked.dataset.tooltipSection = 'identity';
+      locked.dataset.tooltipSection = 'champion_locked';
       toggleCol.appendChild(locked);
     }
     
     row.appendChild(toggleCol);
     elQuestsList.appendChild(row);
   });
+}
+
+// Render the active band roster and inventory items in the party panel
+function renderPartyPanel() {
+  // 1. Render Band Warriors
+  elPartyBandContent.innerHTML = '';
+  if (STATE.band.length === 0) {
+    elPartyBandContent.innerHTML = '<p style="color:var(--text-muted);">Your band has no warriors recruited.</p>';
+  } else {
+    STATE.band.forEach(unit => {
+      const row = document.createElement('div');
+      row.className = 'trade-row';
+      row.style.alignItems = 'center';
+      row.style.padding = '0.5rem 0';
+      row.style.maxWidth = '450px';
+      row.style.margin = '0 auto';
+      
+      const details = document.createElement('div');
+      details.style.display = 'flex';
+      details.style.flexDirection = 'column';
+      details.style.gap = '2px';
+      
+      const name = document.createElement('span');
+      const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
+      name.innerHTML = `<b>${icons[unit.type] || '⚔️'} ${unit.name}</b> (${unit.type.toUpperCase()})`;
+      
+      const stats = document.createElement('span');
+      stats.style.fontSize = '0.75rem';
+      stats.style.color = 'var(--text-muted)';
+      stats.innerText = `ATK: ${unit.dmg} | SPD: ${unit.speed} | RNG: ${unit.range}`;
+      
+      details.appendChild(name);
+      details.appendChild(stats);
+
+      const hpSection = document.createElement('div');
+      hpSection.style.display = 'flex';
+      hpSection.style.flexDirection = 'column';
+      hpSection.style.alignItems = 'flex-end';
+      hpSection.style.gap = '4px';
+      hpSection.style.width = '120px';
+
+      const hpText = document.createElement('span');
+      hpText.style.fontSize = '0.8rem';
+      hpText.innerHTML = `HP: <b>${unit.hp}</b> / ${unit.maxHp}`;
+
+      const hbContainer = document.createElement('div');
+      hbContainer.className = 'health-bar-container';
+      hbContainer.style.position = 'relative';
+      hbContainer.style.width = '100%';
+      hbContainer.style.height = '6px';
+      hbContainer.style.background = '#222';
+      hbContainer.style.borderRadius = '3px';
+      hbContainer.style.overflow = 'hidden';
+
+      const hbFill = document.createElement('div');
+      hbFill.className = 'health-bar-fill';
+      hbFill.style.height = '100%';
+      hbFill.style.width = `${(unit.hp / unit.maxHp) * 100}%`;
+      hbFill.style.background = 'var(--color-success)';
+
+      hbContainer.appendChild(hbFill);
+      hpSection.appendChild(hpText);
+      hpSection.appendChild(hbContainer);
+
+      row.appendChild(details);
+      row.appendChild(hpSection);
+      elPartyBandContent.appendChild(row);
+    });
+  }
+
+  // 2. Render Inventory
+  elPartyInventoryContent.innerHTML = '';
+  if (STATE.inventory.length === 0) {
+    elPartyInventoryContent.innerHTML = '<p style="color:var(--text-muted);">Your cargo holds no items.</p>';
+  } else {
+    const counts = {};
+    STATE.inventory.forEach(item => {
+      counts[item] = (counts[item] || 0) + 1;
+    });
+
+    Object.entries(counts).forEach(([item, count]) => {
+      const row = document.createElement('div');
+      row.className = 'trade-row';
+      row.style.padding = '0.5rem 0';
+      row.style.maxWidth = '450px';
+      row.style.margin = '0 auto';
+      
+      const label = document.createElement('span');
+      label.innerHTML = `💎 <b>${item}</b>`;
+      
+      const qty = document.createElement('span');
+      qty.style.fontWeight = 'bold';
+      qty.innerText = `x${count}`;
+      
+      row.appendChild(label);
+      row.appendChild(qty);
+      elPartyInventoryContent.appendChild(row);
+    });
+  }
 }
 
 /* --- Logging & Overlays helpers --- */
@@ -1858,6 +2494,11 @@ export function showToast(msg, icon = '✨', isImportant = false) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
+  // Enforce a maximum of 3 active toast notifications at once
+  while (container.children.length >= 3) {
+    container.children[0].remove();
+  }
+
   const card = document.createElement('div');
   card.className = `toast-card glass-panel ${isImportant ? 'important-toast' : ''}`;
   
@@ -1882,6 +2523,8 @@ export function showToast(msg, icon = '✨', isImportant = false) {
 }
 
 let activeModalFocusIndex = 0;
+let activePortalTarget = null;
+let localPathMovementTimeout = null;
 
 function updateModalKeyboardNavigation() {
   const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
@@ -1890,7 +2533,8 @@ function updateModalKeyboardNavigation() {
     return;
   }
 
-  const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'));
+  const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'))
+    .filter(btn => !btn.classList.contains('btn-close-x'));
   if (buttons.length === 0) return;
 
   if (activeModalFocusIndex >= buttons.length) {
@@ -1980,8 +2624,12 @@ export function handleStateNotification(event, data) {
     
     {
       const locId = STATE.party.currentLocationId;
-      const locData = locId ? Object.values(STATE.worldMap.locations).find(l => l.id === locId) : null;
-      setScreen(locData && locData.type !== 'town' ? 'location' : 'world');
+      if (!locId) {
+        setScreen('world');
+      } else {
+        const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
+        setScreen((locData && locData.type === 'town') ? 'world' : 'location');
+      }
     }
   }
   else if (event === 'COMBAT_DEFEAT') {
@@ -2000,33 +2648,53 @@ export function handleStateNotification(event, data) {
   else if (event === 'QUEST_MILESTONE') {
     showToast(`Quest Milestone ${data.index + 1} reached for ${data.god.toUpperCase()}!`, '✨', true);
   }
-  else if (event === 'ASCENSION_TRIGGERED') {
-    const ascGod = data;
-    const ascLore = GOD_LORE[ascGod];
-    elModalAscension.dataset.god = ascGod;
-    elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-${ascGod}`;
-    // Build body text
-    const hasOtherActive = STATE.activeBlessing && STATE.activeBlessing !== ascGod;
-    const activeLore = hasOtherActive ? GOD_LORE[STATE.activeBlessing] : null;
-    elModalAscensionText.innerHTML = `You have completed all 5 milestones for <b style="color:${ascLore.color}">${ascGod.toUpperCase()}</b>!<br><br>${ascLore.icon} Champion Buff: <i>${ascLore.buff}</i>`;
+  else if (event === 'GOD_QUESTS_COMPLETE') {
+    const godName = data;
+    const lore = GOD_LORE[godName];
+    elModalAscension.dataset.god = godName;
+    elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-${godName}`;
+    elModalAscension.querySelector('.logo-text').innerText = `⚡ ${godName.toUpperCase()} CHAMPION ⚡`;
+    elModalAscensionText.innerHTML = `You have completed all Milestones for <b>${lore.title}</b>!<br><br><b>Patron Buff unlocked:</b><br><i style="color: var(--color-${godName})">${lore.buff}</i>`;
+    
+    // Hide final ascension button
+    document.getElementById('btn-ascend-victory').classList.add('hidden');
+    document.getElementById('btn-ascend-continue').innerText = 'Continue';
+
     // Remove any previously injected buff button
     const prevBuff = document.getElementById('btn-ascend-buff');
     if (prevBuff) prevBuff.remove();
-    // Inject buff activation button before "Stay in Midgard"
-    const btnContinue = document.getElementById('btn-ascend-continue');
+
+    // Inject active buff button
     const btnBuff = document.createElement('button');
     btnBuff.id = 'btn-ascend-buff';
     btnBuff.className = 'btn btn-primary';
-    btnBuff.innerText = hasOtherActive
-      ? `Switch to ${ascLore.icon} ${ascGod.charAt(0).toUpperCase() + ascGod.slice(1)} Buff & Stay`
-      : `Activate ${ascLore.icon} Buff & Stay`;
+    btnBuff.innerText = `Activate ${godName.charAt(0).toUpperCase() + godName.slice(1)}'s Blessing`;
     btnBuff.addEventListener('click', () => {
-      STATE.activeBlessing = ascGod;
+      STATE.activeBlessing = godName;
       notify('STATE_UPDATED');
-      showToast(`${ascLore.icon} ${ascGod.charAt(0).toUpperCase() + ascGod.slice(1)} Champion Buff activated!`, ascLore.icon, true);
+      showToast(`${lore.icon} ${godName.charAt(0).toUpperCase() + godName.slice(1)}'s Blessing activated!`, lore.icon, true);
       hideOverlay(elModalAscension);
     });
+
+    const btnContinue = document.getElementById('btn-ascend-continue');
     btnContinue.parentNode.insertBefore(btnBuff, btnContinue);
+
+    showOverlay(elModalAscension);
+  }
+  else if (event === 'ASCENSION_TRIGGERED') {
+    elModalAscension.dataset.god = 'odin';
+    elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-odin`;
+    elModalAscension.querySelector('.logo-text').innerText = 'A S C E N S I O N';
+    elModalAscensionText.innerHTML = `You have completed all milestones for <b>ALL 5 GODS</b>!<br><br>The gates of Valhalla are open. You have achieved final ascension!`;
+    
+    // Unhide final ascension button
+    document.getElementById('btn-ascend-victory').classList.remove('hidden');
+    document.getElementById('btn-ascend-continue').innerText = 'Stay in Midgard';
+
+    // Remove any previously injected buff button
+    const prevBuff = document.getElementById('btn-ascend-buff');
+    if (prevBuff) prevBuff.remove();
+    
     showOverlay(elModalAscension);
   }
   else if (event === 'GAME_OVER') {

@@ -55,6 +55,9 @@ export const STATE = {
   // Deity Quest Milestones (5 steps per god)
   godQuests: makeGodQuests(),
 
+  // Current global game day
+  day: 1,
+
   // Active Champion Buff
   activeBlessing: null,
 
@@ -147,7 +150,11 @@ export function adjustFavor(godName, amt) {
       track[emptyIndex] = true;
       notify('QUEST_MILESTONE', { god: godName, index: emptyIndex });
       if (track.every(x => x === true)) {
-        notify('ASCENSION_TRIGGERED', godName);
+        notify('GOD_QUESTS_COMPLETE', godName);
+        const allGodsCompleted = Object.values(STATE.godQuests).every(t => t.every(x => x === true));
+        if (allGodsCompleted) {
+          notify('ASCENSION_TRIGGERED', godName);
+        }
       }
     }
   }
@@ -188,6 +195,7 @@ export function resetGame() {
   STATE.party = { worldX: WC.partyStart.x, worldY: WC.partyStart.y, currentLocationId: null, localX: 0, localY: 0 };
   STATE.godFavor = makeGodFavor();
   STATE.godQuests = makeGodQuests();
+  STATE.day = 1;
   STATE.activeBlessing = null;
   STATE.combat = {
     active: false, grid: [], pool: [], paused: true,

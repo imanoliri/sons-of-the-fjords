@@ -31,11 +31,15 @@
         <div class="resource" id="res-band" title="Viking Band - Active army roster">
           <span class="icon">🛡️</span> <span class="val">3</span>
         </div>
+        <div class="resource" id="res-day" title="Day - Expedition time elapsed">
+          <span class="icon">📅</span> Day <span class="val">1</span>
+        </div>
       </div>
       <div class="active-blessing" id="active-blessing-display" title="Active Champion Buff">
         <span>No Active Buff</span>
       </div>
-      <button class="btn btn-menu" id="btn-toggle-quests">Quest Log</button>
+      <button class="btn btn-menu" id="btn-toggle-party" style="margin-right: 0.5rem;">Band [B]</button>
+      <button class="btn btn-menu" id="btn-toggle-quests">Quests [Q]</button>
     </header>
 
     <!-- MAIN GAME PANEL -->
@@ -54,7 +58,7 @@
             <ul>
               <li><strong>World Map (15x15)</strong>: Sail your drakkar across sea tiles (safe and fast) or walk on land (slow, consumes more food, triggers monster attacks).</li>
               <li><strong>Starvation</strong>: If food hits 0, each step on the World Map kills one random band member!</li>
-              <li><strong>Raid Sites (10x10)</strong>: Procedurally generated like <em>Carcassonne</em>. Step to discovery edges to draw tiles. Defeat monsters, open chests, check burial mounds, or visit dolmen shrines to obtain <strong>Magic Objects</strong>.</li>
+              <li><strong>Raid Sites (10x10)</strong>: Pre-generated layout with Fog of War. Move cardinally to explore and push back the fog. Defeat monsters, open chests, check burial mounds, or visit dolmen shrines to obtain <strong>Magic Objects</strong>.</li>
               <li><strong>Lane Combat (10x8)</strong>: Automated lane battle. Deploy soldiers from your pool (pauses the game) into lanes. Soldiers reaching the end give <strong>+1 Gold</strong> and return to your pool. If monsters breach the left edge, they steal random resources. Units are lost permanently on death.</li>
               <li><strong>The 5 Gods</strong>: Trade Magic Objects to advance god favor tracks. Reaching 5/5 unlocks permanent favor, immunizes you from their wrath, and yields ultimate buffs (only one god's positive buffs can be active at a time).</li>
             </ul>
@@ -71,6 +75,7 @@
           <div class="sidebar-panel glass-panel">
             <h2 class="section-title">Fjord Expedition</h2>
             <div id="world-coordinates" class="coordinates-display">X: 0, Y: 0</div>
+            <div id="world-difficulty-status" class="difficulty-display" style="font-size: 0.85rem; opacity: 0.85; margin: 0.25rem 0 0.5rem 0;">Day Multiplier: +0.00x</div>
             <div id="world-event-log" class="event-log">
               <p class="system-message">Select adjacent tiles to move your longship or walk inland.</p>
             </div>
@@ -167,16 +172,23 @@
         <div class="world-layout">
           <div class="map-view-wrapper glass-panel">
             <div class="location-map-grid" id="location-map"></div>
+            <!-- Floating portal prompt panel -->
+            <div class="portal-prompt-panel hidden" id="portal-prompt-panel">
+              <span id="portal-prompt-text">🕳️ Cave Entrance is here.</span>
+              <button class="btn btn-primary btn-sm" id="btn-use-portal">Use Portal [Enter]</button>
+            </div>
           </div>
           <div class="sidebar-panel glass-panel">
             <h2 class="section-title" id="location-title">Raid Site</h2>
+            <div id="location-threat-display" style="font-size: 0.95rem; font-weight: bold; margin: -0.25rem 0 0.5rem 0; opacity: 0.9;"></div>
             <div class="tile-deck-box">
               <span class="icon">🎴</span>
-              <span class="deck-desc">Procedural Tiles:</span>
+              <span class="deck-desc">Unexplored Tiles:</span>
               <span class="deck-count" id="location-deck-count">0</span>
             </div>
+            <div id="location-difficulty-status" class="difficulty-display" style="font-size: 0.85rem; opacity: 0.85; margin: 0.5rem 0;">Danger: 💀 (0.80x)</div>
             <div id="location-event-log" class="event-log">
-              <p class="system-message">Step onto discovery edges to draw and place tiles. Look for treasures, burial mounds, dolmens, and monster nests.</p>
+              <p class="system-message">Move cardinally to explore the location and push back the fog. Look for treasures, burial mounds, dolmens, and monster nests.</p>
             </div>
             <div class="sidebar-controls">
               <button class="btn btn-danger" id="btn-leave-location">Flee to World Map</button>
@@ -190,7 +202,6 @@
         <div class="combat-layout">
           <div class="combat-grid-wrapper glass-panel">
             <div class="combat-ticker-header">
-              <span id="combat-phase-badge">BATTLE ACTIVE</span>
               <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <span style="font-size: 0.8rem; opacity: 0.8;">Orders:</span>
                 <button class="btn btn-sm" id="btn-stance-retreat">Retreat [Y]</button>
@@ -210,7 +221,6 @@
             
             <!-- DEPLOYMENT HAND -->
             <div class="deployment-panel">
-              <h4>Deployment Pool (Click unit to place on board)</h4>
               <div class="deploy-pool" id="deploy-pool-list"></div>
             </div>
           </div>
@@ -254,6 +264,28 @@
         <div class="modal-choices">
           <button class="btn btn-primary" id="btn-ascend-victory">Ascend to Asgard</button>
           <button class="btn" id="btn-ascend-continue">Stay in Midgard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY MODAL: PARTY PANEL -->
+    <div class="modal-overlay hidden" id="modal-party">
+      <div class="modal-box glass-panel animate-glow" style="max-width: 600px; width: 90%; position: relative;">
+        <button class="btn-close-x" id="btn-close-party" title="Close Panel">✕</button>
+        <h2 class="logo-text">Viking Band & Cargo</h2>
+        
+        <div class="party-panel-tabs" style="display: flex; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem; justify-content: center;">
+          <button class="btn btn-sm btn-primary tab-btn" id="tab-party-band">Warriors</button>
+          <button class="btn btn-sm tab-btn" id="tab-party-inventory">Inventory</button>
+        </div>
+
+        <div class="modal-body" style="text-align: left; max-height: 350px; overflow-y: auto; overflow-x: hidden;">
+          <div id="party-band-content" class="tab-content">
+            <!-- Rendered dynamically -->
+          </div>
+          <div id="party-inventory-content" class="tab-content hidden">
+            <!-- Rendered dynamically -->
+          </div>
         </div>
       </div>
     </div>
