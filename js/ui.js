@@ -703,6 +703,10 @@ const GOD_LORE = {
 
 // Global tooltip delegation
 function initTooltipEvents() {
+  let hoverTimeout = null;
+  let lastClientX = 0;
+  let lastClientY = 0;
+
   function showWorldTileTooltip(tile, clientX, clientY) {
     const x = tile.dataset.x;
     const y = tile.dataset.y;
@@ -853,7 +857,12 @@ function initTooltipEvents() {
     }
 
     if (tile.classList.contains('world-tile')) {
-      showWorldTileTooltip(tile, e.clientX, e.clientY);
+      if (hoverTimeout) clearTimeout(hoverTimeout);
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+      hoverTimeout = setTimeout(() => {
+        showWorldTileTooltip(tile, lastClientX, lastClientY);
+      }, 800);
       return;
     }
 
@@ -951,14 +960,27 @@ function initTooltipEvents() {
       elTooltip.style.left = (e.clientX + 15) + 'px';
       elTooltip.style.top = (e.clientY + 15) + 'px';
     }
+    const tile = e.target.closest('.world-tile');
+    if (tile) {
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+    }
   });
 
   document.body.addEventListener('mouseout', (e) => {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
     const godTarget = e.target.closest('[data-god-tooltip]');
-    if (tile && !e.relatedTarget?.closest('.world-tile, .location-tile, .combat-cell')) {
+    
+    if (tile && tile.classList.contains('world-tile')) {
+      const enteringTile = e.relatedTarget?.closest('.world-tile');
+      if (enteringTile !== tile) {
+        if (hoverTimeout) clearTimeout(hoverTimeout);
+        elTooltip.style.display = 'none';
+      }
+    } else if (tile && !e.relatedTarget?.closest('.world-tile, .location-tile, .combat-cell')) {
       elTooltip.style.display = 'none';
     }
+    
     if (godTarget && !e.relatedTarget?.closest('[data-god-tooltip]')) {
       elTooltip.style.display = 'none';
     }
