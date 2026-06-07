@@ -660,19 +660,26 @@ function initTooltipEvents() {
       } else if (section === 'milestone') {
         const idx = parseInt(godTarget.dataset.milestoneIdx);
         const achieved = STATE.godQuests[gKey][idx];
+        header = `${lore.icon} Milestone ${['I', 'II', 'III', 'IV', 'V'][idx]}`;
+        
+        let statusHtml = achieved 
+          ? `<span style="color:var(--color-success)">✅ Completed</span>` 
+          : `<span style="color:var(--text-muted)">🔒 Unlocked at Favor +${idx + 1}</span>`;
+          
+        let effectHtml = '';
         if (idx === 4) {
-          // Ascension milestone
-          header = `${lore.icon} Ascension`;
-          content = achieved
-            ? `<span style="color:var(--color-success)">✅ Ascended! Visit a Town to switch buff for 5 Gold.</span>`
-            : `<span style="color:var(--text-muted)">🔒 Complete all 5 milestones to ascend and unlock the champion buff.</span>`;
+          effectHtml = `<span style="color:var(--text-muted)">🔒 Unlocks this god's secret Blessing!</span>`;
         } else {
-          header = '';
-          content = '<b style="color:' + lore.color + '">' + lore.milestoneEffects[idx] + '</b>';
+          effectHtml = `<b style="color:${lore.color}">${lore.milestoneEffects[idx]}</b>`;
         }
+        
+        content = `${statusHtml}<br><div style="margin-top:4px;">${effectHtml}</div>`;
       } else if (section === 'champion') {
         header = `${lore.icon} Champion Buff`;
         content = `<b style="color:${lore.color}">${lore.buff}</b>`;
+      } else if (section === 'champion_locked') {
+        header = `${lore.icon} Champion Buff`;
+        content = `<span style="color:var(--text-muted)">reach Milestone 5 to unlock the champion buff of this god</span>`;
       }
 
 
@@ -1003,10 +1010,20 @@ function renderResourceBar() {
   elBand.innerText = STATE.band.length;
   elDay.innerText = STATE.day || 1;
 
+  const activeWraths = Object.keys(STATE.godFavor).filter(g => STATE.godFavor[g] <= -4);
+  let blessingHtml = '';
   if (STATE.activeBlessing) {
-    elBlessing.innerHTML = `<span class="icon">✨</span> <span style="color: var(--color-${STATE.activeBlessing})">${STATE.activeBlessing.toUpperCase()}'S BLESSING</span>`;
+    const lore = GOD_LORE[STATE.activeBlessing];
+    blessingHtml = `<span class="icon">${lore.icon}</span> <span style="color: var(--color-${STATE.activeBlessing})">${STATE.activeBlessing.toUpperCase()}'S BLESSING</span>`;
   } else {
-    elBlessing.innerHTML = `<span>No Active Buff</span>`;
+    blessingHtml = `<span>No Active Buff</span>`;
+  }
+
+  if (activeWraths.length > 0) {
+    const wrathNames = activeWraths.map(g => `<span style="color:var(--color-danger); font-weight:bold;">${g.toUpperCase()}'S WRATH ⚡</span>`).join(', ');
+    elBlessing.innerHTML = `${blessingHtml} | <span style="font-size:0.85em;">Active Curses: ${wrathNames}</span>`;
+  } else {
+    elBlessing.innerHTML = blessingHtml;
   }
 }
 
@@ -1939,12 +1956,12 @@ function renderQuestsScreen() {
       }
       toggleCol.appendChild(btn);
     } else {
-      // Show a locked hint — clicking goes to identity tooltip info
+      // Show a locked hint — hovering shows locked info
       const locked = document.createElement('span');
       locked.style.cssText = 'font-size:0.8rem;color:var(--text-muted);cursor:help;';
       locked.innerText = '🔒 Locked';
       locked.dataset.godTooltip = gKey;
-      locked.dataset.tooltipSection = 'identity';
+      locked.dataset.tooltipSection = 'champion_locked';
       toggleCol.appendChild(locked);
     }
     
@@ -2124,33 +2141,20 @@ export function handleStateNotification(event, data) {
   else if (event === 'QUEST_MILESTONE') {
     showToast(`Quest Milestone ${data.index + 1} reached for ${data.god.toUpperCase()}!`, '✨', true);
   }
+  else if (event === 'GOD_QUESTS_COMPLETE') {
+    const godName = data;
+    const lore = GOD_LORE[godName];
+    showToast(`Unlocked permanent favor of ${godName.toUpperCase()}! Blessing available at town Seidr Shrines.`, lore.icon || '✨', true);
+  }
   else if (event === 'ASCENSION_TRIGGERED') {
     const ascGod = data;
-    const ascLore = GOD_LORE[ascGod];
-    elModalAscension.dataset.god = ascGod;
-    elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-${ascGod}`;
-    // Build body text
-    const hasOtherActive = STATE.activeBlessing && STATE.activeBlessing !== ascGod;
-    const activeLore = hasOtherActive ? GOD_LORE[STATE.activeBlessing] : null;
-    elModalAscensionText.innerHTML = `You have completed all 5 milestones for <b style="color:${ascLore.color}">${ascGod.toUpperCase()}</b>!<br><br>${ascLore.icon} Champion Buff: <i>${ascLore.buff}</i>`;
+    elModalAscension.dataset.god = 'odin';
+    elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-odin`;
+    elModalAscensionText.innerHTML = `You have completed all milestones for <b>ALL 5 GODS</b>!<br><br>The gates of Valhalla are open. You have achieved final ascension!`;
+    
     // Remove any previously injected buff button
     const prevBuff = document.getElementById('btn-ascend-buff');
     if (prevBuff) prevBuff.remove();
-    // Inject buff activation button before "Stay in Midgard"
-    const btnContinue = document.getElementById('btn-ascend-continue');
-    const btnBuff = document.createElement('button');
-    btnBuff.id = 'btn-ascend-buff';
-    btnBuff.className = 'btn btn-primary';
-    btnBuff.innerText = hasOtherActive
-      ? `Switch to ${ascLore.icon} ${ascGod.charAt(0).toUpperCase() + ascGod.slice(1)} Buff & Stay`
-      : `Activate ${ascLore.icon} Buff & Stay`;
-    btnBuff.addEventListener('click', () => {
-      STATE.activeBlessing = ascGod;
-      notify('STATE_UPDATED');
-      showToast(`${ascLore.icon} ${ascGod.charAt(0).toUpperCase() + ascGod.slice(1)} Champion Buff activated!`, ascLore.icon, true);
-      hideOverlay(elModalAscension);
-    });
-    btnContinue.parentNode.insertBefore(btnBuff, btnContinue);
     showOverlay(elModalAscension);
   }
   else if (event === 'GAME_OVER') {

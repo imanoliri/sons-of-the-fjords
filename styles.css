@@ -1028,6 +1028,8 @@ body {
   display: none;
   flex-direction: column;
   gap: 0.25rem;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   backdrop-filter: blur(8px);
   pointer-events: none;
 }
