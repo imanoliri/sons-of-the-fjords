@@ -51,10 +51,10 @@ export const LOCATION_CONFIG = {
       deep_water: 5
     },
     cave: {
-      cave: 60,
+      cave: 50,
       rock: 20,
       mountain: 15,
-      chasm: 5
+      chasm: 15
     }
   },
 
