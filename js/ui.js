@@ -1315,10 +1315,10 @@ function renderLocationMap() {
     const ent = currentTile.entity;
     elPromptPanel.classList.remove('hidden');
     if (ent.isExit) {
-      elPromptText.innerText = '🪜 cave exit';
+      elPromptText.innerText = '🪜 Ladder to upper Level';
       elPromptBtn.innerText = '[enter]';
     } else {
-      elPromptText.innerText = '🕳️ entrance to a cave';
+      elPromptText.innerText = '🕳️ Entrance to a Cave';
       elPromptBtn.innerText = '[enter]';
     }
     activePortalTarget = { coordKey: `${px},${py}`, entity: ent };
