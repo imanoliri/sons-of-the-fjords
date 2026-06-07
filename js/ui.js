@@ -313,28 +313,30 @@ export function initUIBindings() {
 
   // Keyboard Arrow Movement
   window.addEventListener('keydown', (e) => {
-    // Handle B to toggle Band, Q to toggle Quests
-    if (e.key === 'b' || e.key === 'B') {
-      const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
-      if (!visibleOverlay || visibleOverlay === elPartyModal) {
-        e.preventDefault();
-        if (!elPartyModal.classList.contains('hidden')) {
-          document.getElementById('btn-close-party')?.click();
-        } else {
-          document.getElementById('btn-toggle-party')?.click();
+    // Handle B to toggle Band, Q to toggle Quests (only if not in combat screen)
+    if (STATE.activeScreen !== 'combat') {
+      if (e.key === 'b' || e.key === 'B') {
+        const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
+        if (!visibleOverlay || visibleOverlay === elPartyModal) {
+          e.preventDefault();
+          if (!elPartyModal.classList.contains('hidden')) {
+            document.getElementById('btn-close-party')?.click();
+          } else {
+            document.getElementById('btn-toggle-party')?.click();
+          }
+          return;
         }
-        return;
       }
-    }
-    if (e.key === 'q' || e.key === 'Q') {
-      const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
-      if (!visibleOverlay || visibleOverlay === elPartyModal) {
-        e.preventDefault();
-        if (!elPartyModal.classList.contains('hidden')) {
-          document.getElementById('btn-close-party')?.click();
+      if (e.key === 'q' || e.key === 'Q') {
+        const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
+        if (!visibleOverlay || visibleOverlay === elPartyModal) {
+          e.preventDefault();
+          if (!elPartyModal.classList.contains('hidden')) {
+            document.getElementById('btn-close-party')?.click();
+          }
+          document.getElementById('btn-toggle-quests')?.click();
+          return;
         }
-        document.getElementById('btn-toggle-quests')?.click();
-        return;
       }
     }
 
