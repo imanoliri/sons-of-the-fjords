@@ -111,7 +111,13 @@ export function recruitSoldier(type) {
   const rName = namePool[Math.floor(Math.random() * namePool.length)] || type;
   const id = Date.now() + Math.floor(Math.random() * 100);
   const base = SC.recruitStats[type] || {};
-  STATE.band.push({ id, name: rName, type, ...base });
+  let maxHp = base.maxHp;
+  let hp = base.hp;
+  if (STATE.godFavor.freya === -5) {
+    maxHp = Math.max(10, maxHp - 10);
+    hp = Math.max(10, hp - 10);
+  }
+  STATE.band.push({ id, name: rName, type, ...base, maxHp, hp });
   notify('RESOURCES_UPDATED');
 }
 

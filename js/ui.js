@@ -5,7 +5,7 @@
 import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify } from './state.js';
 import { getAdjacentCoords } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
-import { togglePause, deployUnit, undeployUnit, startCombat } from './combat.js';
+import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats } from './combat.js';
 import { TOWN_CONFIG } from './config/town.js';
 import { MOVEMENT_CONFIG } from './config/movement.js';
 import { GODS_CONFIG } from './config/gods.js';
@@ -146,6 +146,10 @@ export function initUIBindings() {
 
   // Recruiting action handlers
   bindButton('btn-recruit-shieldmaiden', () => {
+    if (STATE.godFavor.hel === -5) {
+      logWorld("Hel's Wrath: Dead band members cannot be replaced!", 'warn-message');
+      return;
+    }
     const cost = TOWN_CONFIG.recruitCosts.shieldmaiden;
     if (STATE.resources.gold >= cost && STATE.band.length < 8) {
       adjustResource('gold', -cost); recruitSoldier('shieldmaiden');
@@ -155,6 +159,10 @@ export function initUIBindings() {
   });
 
   bindButton('btn-recruit-berserker', () => {
+    if (STATE.godFavor.hel === -5) {
+      logWorld("Hel's Wrath: Dead band members cannot be replaced!", 'warn-message');
+      return;
+    }
     const cost = TOWN_CONFIG.recruitCosts.berserker;
     if (STATE.resources.gold >= cost && STATE.band.length < 8) {
       adjustResource('gold', -cost); recruitSoldier('berserker');
@@ -164,6 +172,10 @@ export function initUIBindings() {
   });
 
   bindButton('btn-recruit-huntsman', () => {
+    if (STATE.godFavor.hel === -5) {
+      logWorld("Hel's Wrath: Dead band members cannot be replaced!", 'warn-message');
+      return;
+    }
     const cost = TOWN_CONFIG.recruitCosts.huntsman;
     if (STATE.resources.gold >= cost && STATE.band.length < 8) {
       adjustResource('gold', -cost); recruitSoldier('huntsman');
@@ -739,14 +751,38 @@ function initTooltipEvents() {
       }
       contentsText = contents.join('<br>');
     } else if (tile.classList.contains('combat-cell')) {
-      const r = tile.dataset.row;
-      const c = tile.dataset.col;
-      headerText = `Combat Grid Lane ${Number(r)+1}`;
+      const r = Number(tile.dataset.row);
+      const c = Number(tile.dataset.col);
+      headerText = `Combat Grid Lane ${r+1}`;
       coordsText = `Col: ${c}`;
       
       const unitEl = tile.querySelector('.combat-unit');
       if (unitEl) {
-        contentsText = unitEl.title || 'Combat unit/monster.';
+        const unit = STATE.combat.grid[r] ? STATE.combat.grid[r][c] : null;
+        if (unit) {
+          const stats = getEffectiveStats(unit);
+          const allianceText = unit.alliance === 'player' ? 'Viking Soldier' : 'Monster';
+          headerText = `${unit.name} (${allianceText})`;
+          
+          const formatVal = (statObj) => {
+            if (statObj.bonus !== 0) {
+              const sign = statObj.bonus > 0 ? ' + ' : ' - ';
+              const absBonus = Math.abs(statObj.bonus);
+              return `${statObj.base}${sign}${absBonus} (Total: ${statObj.total})`;
+            }
+            return `${statObj.base}`;
+          };
+
+          const contents = [
+            `<b>HP:</b> ${unit.hp} / ${formatVal(stats.maxHp)}`,
+            `<b>Damage:</b> ${formatVal(stats.dmg)}`,
+            `<b>Range:</b> ${formatVal(stats.range)}`,
+            `<b>Speed:</b> ${formatVal(stats.speed)}`
+          ];
+          contentsText = contents.join('<br>');
+        } else {
+          contentsText = unitEl.title || 'Combat unit/monster.';
+        }
       } else {
         contentsText = c <= 1 ? 'Deployable Zone' : 'Empty lane battlefield.';
       }
@@ -1035,6 +1071,11 @@ function movePartyOnWorld(x, y) {
   let cost = 1; // Sea/River cost
   if (targetTerrain !== 'water' && targetTerrain !== 'river') {
     cost = 3; // Land cost
+    // Thor's Wrath: Storms during land travel cost +1 extra Food per step (only at -5 favor)
+    if (STATE.godFavor.thor === -5) {
+      cost += 1;
+      logWorld("Thor's Wrath: Lightning storms increase land travel food cost (+1).", 'warn-message');
+    }
   }
 
   // Deduct food
@@ -1052,6 +1093,58 @@ function movePartyOnWorld(x, y) {
 
   // Reveal fog in a 2-tile radius around player
   revealWorldFog(x, y);
+
+  // Odin's Wrath: Random unit loses 1 HP every 3 world steps (only at -5 favor)
+  if (STATE.godFavor.odin === -5) {
+    if (STATE.odinWrathSteps === undefined) STATE.odinWrathSteps = 0;
+    STATE.odinWrathSteps++;
+    if (STATE.odinWrathSteps >= 3) {
+      STATE.odinWrathSteps = 0;
+      if (STATE.band.length > 0) {
+        const idx = Math.floor(Math.random() * STATE.band.length);
+        const target = STATE.band[idx];
+        target.hp -= 1;
+        logWorld(`Odin's Wrath: Blizzard claimed 1 HP from ${target.name}.`, 'warn-message');
+        if (target.hp <= 0) {
+          STATE.band.splice(idx, 1);
+          logWorld(`Odin's Wrath: ${target.name} perished in the tundra.`, 'warn-message');
+          if (STATE.band.length === 0 && STATE.resources.gold === 0) {
+            notify('GAME_OVER');
+          }
+        }
+      }
+    }
+  } else {
+    STATE.odinWrathSteps = 0;
+  }
+
+  // Loki's Wrath: Random event triggers each world move (only at -5 favor)
+  if (STATE.godFavor.loki === -5) {
+    const roll = Math.random();
+    if (roll < 0.33) {
+      const goldLoss = Math.min(STATE.resources.gold, 3);
+      if (goldLoss > 0) {
+        adjustResource('gold', -goldLoss);
+        logWorld(`Loki's Wrath: Trickster sprites purloined ${goldLoss} Gold from your chest!`, 'warn-message');
+      }
+    } else if (roll < 0.66) {
+      if (STATE.band.length > 0) {
+        const idx = Math.floor(Math.random() * STATE.band.length);
+        const target = STATE.band[idx];
+        const dmg = Math.min(target.hp - 1, 5);
+        if (dmg > 0) {
+          target.hp -= dmg;
+          logWorld(`Loki's Wrath: Loki tripped ${target.name}, dealing ${dmg} injury damage.`, 'warn-message');
+        }
+      }
+    } else {
+      const foodLoss = Math.min(STATE.resources.food, 3);
+      if (foodLoss > 0) {
+        adjustResource('food', -foodLoss);
+        logWorld(`Loki's Wrath: Ravens ruined ${foodLoss} Food rations!`, 'warn-message');
+      }
+    }
+  }
 
   notify('STATE_UPDATED');
 }
@@ -1514,7 +1607,8 @@ function renderCombatGrid() {
           };
           elUnit.innerText = avatars[unit.type] || '👾';
         }
-        elUnit.title = `${unit.name} (${unit.hp}/${unit.maxHp} HP)`;
+        const stats = getEffectiveStats(unit);
+        elUnit.title = `${unit.name} (${unit.hp}/${stats.maxHp.total} HP)`;
 
         // Healthbar rendering
         const hbContainer = document.createElement('div');
@@ -1523,7 +1617,7 @@ function renderCombatGrid() {
 
         const hbFill = document.createElement('div');
         hbFill.classList.add('health-bar-fill');
-        const hpPct = (unit.hp / unit.maxHp) * 100;
+        const hpPct = (unit.hp / stats.maxHp.total) * 100;
         hbFill.style.width = `${Math.max(0, hpPct)}%`;
 
         hbContainer.appendChild(hbFill);

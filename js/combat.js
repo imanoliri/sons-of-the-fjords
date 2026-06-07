@@ -4,6 +4,7 @@
 
 import { STATE, notify, adjustResource } from './state.js';
 import { COMBAT_CONFIG as CFG } from './config/combat.js';
+import { SOLDIERS_CONFIG } from './config/soldiers.js';
 
 let combatTimer = null;
 
@@ -90,7 +91,7 @@ function combatTick() {
 
     const target = unit.isFleeing ? null : findTargetInLane(unit);
     if (target) {
-      target.hp -= unit.dmg;
+      target.hp -= getEffectiveStats(unit).dmg.total;
       notify('COMBAT_DAMAGE', { attacker: unit, defender: target });
       unit.isAttacking = true;
       setTimeout(() => { unit.isAttacking = false; }, 200);
@@ -147,7 +148,7 @@ function combatTick() {
 function findTargetInLane(unit) {
   const grid = STATE.combat.grid;
   const dir = unit.alliance === 'player' ? 1 : -1;
-  for (let r = 1; r <= unit.range; r++) {
+  for (let r = 1; r <= getEffectiveStats(unit).range.total; r++) {
     const checkCol = unit.col + (r * dir);
     if (checkCol >= 0 && checkCol < CFG.gridCols) {
       const cell = grid[unit.row][checkCol];
@@ -280,4 +281,95 @@ function shuffleArray(arr) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
+}
+
+export function getEffectiveStats(unit) {
+  const isPlayer = unit.alliance === 'player';
+  let baseMaxHp = unit.maxHp;
+  let baseDmg = unit.dmg;
+  let baseSpeed = unit.speed;
+  let baseRange = unit.range;
+
+  if (isPlayer) {
+    const base = SOLDIERS_CONFIG.recruitStats[unit.type];
+    if (base) {
+      baseMaxHp = base.maxHp;
+      baseDmg = base.dmg;
+      baseSpeed = base.speed;
+      baseRange = base.range;
+    }
+  } else {
+    const base = CFG.monsters[unit.type] || CFG.monsterFallback;
+    if (base) {
+      baseMaxHp = base.hp;
+      baseDmg = base.dmg;
+      baseSpeed = base.speed;
+      baseRange = base.range;
+    }
+  }
+
+  let bonusMaxHp = 0;
+  let bonusDmg = 0;
+  let bonusSpeed = 0;
+  let bonusRange = 0;
+
+  if (isPlayer) {
+    // Thor milestone 4: All units gain +1 max HP
+    if (STATE.godQuests.thor?.[3]) {
+      bonusMaxHp += 1;
+    }
+
+    if (unit.type === 'shieldmaiden') {
+      // Freya milestone 1: Shieldmaidens gain +5 max HP
+      if (STATE.godQuests.freya?.[0]) {
+        bonusMaxHp += 5;
+      }
+      // Freya milestone 3: Shieldmaidens gain +2 DMG
+      if (STATE.godQuests.freya?.[2]) {
+        bonusDmg += 2;
+      }
+    } else if (unit.type === 'berserker') {
+      // Odin milestone 4: Berserkers gain +1 DMG per combat tick
+      if (STATE.godQuests.odin?.[3]) {
+        bonusDmg += 1;
+      }
+      // Thor milestone 1: Berserkers gain +1 DMG in combat
+      if (STATE.godQuests.thor?.[0]) {
+        bonusDmg += 1;
+      }
+      // Thor buff (active blessing): Berserkers gain +3 DMG and +1 Speed
+      if (STATE.activeBlessing === 'thor') {
+        bonusDmg += 3;
+        bonusSpeed += 1;
+      }
+      // Thor milestone 2: Berserkers move +1 Speed per tick
+      if (STATE.godQuests.thor?.[1]) {
+        bonusSpeed += 1;
+      }
+    } else if (unit.type === 'huntsman') {
+      // Odin milestone 3: All Huntsmen gain +1 Attack Range
+      if (STATE.godQuests.odin?.[2]) {
+        bonusRange += 1;
+      }
+      // Odin buff: Huntsmen gain +2 Attack Range & +1 DMG per turn
+      if (STATE.activeBlessing === 'odin') {
+        bonusRange += 2;
+        bonusDmg += 1;
+      }
+    }
+  } else {
+    // Enemy units
+    // Hel milestone 1: Enemies deal -1 DMG
+    if (STATE.godQuests.hel?.[0]) {
+      bonusDmg -= 1;
+    }
+  }
+
+  return {
+    hp: unit.hp,
+    maxHp: { base: baseMaxHp, bonus: bonusMaxHp, total: Math.max(1, baseMaxHp + bonusMaxHp) },
+    dmg: { base: baseDmg, bonus: bonusDmg, total: Math.max(0, baseDmg + bonusDmg) },
+    speed: { base: baseSpeed, bonus: bonusSpeed, total: Math.max(0, baseSpeed + bonusSpeed) },
+    range: { base: baseRange, bonus: bonusRange, total: Math.max(1, baseRange + bonusRange) }
+  };
 }
