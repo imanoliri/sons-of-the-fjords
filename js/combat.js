@@ -164,61 +164,71 @@ function combatTick() {
         continue; // Skip attack this tick
       }
 
-      let dmgTaken = getEffectiveStats(unit).dmg.total;
+      // Thor Milestone 3: Player units attack speed increased by 10% (10% chance to attack again)
+      const isPlayer = unit.alliance === 'player';
+      const hasThorAttackSpeed = isPlayer && STATE.godQuests.thor?.[2];
+      const attackCount = (hasThorAttackSpeed && Math.random() < 0.10) ? 2 : 1;
 
-      // Freya Milestone 4: Shieldmaidens block 1 DMG per hit
-      if (target.alliance === 'player' && target.type === 'shieldmaiden' && STATE.godQuests.freya?.[3]) {
-        dmgTaken = Math.max(0, dmgTaken - 1);
-      }
+      for (let i = 0; i < attackCount; i++) {
+        const currentTarget = (i === 0) ? target : (unit.isFleeing ? null : findTargetInLane(unit));
+        if (!currentTarget) break;
 
-      let nextHp = target.hp - dmgTaken;
+        let dmgTaken = getEffectiveStats(unit).dmg.total;
 
-      // Hel Milestone 2: Player units survive lethal hits once with 1 HP (once per battle)
-      if (nextHp <= 0 && target.alliance === 'player' && STATE.godQuests.hel?.[1] && !target.hasSurvivedLethal) {
-        target.hasSurvivedLethal = true;
-        nextHp = 1;
-      }
-
-      target.hp = nextHp;
-      notify('COMBAT_DAMAGE', { attacker: unit, defender: target });
-      unit.isAttacking = true;
-      setTimeout(() => { unit.isAttacking = false; }, 200);
-      if (target.hp <= 0) {
-        grid[target.row][target.col] = null;
-        removeUnitFromRegistry(target);
-        if (target.alliance === 'enemy') {
-          recordMonsterKill(target.type);
-
-          // Hel Milestone 3: Slain enemies drop +1 extra Gold
-          if (STATE.godQuests.hel?.[2]) {
-            adjustResource('gold', 1);
-          }
-
-          const activeBlessings = new Set();
-          if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
-          if (STATE.permanentlyActivatedBlessings) {
-            STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
-          }
-          if (activeBlessings.has('hel') && Math.random() < 0.5) {
-            const undead = {
-              id: Date.now() + Math.floor(Math.random() * 1000),
-              name: 'Draugr (Undead) 💀',
-              type: 'Draugr Warrior',
-              hp: 15,
-              maxHp: 15,
-              dmg: 4,
-              speed: 1,
-              range: 1,
-              alliance: 'player',
-              isUndead: true,
-              undeadTicksLeft: 3,
-              row: target.row,
-              col: target.col
-            };
-            grid[target.row][target.col] = undead;
-          }
+        // Freya Milestone 4: Shieldmaidens block 1 DMG per hit
+        if (currentTarget.alliance === 'player' && currentTarget.type === 'shieldmaiden' && STATE.godQuests.freya?.[3]) {
+          dmgTaken = Math.max(0, dmgTaken - 1);
         }
-        notify('COMBAT_DEATH', target);
+
+        let nextHp = currentTarget.hp - dmgTaken;
+
+        // Hel Milestone 2: Player units survive lethal hits once with 1 HP (once per battle)
+        if (nextHp <= 0 && currentTarget.alliance === 'player' && STATE.godQuests.hel?.[1] && !currentTarget.hasSurvivedLethal) {
+          currentTarget.hasSurvivedLethal = true;
+          nextHp = 1;
+        }
+
+        currentTarget.hp = nextHp;
+        notify('COMBAT_DAMAGE', { attacker: unit, defender: currentTarget });
+        unit.isAttacking = true;
+        setTimeout(() => { unit.isAttacking = false; }, 200);
+        if (currentTarget.hp <= 0) {
+          grid[currentTarget.row][currentTarget.col] = null;
+          removeUnitFromRegistry(currentTarget);
+          if (currentTarget.alliance === 'enemy') {
+            recordMonsterKill(currentTarget.type);
+
+            // Hel Milestone 3: Slain enemies drop +1 extra Gold
+            if (STATE.godQuests.hel?.[2]) {
+              adjustResource('gold', 1);
+            }
+
+            const activeBlessings = new Set();
+            if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
+            if (STATE.permanentlyActivatedBlessings) {
+              STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
+            }
+            if (activeBlessings.has('hel') && Math.random() < 0.5) {
+              const undead = {
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                name: 'Draugr (Undead) 💀',
+                type: 'Draugr Warrior',
+                hp: 15,
+                maxHp: 15,
+                dmg: 4,
+                speed: 1,
+                range: 1,
+                alliance: 'player',
+                isUndead: true,
+                undeadTicksLeft: 3,
+                row: currentTarget.row,
+                col: currentTarget.col
+              };
+              grid[currentTarget.row][currentTarget.col] = undead;
+            }
+          }
+          notify('COMBAT_DEATH', currentTarget);
+        }
       }
     } else {
       let dir = 0;

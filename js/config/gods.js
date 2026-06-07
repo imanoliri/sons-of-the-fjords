@@ -128,7 +128,7 @@ export const GODS_CONFIG = {
       milestoneEffects: [
         'Berserkers gain +1 DMG.',
         'Berserkers move +1 Speed.',
-        'Enemy spawn rate slowed by 10%.',
+        'All soldiers gain +10% faster Attack Speed.',
         'All units gain +5 max HP.',
         null
       ],
