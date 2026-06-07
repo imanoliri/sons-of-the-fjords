@@ -1264,9 +1264,16 @@ function movePartyOnWorld(x, y) {
   let woodCost = 0;
   
   if (targetTerrain === 'water' || targetTerrain === 'river') {
-    if (STATE.resources.wood >= 1) {
+    let requiredWood = 1;
+    if (targetTerrain === 'water' && STATE.godFavor.thor === -5) {
+      requiredWood = 2;
+    }
+    if (STATE.resources.wood >= requiredWood) {
       cost = 1;
-      woodCost = 1;
+      woodCost = requiredWood;
+      if (targetTerrain === 'water' && STATE.godFavor.thor === -5) {
+        logWorld("Thor's Wrath: Rough seas increase sea travel wood cost (+1 Wood).", 'warn-message');
+      }
     } else {
       cost = 3;
       woodCost = 0;

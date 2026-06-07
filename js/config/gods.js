@@ -126,7 +126,7 @@ export const GODS_CONFIG = {
         '6. Alternative: Kill 3 Draugrs (🧟) or 1 Lindwurm (🐉) to gain 1 Favor'
       ],
       buff: 'Berserkers gain +3 DMG and +1 Speed.',
-      wrath: 'Wrath: Storms during land travel cost +1 extra Food per step.',
+      wrath: 'Wrath: Storms during travel cost +1 extra Food on land and +1 extra Wood on sea per step.',
       milestoneEffects: [
         'Berserkers gain +1 DMG in combat.',
         'Berserkers move +1 Speed per tick.',
