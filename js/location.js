@@ -16,7 +16,7 @@ export function generateLocationMap(locationId, worldTileTerrain) {
   const pool = CFG.terrainPools[worldTileTerrain] || CFG.terrainPools.plains;
   const deck = [];
   for (let i = 0; i < CFG.deckSize; i++) {
-    deck.push(pool[Math.floor(Math.random() * pool.length)]);
+    deck.push(getRandomFromWeights(pool));
   }
   shuffle(deck);
 
@@ -123,4 +123,18 @@ function shuffle(array) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
+}
+
+// Draw a random item from an object of weights (e.g. { grass: 30, forest: 10 })
+function getRandomFromWeights(weightsObj) {
+  const entries = Object.entries(weightsObj);
+  const totalWeight = entries.reduce((sum, [_, weight]) => sum + weight, 0);
+  let roll = Math.random() * totalWeight;
+  for (const [terrain, weight] of entries) {
+    if (roll < weight) {
+      return terrain;
+    }
+    roll -= weight;
+  }
+  return entries[entries.length - 1][0];
 }
