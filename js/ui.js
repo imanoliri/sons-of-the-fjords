@@ -754,7 +754,7 @@ function initTooltipEvents() {
         } else if (terrain === 'river') {
           contents.push('River stream. Fast sailing, costs 1 Food per step.');
         } else {
-          contents.push('Rugged land. Slow travel, costs 3 Food per step. Dangerous creature attacks!');
+          contents.push('Rugged land. Slow travel, costs 3 Food per step.');
         }
       }
 
