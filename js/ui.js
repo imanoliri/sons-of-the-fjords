@@ -1145,12 +1145,36 @@ function movePartyOnWorld(x, y) {
   }
 
   // Deduct food
-  if (STATE.resources.food > 0) {
+  if (STATE.resources.food >= cost) {
     adjustResource('food', -cost);
   } else {
-    // Starving: moving kills a random soldier
-    triggerStarvationDamage();
-    logWorld('STARVING! Starvation claimed a member of your band.', 'warn-message');
+    // We don't have enough food for this movement step. Try consuming sheep first.
+    if (STATE.resources.sheep > 0) {
+      adjustResource('sheep', -1);
+      const yieldAmt = MOVEMENT_CONFIG.sheepFoodYield || 15;
+      adjustResource('food', yieldAmt);
+      logWorld(`HUNGERING! Slaughtered 1 Sheep to harvest emergency rations (+${yieldAmt} Food).`, 'warn-message');
+      adjustResource('food', -cost);
+    } else {
+      // Starving: units lose 3 hp per movement
+      const dmg = MOVEMENT_CONFIG.starvationHpDamage || 3;
+      let deadUnits = [];
+      for (let i = STATE.band.length - 1; i >= 0; i--) {
+        const u = STATE.band[i];
+        u.hp -= dmg;
+        if (u.hp <= 0) {
+          deadUnits.push(u.name);
+          STATE.band.splice(i, 1);
+        }
+      }
+      logWorld(`STARVING! No sheep left. Your units lost ${dmg} HP from hunger.`, 'warn-message');
+      if (deadUnits.length > 0) {
+        logWorld(`Starvation claimed: ${deadUnits.join(', ')}.`, 'warn-message');
+      }
+      if (STATE.band.length === 0 && STATE.resources.gold === 0) {
+        notify('GAME_OVER');
+      }
+    }
   }
 
   // Set position

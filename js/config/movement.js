@@ -15,5 +15,9 @@ export const MOVEMENT_CONFIG = {
   },
 
   // Fog-of-war reveal radius around player position (Manhattan distance)
-  fogRevealRadius: 2
+  fogRevealRadius: 2,
+
+  // Emergency food settings
+  sheepFoodYield: 15,
+  starvationHpDamage: 3
 };
