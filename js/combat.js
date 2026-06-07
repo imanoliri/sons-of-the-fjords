@@ -163,6 +163,10 @@ function combatTick() {
       if (unit.alliance === 'enemy' && STATE.godQuests.loki?.[1] && Math.random() < 0.10) {
         continue; // Skip attack this tick
       }
+      // Hel Milestone 4: Enemy attack speed reduced by 10%
+      if (unit.alliance === 'enemy' && STATE.godQuests.hel?.[3] && Math.random() < 0.10) {
+        continue; // Skip attack this tick
+      }
 
       // Thor Milestone 3: Player units attack speed increased by 10% (10% chance to attack again)
       const isPlayer = unit.alliance === 'player';
@@ -235,6 +239,10 @@ function combatTick() {
       let shouldMove = true;
       if (unit.alliance === 'enemy') {
         dir = -1;
+        // Hel Milestone 4: Enemy movement speed reduced by 10%
+        if (STATE.godQuests.hel?.[3] && Math.random() < 0.10) {
+          shouldMove = false;
+        }
       } else if (unit.isFleeing) {
         dir = -1;
       } else {

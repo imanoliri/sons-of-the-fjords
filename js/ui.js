@@ -1748,7 +1748,7 @@ function renderTownScreen() {
     }
   });
 
-  // Hel milestone 4: Gold cost to recruit is reduced by 1
+  // Great Hall recruitment labels
   const baseCosts = {
     shieldmaiden: { gold: 5, food: 10 },
     berserker: { gold: 7, sheep: 1 },
@@ -1758,9 +1758,6 @@ function renderTownScreen() {
     const labelEl = document.getElementById(`label-recruit-${t}`);
     if (labelEl) {
       let gCost = baseCosts[t].gold;
-      if (STATE.godQuests.hel?.[3]) {
-        gCost = Math.max(0, gCost - 1);
-      }
       const otherRes = Object.keys(baseCosts[t]).find(k => k !== 'gold');
       const otherAmt = baseCosts[t][otherRes];
       const otherLabel = otherRes.charAt(0).toUpperCase() + otherRes.slice(1);
