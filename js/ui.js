@@ -1014,6 +1014,87 @@ function autoDiscoverAdjacent(locId) {
   });
 }
 
+function findLocalPath(startX, startY, targetX, targetY, locState) {
+  if (startX === targetX && startY === targetY) return [];
+
+  const queue = [{ x: startX, y: startY, path: [] }];
+  const visited = new Set();
+  visited.add(`${startX},${startY}`);
+
+  const directions = [
+    { dx: 0, dy: -1 },
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 },
+    { dx: 1, dy: 0 }
+  ];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+
+    if (current.x === targetX && current.y === targetY) {
+      return current.path;
+    }
+
+    for (const dir of directions) {
+      const nx = current.x + dir.dx;
+      const ny = current.y + dir.dy;
+      const nKey = `${nx},${ny}`;
+
+      if (nx >= 0 && nx < 10 && ny >= 0 && ny < 10 && !visited.has(nKey)) {
+        const tile = locState.placedTiles[nKey];
+        if (tile) {
+          const terrainType = locState.preGeneratedGrid[nKey];
+          const isPassable = terrainType !== 'chasm' && terrainType !== 'mountain' && terrainType !== 'deep_water';
+          if (isPassable) {
+            visited.add(nKey);
+            queue.push({
+              x: nx,
+              y: ny,
+              path: [...current.path, { x: nx, y: ny }]
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function attemptLocalPathMove(targetX, targetY) {
+  const locId = STATE.party.currentLocationId;
+  const locState = STATE.locations[locId];
+  if (!locState) return;
+
+  if (localPathMovementTimeout) {
+    clearTimeout(localPathMovementTimeout);
+    localPathMovementTimeout = null;
+  }
+
+  const path = findLocalPath(STATE.party.localX, STATE.party.localY, targetX, targetY, locState);
+  if (!path || path.length === 0) {
+    return;
+  }
+
+  let stepIndex = 0;
+  function nextStep() {
+    if (STATE.activeScreen !== 'location') return;
+    if (document.querySelector('.modal-overlay:not(.hidden)')) return;
+
+    const step = path[stepIndex];
+    attemptLocalMove(step.x, step.y);
+
+    if (STATE.party.localX === step.x && STATE.party.localY === step.y && !document.querySelector('.modal-overlay:not(.hidden)')) {
+      stepIndex++;
+      if (stepIndex < path.length) {
+        localPathMovementTimeout = setTimeout(nextStep, 150);
+      }
+    }
+  }
+
+  nextStep();
+}
+
 // Attempt to move player locally, auto-discovering tiles and gathering contents or triggering combat
 function attemptLocalMove(targetX, targetY) {
   const locId = STATE.party.currentLocationId;
@@ -1588,28 +1669,51 @@ function renderLocationMap() {
 
           if (ent.type === 'treasure' && !ent.isLooted) {
             badge.innerText = '🪙';
-            badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
+              else attemptLocalPathMove(x, y);
+            });
           } 
           else if (ent.type === 'wood_source' && !ent.isLooted) {
             badge.innerText = '🪵';
-            badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
+              else attemptLocalPathMove(x, y);
+            });
           }
           else if (ent.type === 'ore_deposit' && !ent.isLooted) {
             badge.innerText = '🪨';
-            badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
+              else attemptLocalPathMove(x, y);
+            });
           }
           else if (ent.type === 'enemy_army' && !ent.isDefeated) {
             const firstMonster = ent.monsters && ent.monsters[0] ? ent.monsters[0].monsterClass : '';
             badge.innerText = MONSTER_EMOJIS[firstMonster] || '👹';
-            badge.addEventListener('click', () => triggerCombatTransition(coordKey, ent));
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              attemptLocalPathMove(x, y);
+            });
           } 
           else if (ent.type === 'burial_mound' && !ent.isExplored) {
             badge.innerText = '🪦';
-            badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
+              else attemptLocalPathMove(x, y);
+            });
           } 
           else if (ent.type === 'dolmen' && !ent.isVisited) {
             badge.innerText = '🏆';
-            badge.addEventListener('click', () => triggerEncounterEvent(coordKey, ent));
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
+              else attemptLocalPathMove(x, y);
+            });
           }
           else if (ent.type === 'cave_entrance') {
             if (ent.isExit) {
@@ -1626,7 +1730,7 @@ function renderLocationMap() {
               if (x === px && y === py) {
                 triggerEnterCavePortal(coordKey, ent);
               } else {
-                attemptLocalMove(x, y);
+                attemptLocalPathMove(x, y);
               }
             });
           }
@@ -1643,12 +1747,14 @@ function renderLocationMap() {
           elCell.appendChild(marker);
         }
 
-        // Click to move player locally to adjacent placed tiles
+        // Click to move player locally to any visible placed tiles
+        elCell.style.cursor = 'pointer';
+        elCell.addEventListener('click', () => {
+          attemptLocalPathMove(x, y);
+        });
+
         if (isNeighbor) {
           elCell.classList.add('tile-border-highlight');
-          elCell.addEventListener('click', () => {
-            attemptLocalMove(x, y);
-          });
         }
 
       } else {
@@ -2265,6 +2371,7 @@ export function showToast(msg, icon = '✨', isImportant = false) {
 
 let activeModalFocusIndex = 0;
 let activePortalTarget = null;
+let localPathMovementTimeout = null;
 
 function updateModalKeyboardNavigation() {
   const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
