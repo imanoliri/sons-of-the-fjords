@@ -47,6 +47,7 @@ const elLocDeckCount = document.getElementById('location-deck-count');
 const elLocLog = document.getElementById('location-event-log');
 const elPromptPanel = document.getElementById('portal-prompt-panel');
 const elPromptText = document.getElementById('portal-prompt-text');
+const elPromptBtn = document.getElementById('btn-use-portal');
 
 // Combat elements
 const elCombatGrid = document.getElementById('combat-grid');
@@ -1314,9 +1315,11 @@ function renderLocationMap() {
     const ent = currentTile.entity;
     elPromptPanel.classList.remove('hidden');
     if (ent.isExit) {
-      elPromptText.innerText = '🪜 Cave Exit (Ladder to surface) is here.';
+      elPromptText.innerText = '🪜 cave exit';
+      elPromptBtn.innerText = '[enter]';
     } else {
-      elPromptText.innerText = '🕳️ Cave Sub-Dungeon Portal is here.';
+      elPromptText.innerText = '🕳️ entrance to a cave';
+      elPromptBtn.innerText = '[enter]';
     }
     activePortalTarget = { coordKey: `${px},${py}`, entity: ent };
   } else {
