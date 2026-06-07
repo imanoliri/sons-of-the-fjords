@@ -64,7 +64,8 @@ export const LOCATION_CONFIG = {
   // Entity spawn probability
   entitySpawnChance: 0.35,
   entityWeights: {
-    treasure: 0.25,
+    treasure: 0.20,
+    sheep_source: 0.30,
     enemy_army: 0.65,
     burial_mound: 0.85,
     dolmen: 1.00
@@ -75,8 +76,9 @@ export const LOCATION_CONFIG = {
     forest: {
       treasure: 0.15,
       wood_source: 0.35,
-      enemy_army: 0.70,
-      burial_mound: 0.85,
+      sheep_source: 0.45,
+      enemy_army: 0.75,
+      burial_mound: 0.90,
       dolmen: 1.00
     },
     mountain: {
@@ -100,7 +102,8 @@ export const LOCATION_CONFIG = {
       dolmen: 1.00
     },
     default: {
-      treasure: 0.25,
+      treasure: 0.20,
+      sheep_source: 0.30,
       enemy_army: 0.65,
       burial_mound: 0.85,
       dolmen: 1.00
@@ -124,6 +127,10 @@ export const LOCATION_CONFIG = {
   oreDeposit: {
     goldMin: 5,
     goldMax: 12
+  },
+  sheepSource: {
+    sheepMin: 1,
+    sheepMax: 1
   },
 
   // Chance settings for cave portals under diminishing returns

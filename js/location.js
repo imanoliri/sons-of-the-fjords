@@ -389,6 +389,9 @@ function generateRandomEntity(locationId, terrain, x = null, y = null, locationT
   let type;
   if      (w.treasure !== undefined && roll < w.treasure)         type = 'treasure';
   else if (w.wood_source !== undefined && roll < w.wood_source)   type = 'wood_source';
+  else if (w.sheep_source !== undefined && roll < w.sheep_source) {
+    type = (terrain === 'grass') ? 'sheep_source' : 'treasure';
+  }
   else if (w.ore_deposit !== undefined && roll < w.ore_deposit)   type = 'ore_deposit';
   else if (w.enemy_army !== undefined && roll < w.enemy_army)     type = 'enemy_army';
   else if (w.burial_mound !== undefined && roll < w.burial_mound) type = 'burial_mound';
@@ -439,6 +442,15 @@ function generateRandomEntity(locationId, terrain, x = null, y = null, locationT
     return {
       type: 'ore_deposit',
       gold: Math.floor(Math.random() * (od.goldMax - od.goldMin + 1)) + od.goldMin,
+      isLooted: false
+    };
+  }
+
+  if (type === 'sheep_source') {
+    const ss = CFG.sheepSource || { sheepMin: 1, sheepMax: 1 };
+    return {
+      type: 'sheep_source',
+      sheep: Math.floor(Math.random() * (ss.sheepMax - ss.sheepMin + 1)) + ss.sheepMin,
       isLooted: false
     };
   }

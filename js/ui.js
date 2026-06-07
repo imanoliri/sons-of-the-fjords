@@ -1215,6 +1215,8 @@ function attemptLocalMove(targetX, targetY) {
       triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'wood_source' && !ent.isLooted) {
       triggerEncounterEvent(coordKey, ent);
+    } else if (ent.type === 'sheep_source' && !ent.isLooted) {
+      triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'ore_deposit' && !ent.isLooted) {
       triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'dolmen' && !ent.isVisited) {
@@ -1784,6 +1786,7 @@ function renderLocationMap() {
           const ent = tile.entity;
           if (ent.type === 'treasure' && !ent.isLooted) entityDesc = '🪙 Treasure Chest (Loot Gold)';
           else if (ent.type === 'wood_source' && !ent.isLooted) entityDesc = '🪵 Wood Source (Harvest Wood)';
+          else if (ent.type === 'sheep_source' && !ent.isLooted) entityDesc = '🐑 Lost Sheep (Rescue Sheep)';
           else if (ent.type === 'ore_deposit' && !ent.isLooted) entityDesc = '🪨 Ore Deposit (Mine Gold)';
           else if (ent.type === 'enemy_army' && !ent.isDefeated) entityDesc = `👹 Monster Nest (${ent.monsters[0].monsterClass})`;
           else if (ent.type === 'burial_mound' && !ent.isExplored) entityDesc = '🪦 Ancient Burial Mound';
@@ -1820,6 +1823,14 @@ function renderLocationMap() {
           } 
           else if (ent.type === 'wood_source' && !ent.isLooted) {
             badge.innerText = '🪵';
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
+              else attemptLocalPathMove(x, y);
+            });
+          }
+          else if (ent.type === 'sheep_source' && !ent.isLooted) {
+            badge.innerText = '🐑';
             badge.addEventListener('click', (e) => {
               e.stopPropagation();
               if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
@@ -1989,6 +2000,12 @@ function triggerEncounterEvent(coordKey, entity) {
     adjustResource('wood', entity.wood);
     entity.isLooted = true;
     showToast(`Harvested wood source! Gathered +${entity.wood} Wood.`, '🪵');
+    notify('STATE_UPDATED');
+  }
+  else if (entity.type === 'sheep_source') {
+    adjustResource('sheep', entity.sheep);
+    entity.isLooted = true;
+    showToast(`Rescued lost sheep! Added +${entity.sheep} Sheep to herd.`, '🐑');
     notify('STATE_UPDATED');
   }
   else if (entity.type === 'ore_deposit') {
