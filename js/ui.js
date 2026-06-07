@@ -1338,15 +1338,22 @@ function renderWorldMap() {
 
         if (hasLocation) {
           const loc = hasLocation;
-          const marker = document.createElement('span');
           if (loc.type === 'town') {
+            const marker = document.createElement('span');
             marker.innerText = '🏘️';
             marker.classList.add('town-marker');
+            elCell.appendChild(marker);
           } else {
-            marker.innerText = '⚔️';
-            marker.classList.add('raid-marker');
+            const isStaticRaid = loc.id.startsWith('raid_');
+            if (isStaticRaid) {
+              const marker = document.createElement('span');
+              marker.innerText = '⚔️';
+              marker.classList.add('raid-marker');
+              elCell.appendChild(marker);
+            } else {
+              elCell.classList.add('visited-wilderness');
+            }
           }
-          elCell.appendChild(marker);
         }
       }
 
