@@ -2,7 +2,7 @@
    UI MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify } from './state.js';
+import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, sellSheep, sellWood } from './state.js';
 import { getAdjacentCoords } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
 import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats } from './combat.js';
@@ -176,12 +176,15 @@ export function initUIBindings() {
   });
 
   bindButton('btn-sell-sheep', () => {
-    const t = TOWN_CONFIG.trades.find(x => x.id === 'sell-sheep');
-    if (STATE.resources.sheep >= 1) {
-      Object.entries(t.cost).forEach(([r, d]) => adjustResource(r, d));
-      Object.entries(t.gain).forEach(([r, d]) => adjustResource(r, d));
+    if (sellSheep()) {
       logWorld('Sold 1 livestock sheep.', 'gain-message');
     } else { logWorld('No sheep available to trade!', 'warn-message'); }
+  });
+
+  bindButton('btn-sell-wood', () => {
+    if (sellWood()) {
+      logWorld('Sold 10 wood planks.', 'gain-message');
+    } else { logWorld('Not enough wood to sell (requires 10 wood)!', 'warn-message'); }
   });
 
   bindButton('btn-buy-sheep', () => {
@@ -500,6 +503,10 @@ export function initUIBindings() {
         e.preventDefault();
         document.getElementById('btn-buy-wood')?.click();
       }
+      else if (key === 'h') {
+        e.preventDefault();
+        document.getElementById('btn-sell-wood')?.click();
+      }
       else if (key === 's') {
         e.preventDefault();
         document.getElementById('btn-buy-sheep')?.click();
@@ -629,7 +636,8 @@ const GOD_LORE = {
       '2. Find a 🏆 Dolmen shrine tile — walk onto it to auto-collect the <b>Shard of Gungnir</b>',
       '3. Sail to any 🏘️ Town on the world map',
       '4. Open the Town screen → Temple section → click <b>Appease Odin</b>',
-      '5. Repeat: each sacrifice grants +1 Favor toward the next milestone'
+      '5. Repeat: each sacrifice grants +1 Favor toward the next milestone',
+      '6. Alternative: Kill 3 Wolves (🐺) or 1 Giant (❄️) to gain 1 Favor'
     ],
     opposites: ['Freya', 'Hel'],
     buff: 'Huntsmen gain +2 Attack Range & +1 DMG per turn.',
@@ -652,7 +660,8 @@ const GOD_LORE = {
       '2. Find a 🏆 Dolmen shrine tile — walk onto it to auto-collect <b>Mjolnir\'s Core</b>',
       '3. Sail to any 🏘️ Town on the world map',
       '4. Open the Town screen → Temple section → click <b>Appease Thor</b>',
-      '5. Repeat: each sacrifice grants +1 Favor toward the next milestone'
+      '5. Repeat: each sacrifice grants +1 Favor toward the next milestone',
+      '6. Alternative: Kill 3 Draugrs (🧟) or 1 Lindwurm (🐉) to gain 1 Favor'
     ],
     opposites: ['Hel', 'Loki'],
     buff: 'Berserkers gain +3 DMG and +1 Speed.',
@@ -675,7 +684,8 @@ const GOD_LORE = {
       '2. Find a 🏆 Dolmen shrine tile — walk onto it to auto-collect <b>Freya\'s Amber Tear</b>',
       '3. Sail to any 🏘️ Town on the world map',
       '4. Open the Town screen → Temple section → click <b>Appease Freya</b>',
-      '5. Repeat: each sacrifice grants +1 Favor toward the next milestone'
+      '5. Repeat: each sacrifice grants +1 Favor toward the next milestone',
+      '6. Alternative: Sell 3 Sheep (🐑) or 10 Wood (🪵) to gain 1 Favor'
     ],
     opposites: ['Loki', 'Odin'],
     buff: 'Shieldmaidens heal 2 HP per combat tick when not in melee.',
@@ -1413,7 +1423,17 @@ function movePartyOnWorld(x, y) {
 
   // Verify costs
   let cost = 1; // Sea/River cost
-  if (targetTerrain !== 'water' && targetTerrain !== 'river') {
+  let woodCost = 0;
+  const isSea = (targetTerrain === 'water' || targetTerrain === 'river');
+  if (isSea) {
+    if (STATE.resources.wood >= 1) {
+      cost = 1;
+      woodCost = 1;
+    } else {
+      cost = 3;
+      woodCost = 0;
+    }
+  } else {
     cost = 3; // Land cost
     // Thor's Wrath: Storms during land travel cost +1 extra Food per step (only at -5 favor)
     if (STATE.godFavor.thor === -5) {
@@ -1422,9 +1442,19 @@ function movePartyOnWorld(x, y) {
     }
   }
 
-  // Deduct food
+  // Deduct food & wood
   if (STATE.resources.food >= cost) {
     adjustResource('food', -cost);
+    if (woodCost > 0) {
+      adjustResource('wood', -woodCost);
+    }
+    if (isSea) {
+      if (woodCost > 0) {
+        logWorld(`Sailed 1 tile. Consumed 1 Food and 1 Wood (hull maintenance).`);
+      } else {
+        logWorld(`Sailed 1 tile without wood. Consumed 3 Food (rowing exhaustion).`, 'warn-message');
+      }
+    }
   } else {
     // We don't have enough food for this movement step. Try consuming sheep first.
     if (STATE.resources.sheep > 0) {
@@ -1433,6 +1463,9 @@ function movePartyOnWorld(x, y) {
       adjustResource('food', yieldAmt);
       logWorld(`HUNGERING! Slaughtered 1 Sheep to harvest emergency rations (+${yieldAmt} Food).`, 'warn-message');
       adjustResource('food', -cost);
+      if (woodCost > 0) {
+        adjustResource('wood', -woodCost);
+      }
     } else {
       // Starving: units lose 3 hp per movement
       const dmg = MOVEMENT_CONFIG.starvationHpDamage || 3;
@@ -2705,6 +2738,10 @@ export function handleStateNotification(event, data) {
   }
   else if (event === 'RELIC_SACRIFICED') {
     logWorld(`You sacrificed a ${data.relicId} relic to appease ${data.godName.toUpperCase()}.`, 'gain-message');
+  }
+  else if (event === 'FAVOR_GAIN_ACTION') {
+    logWorld(`Action Pleased the Gods: Gained 1 Favor with ${data.god.toUpperCase()} by ${data.reason}!`, 'gain-message');
+    showToast(`Gained +1 Favor with ${data.god.toUpperCase()}!`, '✨');
   }
   else if (event === 'QUEST_MILESTONE') {
     showToast(`Quest Milestone ${data.index + 1} reached for ${data.god.toUpperCase()}!`, '✨', true);

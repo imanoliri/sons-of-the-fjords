@@ -55,6 +55,14 @@ export const STATE = {
   // Deity Quest Milestones (5 steps per god)
   godQuests: makeGodQuests(),
 
+  // Counters for alternate favor gains
+  odinWolvesKilled: 0,
+  odinGiantsKilled: 0,
+  thorDraugrsKilled: 0,
+  thorLindwurmsKilled: 0,
+  freyaSheepSold: 0,
+  freyaWoodSold: 0,
+
   // Current global game day
   day: 1,
 
@@ -172,6 +180,78 @@ export function adjustFavor(godName, amt) {
   notify('FAVOR_UPDATED');
 }
 
+// Record monster kills to award alternative favor
+export function recordMonsterKill(monsterType) {
+  const nameLower = monsterType.toLowerCase();
+
+  if (nameLower.includes('wolf')) {
+    STATE.odinWolvesKilled = (STATE.odinWolvesKilled || 0) + 1;
+    if (STATE.odinWolvesKilled >= 3) {
+      STATE.odinWolvesKilled = 0;
+      adjustFavor('odin', 1);
+      notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: 'slaying 3 wolves' });
+    }
+  } else if (nameLower.includes('giant')) {
+    STATE.odinGiantsKilled = (STATE.odinGiantsKilled || 0) + 1;
+    if (STATE.odinGiantsKilled >= 1) {
+      STATE.odinGiantsKilled = 0;
+      adjustFavor('odin', 1);
+      notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: 'slaying a giant' });
+    }
+  }
+
+  if (nameLower.includes('draugr')) {
+    STATE.thorDraugrsKilled = (STATE.thorDraugrsKilled || 0) + 1;
+    if (STATE.thorDraugrsKilled >= 3) {
+      STATE.thorDraugrsKilled = 0;
+      adjustFavor('thor', 1);
+      notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: 'slaying 3 draugrs' });
+    }
+  } else if (nameLower.includes('lindwurm')) {
+    STATE.thorLindwurmsKilled = (STATE.thorLindwurmsKilled || 0) + 1;
+    if (STATE.thorLindwurmsKilled >= 1) {
+      STATE.thorLindwurmsKilled = 0;
+      adjustFavor('thor', 1);
+      notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: 'slaying a Lindwurm' });
+    }
+  }
+}
+
+// Sell sheep and update Freya favor
+export function sellSheep() {
+  if (STATE.resources.sheep >= 1) {
+    adjustResource('sheep', -1);
+    adjustResource('gold', 4);
+
+    STATE.freyaSheepSold = (STATE.freyaSheepSold || 0) + 1;
+    if (STATE.freyaSheepSold >= 3) {
+      STATE.freyaSheepSold = 0;
+      adjustFavor('freya', 1);
+      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: 'selling 3 sheep' });
+    }
+    return true;
+  }
+  return false;
+}
+
+// Sell wood and update Freya favor
+export function sellWood() {
+  if (STATE.resources.wood >= 10) {
+    adjustResource('wood', -10);
+    adjustResource('gold', 4);
+
+    STATE.freyaWoodSold = (STATE.freyaWoodSold || 0) + 10;
+    if (STATE.freyaWoodSold >= 10) {
+      const favorGained = Math.floor(STATE.freyaWoodSold / 10);
+      STATE.freyaWoodSold = STATE.freyaWoodSold % 10;
+      adjustFavor('freya', favorGained);
+      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: 'selling 10 wood' });
+    }
+    return true;
+  }
+  return false;
+}
+
 // Starvation damage
 export function triggerStarvationDamage() {
   if (STATE.band.length > 0) {
@@ -195,6 +275,12 @@ export function resetGame() {
   STATE.party = { worldX: WC.partyStart.x, worldY: WC.partyStart.y, currentLocationId: null, localX: 0, localY: 0 };
   STATE.godFavor = makeGodFavor();
   STATE.godQuests = makeGodQuests();
+  STATE.odinWolvesKilled = 0;
+  STATE.odinGiantsKilled = 0;
+  STATE.thorDraugrsKilled = 0;
+  STATE.thorLindwurmsKilled = 0;
+  STATE.freyaSheepSold = 0;
+  STATE.freyaWoodSold = 0;
   STATE.day = 1;
   STATE.activeBlessing = null;
   STATE.combat = {

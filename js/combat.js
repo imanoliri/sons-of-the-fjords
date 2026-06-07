@@ -2,7 +2,7 @@
    COMBAT MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, notify, adjustResource } from './state.js';
+import { STATE, notify, adjustResource, recordMonsterKill } from './state.js';
 import { COMBAT_CONFIG as CFG } from './config/combat.js';
 import { SOLDIERS_CONFIG } from './config/soldiers.js';
 
@@ -98,6 +98,9 @@ function combatTick() {
       if (target.hp <= 0) {
         grid[target.row][target.col] = null;
         removeUnitFromRegistry(target);
+        if (target.alliance === 'enemy') {
+          recordMonsterKill(target.type);
+        }
         notify('COMBAT_DEATH', target);
       }
     } else {

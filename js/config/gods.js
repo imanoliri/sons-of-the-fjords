@@ -28,7 +28,8 @@ export const GODS_CONFIG = {
         '2. Find a 🏆 Dolmen shrine tile — walk onto it to auto-collect the <b>Shard of Gungnir</b>',
         '3. Sail to any 🏘️ Town on the world map',
         '4. Open the Town screen → Temple section → click <b>Appease Odin</b>',
-        '5. Repeat: each sacrifice grants +1 Favor toward the next milestone'
+        '5. Repeat: each sacrifice grants +1 Favor toward the next milestone',
+        '6. Alternative: Kill 3 Wolves (🐺) or 1 Giant (❄️) to gain 1 Favor'
       ],
       buff: 'Huntsmen gain +2 Attack Range & +1 DMG per turn.',
       wrath: 'Wrath: Random unit loses 1 HP every 3 world steps.',
@@ -50,7 +51,8 @@ export const GODS_CONFIG = {
         "2. Find a 🏆 Dolmen shrine tile — walk onto it to auto-collect <b>Mjolnir's Core</b>",
         '3. Sail to any 🏘️ Town on the world map',
         '4. Open the Town screen → Temple section → click <b>Appease Thor</b>',
-        '5. Repeat: each sacrifice grants +1 Favor toward the next milestone'
+        '5. Repeat: each sacrifice grants +1 Favor toward the next milestone',
+        '6. Alternative: Kill 3 Draugrs (🧟) or 1 Lindwurm (🐉) to gain 1 Favor'
       ],
       buff: 'Berserkers gain +3 DMG and +1 Speed.',
       wrath: 'Wrath: Storms during land travel cost +1 extra Food per step.',
@@ -72,7 +74,8 @@ export const GODS_CONFIG = {
         "2. Find a 🏆 Dolmen shrine tile — walk onto it to auto-collect <b>Freya's Amber Tear</b>",
         '3. Sail to any 🏘️ Town on the world map',
         '4. Open the Town screen → Temple section → click <b>Appease Freya</b>',
-        '5. Repeat: each sacrifice grants +1 Favor toward the next milestone'
+        '5. Repeat: each sacrifice grants +1 Favor toward the next milestone',
+        '6. Alternative: Sell 3 Sheep (🐑) or 10 Wood (🪵) to gain 1 Favor'
       ],
       buff: 'Shieldmaidens heal 2 HP per combat tick when not in melee.',
       wrath: 'Wrath: Recruited units start with -10 max HP.',

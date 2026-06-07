@@ -8,6 +8,7 @@ export const TOWN_CONFIG = {
     { id: 'buy-food',  label: 'Buy 5 Food',   cost: { gold: -2 }, gain: { food:  5  } },
     { id: 'buy-wood',  label: 'Buy 2 Wood',   cost: { gold: -2 }, gain: { wood:  2  } },
     { id: 'sell-sheep',label: 'Sell 1 Sheep', cost: { sheep: -1}, gain: { gold:  4  } },
+    { id: 'sell-wood', label: 'Sell 10 Wood', cost: { wood: -10}, gain: { gold:  4  } },
     { id: 'buy-sheep', label: 'Buy 1 Sheep',  cost: { gold: -6 }, gain: { sheep: 1  } }
   ],
 
