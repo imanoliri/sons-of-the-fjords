@@ -927,7 +927,13 @@ function findLocalPath(startX, startY, targetX, targetY, locState) {
         const tile = locState.placedTiles[nKey];
         if (tile) {
           const terrainType = locState.preGeneratedGrid[nKey];
-          const isPassable = terrainType !== 'chasm' && terrainType !== 'mountain' && terrainType !== 'deep_water';
+          let isPassable = terrainType !== 'chasm' && terrainType !== 'mountain' && terrainType !== 'deep_water';
+          if (isPassable && (nx !== targetX || ny !== targetY)) {
+            const hasEnemy = tile.entity && tile.entity.type === 'enemy_army' && !tile.entity.isDefeated;
+            if (hasEnemy) {
+              isPassable = false;
+            }
+          }
           if (isPassable) {
             visited.add(nKey);
             queue.push({
