@@ -20,6 +20,22 @@ export function generateLocationMap(locationId, worldTileTerrain) {
   }
   shuffle(deck);
 
+  // Guarantee at least one cave tile is near the top of the stack (drawn early)
+  if (pool.cave && pool.cave > 0) {
+    let caveIdx = deck.lastIndexOf('cave');
+    if (caveIdx === -1) {
+      // If no cave tile exists in the deck, replace one near the top (last elements of array)
+      const targetIdx = deck.length - 1 - Math.floor(Math.random() * 10);
+      deck[targetIdx] = 'cave';
+    } else {
+      // Swap the existing cave tile into the top 10 elements of the deck
+      const targetIdx = deck.length - 1 - Math.floor(Math.random() * 10);
+      const temp = deck[targetIdx];
+      deck[targetIdx] = deck[caveIdx];
+      deck[caveIdx] = temp;
+    }
+  }
+
   // 2. Initialize grid state with center starting tile
   const { x: sx, y: sy, terrain: st } = CFG.startTile;
   const placedTiles = {};
@@ -29,7 +45,8 @@ export function generateLocationMap(locationId, worldTileTerrain) {
     isDiscovered: true,
     isCleared: false,
     placedTiles,
-    tileStack: deck
+    tileStack: deck,
+    hasCaveEntranceSpawned: false
   };
 
   STATE.locations[locationId] = state;
@@ -46,7 +63,9 @@ export function discoverTile(locationId, x, y) {
   // Decide entity spawn — only on traversable terrains
   let entity = null;
   const isTraversable = !CFG.nonTraversable.includes(terrain);
-  if (isTraversable && Math.random() < CFG.entitySpawnChance) {
+  const isFirstCaveEntranceNeeded = terrain === 'cave' && !locState.hasCaveEntranceSpawned;
+
+  if (isTraversable && (isFirstCaveEntranceNeeded || Math.random() < CFG.entitySpawnChance)) {
     entity = generateRandomEntity(locationId, terrain);
   }
 
@@ -66,8 +85,15 @@ function generateRandomEntity(locationId, terrain) {
   else                            type = 'dolmen';
 
   // Cave terrain override
-  if (terrain === 'cave' && Math.random() < CFG.caveEntranceChance) {
-    type = 'cave_entrance';
+  if (terrain === 'cave') {
+    const locState = STATE.locations[locationId];
+    if (locState && !locState.hasCaveEntranceSpawned) {
+      type = 'cave_entrance';
+      locState.hasCaveEntranceSpawned = true;
+    } else if (Math.random() < CFG.caveEntranceChance) {
+      type = 'cave_entrance';
+      if (locState) locState.hasCaveEntranceSpawned = true;
+    }
   }
 
   if (type === 'treasure') {
