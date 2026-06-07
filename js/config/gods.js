@@ -170,7 +170,7 @@ export const GODS_CONFIG = {
         '3. Open the Town screen → Temple section → click <b>Appease Hel</b>',
         '4. Repeat: each sacrifice grants +1 Favor toward the next milestone'
       ],
-      buff: 'Fallen enemies have a 20% chance to rise as allied undead for 3 ticks.',
+      buff: 'Fallen enemies have a 50% chance to rise as allied undead for 3 ticks.',
       wrath: 'Wrath: Dead band members cannot be replaced for 5 turns.',
       milestoneEffects: [
         'Enemies deal -1 DMG.',

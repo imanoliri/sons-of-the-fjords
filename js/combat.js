@@ -115,6 +115,15 @@ function combatTick() {
   for (const unit of boardUnits) {
     if (unit.hp <= 0) continue;
 
+    if (unit.isUndead) {
+      unit.undeadTicksLeft--;
+      if (unit.undeadTicksLeft <= 0) {
+        grid[unit.row][unit.col] = null;
+        notify('COMBAT_DEATH', unit);
+        continue;
+      }
+    }
+
     const target = unit.isFleeing ? null : findTargetInLane(unit);
     if (target) {
       target.hp -= getEffectiveStats(unit).dmg.total;
@@ -126,6 +135,30 @@ function combatTick() {
         removeUnitFromRegistry(target);
         if (target.alliance === 'enemy') {
           recordMonsterKill(target.type);
+
+          const activeBlessings = new Set();
+          if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
+          if (STATE.permanentlyActivatedBlessings) {
+            STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
+          }
+          if (activeBlessings.has('hel') && Math.random() < 0.5) {
+            const undead = {
+              id: Date.now() + Math.floor(Math.random() * 1000),
+              name: 'Draugr (Undead) 💀',
+              type: 'Draugr Warrior',
+              hp: 15,
+              maxHp: 15,
+              dmg: 4,
+              speed: 1,
+              range: 1,
+              alliance: 'player',
+              isUndead: true,
+              undeadTicksLeft: 3,
+              row: target.row,
+              col: target.col
+            };
+            grid[target.row][target.col] = undead;
+          }
         }
         notify('COMBAT_DEATH', target);
       }
@@ -193,7 +226,7 @@ function findTargetInLane(unit) {
 }
 
 function removeUnitFromRegistry(unit) {
-  if (unit.alliance === 'player' && !unit.isCharmed) {
+  if (unit.alliance === 'player' && !unit.isCharmed && !unit.isUndead) {
     const idx = STATE.band.findIndex(u => u.id === unit.id);
     if (idx !== -1) STATE.band.splice(idx, 1);
   } else {
@@ -209,6 +242,10 @@ function handleUnitReachEnd(unit) {
       if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
       notify('COMBAT_UPDATE');
       checkCombatEndConditions();
+      return;
+    }
+    if (unit.isUndead) {
+      notify('COMBAT_UPDATE');
       return;
     }
     const reward = CFG.playerCrossReward;
