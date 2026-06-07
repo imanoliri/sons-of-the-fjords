@@ -186,6 +186,9 @@ function generateRandomEntity(locationId, terrain, x = null, y = null) {
     if (locState && !locState.hasCaveEntranceSpawned) {
       type = 'cave_entrance';
       locState.hasCaveEntranceSpawned = true;
+    } else if (Math.random() < CFG.caveEntranceChance) {
+      type = 'cave_entrance';
+      if (locState) locState.hasCaveEntranceSpawned = true;
     }
   }
 
