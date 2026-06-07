@@ -767,7 +767,7 @@ function initTooltipEvents() {
         content = [
           `<b style="color:var(--text-accent)">📋 How to gain Favor:</b>`,
           `<div style="margin:4px 0 0 0">${stepsHtml}</div>`,
-          `<b>Opposes:</b> ${lore.opposites.join(' & ')} — pleasing ${lore.icon} drains their favor`,
+          `<b>Opposes:</b> ${(GODS_CONFIG.pentagramOpposites[gKey] || []).map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(' & ')} — pleasing ${lore.icon} drains their favor`,
           `<b style="color:var(--color-danger)">⚠️ ${lore.wrath}</b>`
         ].join('<br>');
       } else if (section === 'milestone') {
