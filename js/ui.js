@@ -635,13 +635,8 @@ function initTooltipEvents() {
             ? `<span style="color:var(--color-success)">✅ Ascended! Visit a Town to switch buff for 5 Gold.</span>`
             : `<span style="color:var(--text-muted)">🔒 Complete all 5 milestones to ascend and unlock the champion buff.</span>`;
         } else {
-          header = `${lore.icon} Milestone ${idx + 1}`;
-          content = [
-            `<b style="color:${lore.color}">${lore.milestoneEffects[idx]}</b>`,
-            achieved
-              ? `<span style="color:var(--color-success)">✅ Active</span>`
-              : `<span style="color:var(--text-muted)">🔒 Not yet reached</span>`
-          ].join('<br>');
+        } else {
+          header = '';
         }
       } else if (section === 'champion') {
         header = `${lore.icon} Champion Buff`;
