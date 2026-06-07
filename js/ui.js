@@ -711,9 +711,9 @@ function initTooltipEvents() {
       if (terrain === 'deep_water') {
         contents.push('🌊 Deep Water. Extremely dangerous, non-traversable.');
       } else if (terrain === 'water') {
-        contents.push('Open water. Safe sailing, costs 1 Food per step.');
+        contents.push('Open water. Safe sailing, costs 1 Food per step (+1 Wood if available, else 3 Food).');
       } else if (terrain === 'river') {
-        contents.push('River stream. Fast sailing, costs 1 Food per step.');
+        contents.push('River stream. Fast sailing, costs 1 Food per step (+1 Wood if available, else 3 Food).');
       } else {
         contents.push('Rugged land. Slow travel, costs 3 Food per step.');
       }
@@ -1103,6 +1103,10 @@ function attemptLocalMove(targetX, targetY) {
       triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'ore_deposit' && !ent.isLooted) {
       triggerEncounterEvent(coordKey, ent);
+    } else if (ent.type === 'fishing_spot' && !ent.isLooted) {
+      triggerEncounterEvent(coordKey, ent);
+    } else if (ent.type === 'berry_bush' && !ent.isLooted) {
+      triggerEncounterEvent(coordKey, ent);
     } else if (ent.type === 'dolmen' && !ent.isVisited) {
       triggerEncounterEvent(coordKey, ent);
     }
@@ -1297,10 +1301,10 @@ function movePartyOnWorld(x, y) {
   const targetTerrain = STATE.worldMap.tiles[y][x];
 
   // Verify costs
-  let cost = 1; // Sea/River cost
+  let cost = 3;
   let woodCost = 0;
-  const isSea = (targetTerrain === 'water' || targetTerrain === 'river');
-  if (isSea) {
+  
+  if (targetTerrain === 'water' || targetTerrain === 'river') {
     if (STATE.resources.wood >= 1) {
       cost = 1;
       woodCost = 1;
@@ -1309,12 +1313,13 @@ function movePartyOnWorld(x, y) {
       woodCost = 0;
     }
   } else {
-    cost = 3; // Land cost
-    // Thor's Wrath: Storms during land travel cost +1 extra Food per step (only at -5 favor)
-    if (STATE.godFavor.thor === -5) {
-      cost += 1;
-      logWorld("Thor's Wrath: Lightning storms increase land travel food cost (+1).", 'warn-message');
-    }
+    cost = 3;
+  }
+
+  // Thor's Wrath: Storms during land travel cost +1 extra Food per step (only at -5 favor)
+  if (targetTerrain !== 'water' && targetTerrain !== 'river' && STATE.godFavor.thor === -5) {
+    cost += 1;
+    logWorld("Thor's Wrath: Lightning storms increase land travel food cost (+1).", 'warn-message');
   }
 
   // Deduct food & wood
@@ -1323,12 +1328,15 @@ function movePartyOnWorld(x, y) {
     if (woodCost > 0) {
       adjustResource('wood', -woodCost);
     }
-    if (isSea) {
+    if (targetTerrain === 'water' || targetTerrain === 'river') {
+      const modeText = targetTerrain === 'water' ? 'Sailed' : 'Rowed';
       if (woodCost > 0) {
-        logWorld(`Sailed 1 tile. Consumed 1 Food and 1 Wood (hull maintenance).`);
+        logWorld(`${modeText} 1 tile. Consumed 1 Food and 1 Wood (hull maintenance).`);
       } else {
-        logWorld(`Sailed 1 tile without wood. Consumed 3 Food (rowing exhaustion).`, 'warn-message');
+        logWorld(`${modeText} 1 tile without wood. Consumed 3 Food (rowing exhaustion).`, 'warn-message');
       }
+    } else {
+      logWorld(`Traveled on ${targetTerrain}. Consumed ${cost} Food.`);
     }
   } else {
     // We don't have enough food for this movement step. Try consuming sheep first.
@@ -1728,6 +1736,8 @@ function renderLocationMap() {
           else if (ent.type === 'wood_source' && !ent.isLooted) entityDesc = '🪵 Wood Source (Harvest Wood)';
           else if (ent.type === 'sheep_source' && !ent.isLooted) entityDesc = '🐑 Lost Sheep (Rescue Sheep)';
           else if (ent.type === 'ore_deposit' && !ent.isLooted) entityDesc = '🪨 Ore Deposit (Mine Gold)';
+          else if (ent.type === 'fishing_spot' && !ent.isLooted) entityDesc = '🎣 Fishing Spot (Catch Food)';
+          else if (ent.type === 'berry_bush' && !ent.isLooted) entityDesc = '🍒 Berry Bush (Gather Berries)';
           else if (ent.type === 'enemy_army' && !ent.isDefeated) entityDesc = `👹 Monster Nest (${ent.monsters[0].monsterClass})`;
           else if (ent.type === 'burial_mound' && !ent.isExplored) entityDesc = '🪦 Ancient Burial Mound';
           else if (ent.type === 'dolmen' && !ent.isVisited) entityDesc = `🏆 Sacred Dolmen Stone (Appease ${ent.godName.toUpperCase()})`;
@@ -1779,6 +1789,22 @@ function renderLocationMap() {
           }
           else if (ent.type === 'ore_deposit' && !ent.isLooted) {
             badge.innerText = '🪨';
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
+              else attemptLocalPathMove(x, y);
+            });
+          }
+          else if (ent.type === 'fishing_spot' && !ent.isLooted) {
+            badge.innerText = '🎣';
+            badge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
+              else attemptLocalPathMove(x, y);
+            });
+          }
+          else if (ent.type === 'berry_bush' && !ent.isLooted) {
+            badge.innerText = '🍒';
             badge.addEventListener('click', (e) => {
               e.stopPropagation();
               if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
@@ -1952,6 +1978,18 @@ function triggerEncounterEvent(coordKey, entity) {
     adjustResource('gold', entity.gold);
     entity.isLooted = true;
     showToast(`Mined ore deposit! Gained +${entity.gold} Gold.`, '🪨');
+    notify('STATE_UPDATED');
+  }
+  else if (entity.type === 'fishing_spot') {
+    adjustResource('food', entity.food);
+    entity.isLooted = true;
+    showToast(`Caught fresh fish! Added +${entity.food} Food.`, '🎣');
+    notify('STATE_UPDATED');
+  }
+  else if (entity.type === 'berry_bush') {
+    adjustResource('food', entity.food);
+    entity.isLooted = true;
+    showToast(`Gathered wild berries! Added +${entity.food} Food.`, '🍒');
     notify('STATE_UPDATED');
   }
   else if (entity.type === 'dolmen') {

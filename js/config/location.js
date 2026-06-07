@@ -82,7 +82,8 @@ export const LOCATION_CONFIG = {
         treasure: 3,  // hidden stash
         enemy_army: 10,  // raiding warbands
         dolmen: 2,  // ancient standing stone
-        burial_mound: 1   // rare; further boosted by raidLocationEffects
+        burial_mound: 1,   // rare; further boosted by raidLocationEffects
+        berry_bush: 3     // wild foraging
       },
       // Monster pool for enemy_army on this tile type
       monsterPool: ['Fenrir Pack Wolf', 'Giant Brood-Spider']
@@ -94,7 +95,8 @@ export const LOCATION_CONFIG = {
         treasure: 3,
         enemy_army: 12,  // wolves and spiders lurk here
         dolmen: 2,
-        burial_mound: 1
+        burial_mound: 1,
+        berry_bush: 5     // forest berries
       },
       monsterPool: ['Fenrir Pack Wolf', 'Giant Brood-Spider']
     },
@@ -131,7 +133,8 @@ export const LOCATION_CONFIG = {
     water: {
       entities: {
         treasure: 7,  // sunken hoard
-        enemy_army: 8
+        enemy_army: 8,
+        fishing_spot: 5   // minor wild food
       },
       monsterPool: ['Giant Brood-Spider']
     }
@@ -232,6 +235,14 @@ export const LOCATION_CONFIG = {
     sheepMin: 1,
     sheepMax: 1
   },
+  fishingSpot: {
+    foodMin: 4,
+    foodMax: 8
+  },
+  berryBush: {
+    foodMin: 3,
+    foodMax: 6
+  },
 
   // Chance settings for cave portals under diminishing returns
   cavePortalBaseChance: 0.02,
@@ -258,7 +269,7 @@ export const LOCATION_CONFIG = {
   difficultyScaling: {
     dangerMultipliers: [0.8, 0.9, 1.0, 1.1, 1.2],
     caveDepthFactor: 0.35,
-    timeFactor: 0.02,
+    timeFactor: 0.01,
     maxTimeFactorCap: 2.5,
     bossThreshold: 1.40,
     bosses: ['Frost Giant (Jotunn)', 'Lindwurm'],

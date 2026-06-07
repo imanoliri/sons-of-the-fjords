@@ -510,6 +510,24 @@ function buildEntityOfType(locationId, type, terrain, x, y, locationType, diffic
     };
   }
 
+  if (type === 'fishing_spot') {
+    const fs = CFG.fishingSpot || { foodMin: 4, foodMax: 8 };
+    return {
+      type: 'fishing_spot',
+      food: Math.floor(Math.random() * (fs.foodMax - fs.foodMin + 1)) + fs.foodMin,
+      isLooted: false
+    };
+  }
+
+  if (type === 'berry_bush') {
+    const bb = CFG.berryBush || { foodMin: 3, foodMax: 6 };
+    return {
+      type: 'berry_bush',
+      food: Math.floor(Math.random() * (bb.foodMax - bb.foodMin + 1)) + bb.foodMin,
+      isLooted: false
+    };
+  }
+
   if (type === 'enemy_army') {
     const e = CFG.enemyArmy;
     const pools = CFG.monsterPoolsByBiome || {};
