@@ -82,6 +82,7 @@ const elQuestsList = document.getElementById('gods-tracks-list');
 
 // Modals
 const elModalEvent = document.getElementById('modal-event');
+const elModalEventCloseBtn = document.getElementById('modal-event-close-btn');
 const elModalEventTitle = document.getElementById('modal-event-title');
 const elModalEventBody = document.getElementById('modal-event-body');
 const elModalEventChoices = document.getElementById('modal-event-choices');
@@ -135,6 +136,10 @@ export function initUIBindings() {
 
   bindButton('btn-close-party', () => {
     hideOverlay(elPartyModal);
+  });
+
+  bindButton('modal-event-close-btn', () => {
+    hideOverlay(elModalEvent);
   });
 
   bindButton('tab-party-band', () => {
@@ -294,6 +299,13 @@ export function initUIBindings() {
 
     // 0. Handle Escape key to leave Location (Raid or Town) or close panels
     if (e.key === 'Escape') {
+      if (!elModalEvent.classList.contains('hidden')) {
+        if (elModalEventCloseBtn && elModalEventCloseBtn.style.display !== 'none') {
+          e.preventDefault();
+          elModalEventCloseBtn.click();
+          return;
+        }
+      }
       if (!elPartyModal.classList.contains('hidden')) {
         e.preventDefault();
         document.getElementById('btn-close-party')?.click();
@@ -696,61 +708,7 @@ function initTooltipEvents() {
   document.body.addEventListener('mouseover', (e) => {
     const godTarget = e.target.closest('[data-god-tooltip]');
     if (godTarget) {
-      const gKey = godTarget.dataset.godTooltip;
-      const section = godTarget.dataset.tooltipSection;
-      const lore = GOD_LORE[gKey];
-      if (!lore) return;
-
-      let header = '';
-      let content = '';
-
-      if (section === 'identity') {
-        header = '';
-        const stepsHtml = lore.favorSteps.map(s => `<div style="margin:2px 0">${s}</div>`).join('');
-        content = [
-          `<b style="color:var(--text-accent)">📋 How to gain Favor:</b>`,
-          `<div style="margin:4px 0 0 0">${stepsHtml}</div>`,
-          `<b>Opposes:</b> ${(GODS_CONFIG.pentagramOpposites[gKey] || []).map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(' & ')} — pleasing ${lore.icon} drains their favor`,
-          `<b style="color:var(--color-danger)">⚠️ ${lore.wrath}</b>`
-        ].join('<br>');
-      } else if (section === 'milestone') {
-        const idx = parseInt(godTarget.dataset.milestoneIdx);
-        const achieved = STATE.godQuests[gKey][idx];
-        header = `${lore.icon} Milestone ${['I', 'II', 'III', 'IV', 'V'][idx]}`;
-        
-        let statusHtml = achieved 
-          ? `<span style="color:var(--color-success)">✅ Completed</span>` 
-          : `<span style="color:var(--text-muted)">🔒 Unlocked at Favor +${idx + 1}</span>`;
-          
-        let effectHtml = '';
-        if (idx === 4) {
-          effectHtml = `<span style="color:var(--text-muted)">🔒 Unlocks this god's secret Blessing!</span>`;
-        } else {
-          effectHtml = `<b style="color:${lore.color}">${lore.milestoneEffects[idx]}</b>`;
-        }
-        
-        content = `${statusHtml}<br><div style="margin-top:4px;">${effectHtml}</div>`;
-      } else if (section === 'champion') {
-        header = `${lore.icon} Champion Buff`;
-        content = `<b style="color:${lore.color}">${lore.buff}</b>`;
-      } else if (section === 'champion_locked') {
-        header = `${lore.icon} Champion Buff`;
-        content = `<span style="color:var(--text-muted)">reach Milestone 5 to unlock the champion buff of this god</span>`;
-      } else if (section === 'curse') {
-        header = `${lore.icon} Active Curse (${gKey.toUpperCase()})`;
-        content = `<b style="color:var(--color-danger)">${lore.wrath}</b>`;
-      }
-
-      elTooltip.innerHTML = `
-        <div class="game-tooltip-header">
-          <span>${header}</span>
-        </div>
-        <div class="game-tooltip-contents">${content}</div>
-      `;
-      elTooltip.style.borderLeftColor = section === 'curse' ? 'var(--color-danger)' : lore.color;
-      elTooltip.style.left = (e.clientX + 15) + 'px';
-      elTooltip.style.top = (e.clientY + 15) + 'px';
-      elTooltip.style.display = 'flex';
+      // Deactivated: popup fulfills this function
       return;
     }
   });
@@ -759,9 +717,7 @@ function initTooltipEvents() {
   document.body.addEventListener('mouseover', (e) => {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
     if (!tile) {
-      if (!e.target.closest('[data-god-tooltip]')) {
-        elTooltip.style.display = 'none';
-      }
+      elTooltip.style.display = 'none';
       return;
     }
     
@@ -859,7 +815,6 @@ function initTooltipEvents() {
 
   document.body.addEventListener('mouseout', (e) => {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
-    const godTarget = e.target.closest('[data-god-tooltip]');
     
     if (tile && (tile.classList.contains('world-tile') || tile.dataset.entityType === 'burial_mound')) {
       const enteringTile = e.relatedTarget?.closest('.world-tile, .location-tile');
@@ -868,10 +823,6 @@ function initTooltipEvents() {
         elTooltip.style.display = 'none';
       }
     } else if (tile && !e.relatedTarget?.closest('.world-tile, .location-tile, .combat-cell')) {
-      elTooltip.style.display = 'none';
-    }
-    
-    if (godTarget && !e.relatedTarget?.closest('[data-god-tooltip]')) {
       elTooltip.style.display = 'none';
     }
   });
@@ -2171,6 +2122,9 @@ function triggerEncounterEvent(coordKey, entity) {
   }
   else {
     // Show overlay modal for entities with real choices
+    if (elModalEventCloseBtn) {
+      elModalEventCloseBtn.style.display = 'none';
+    }
     showOverlay(elModalEvent);
     elModalEventChoices.innerHTML = '';
 
@@ -2475,13 +2429,9 @@ function showGodLorePopup(gKey) {
   `;
 
   elModalEventChoices.innerHTML = '';
-  const btnClose = document.createElement('button');
-  btnClose.classList.add('btn', 'btn-primary');
-  btnClose.innerText = 'Close';
-  btnClose.addEventListener('click', () => {
-    hideOverlay(elModalEvent);
-  });
-  elModalEventChoices.appendChild(btnClose);
+  if (elModalEventCloseBtn) {
+    elModalEventCloseBtn.style.display = 'block';
+  }
   
   showOverlay(elModalEvent);
   updateModalKeyboardNavigation();

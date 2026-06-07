@@ -981,6 +981,7 @@ body {
 }
 
 .modal-box {
+  position: relative;
   width: 100%;
   max-width: 500px;
   padding: 2rem;
@@ -1294,4 +1295,26 @@ body {
 
 .god-lore-list li {
   margin-bottom: 4px;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  background: transparent;
+  border: none;
+  color: var(--color-danger);
+  font-size: 1.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  outline: none;
+  line-height: 1;
+  padding: 0;
+  transition: transform 0.2s, opacity 0.2s;
+  z-index: 100;
+}
+
+.modal-close-btn:hover {
+  transform: scale(1.15);
+  opacity: 0.9;
 }
