@@ -153,28 +153,28 @@ export function sacrificeRelic(relicId, godName) {
 export function adjustFavor(godName, amt) {
   const opposites = GC.pentagramOpposites;
   const current = STATE.godFavor[godName];
-  if (current >= GC.favorMax && amt > 0) return;
 
   const nextFavor = Math.min(GC.favorMax, Math.max(GC.favorMin, current + amt));
   STATE.godFavor[godName] = nextFavor;
 
   if (amt > 0) {
     const track = STATE.godQuests[godName];
-    const emptyIndex = track.indexOf(false);
-    if (emptyIndex !== -1 && emptyIndex < nextFavor) {
+    let emptyIndex = track.indexOf(false);
+    while (emptyIndex !== -1 && emptyIndex < nextFavor) {
       track[emptyIndex] = true;
       notify('QUEST_MILESTONE', { god: godName, index: emptyIndex });
-      if (track.every(x => x === true)) {
-        notify('GOD_QUESTS_COMPLETE', godName);
-        const allGodsCompleted = Object.values(STATE.godQuests).every(t => t.every(x => x === true));
-        if (allGodsCompleted) {
-          notify('ASCENSION_TRIGGERED', godName);
-        }
+      emptyIndex = track.indexOf(false);
+    }
+    if (track.every(x => x === true)) {
+      notify('GOD_QUESTS_COMPLETE', godName);
+      const allGodsCompleted = Object.values(STATE.godQuests).every(t => t.every(x => x === true));
+      if (allGodsCompleted) {
+        notify('ASCENSION_TRIGGERED', godName);
       }
     }
   }
 
-  if (amt > 0) {
+  if (amt > 0 && nextFavor > current) {
     const oppList = opposites[godName] || [];
     for (const opp of oppList) {
       const oppTrack = STATE.godQuests[opp];
