@@ -5,7 +5,7 @@
 import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, executePlunderMound, executeSacrificeSheep, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, buyRecruit } from './state.js';
 import { getAdjacentCoords } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
-import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats } from './combat.js';
+import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats, fleeCombat } from './combat.js';
 import { TOWN_CONFIG } from './config/town.js';
 import { MOVEMENT_CONFIG } from './config/movement.js';
 import { LOCATION_CONFIG } from './config/location.js';
@@ -208,11 +208,7 @@ export function initUIBindings() {
   });
 
   bindButton('btn-combat-flee', () => {
-    STATE.combat.fleeMode = !STATE.combat.fleeMode;
-    if (STATE.combat.fleeMode) {
-      STATE.combat.selectedPoolIndex = null;
-    }
-    notify('COMBAT_UPDATE');
+    fleeCombat();
   });
 
   bindButton('btn-stance-retreat', () => {
@@ -2253,18 +2249,7 @@ function renderCombatGrid() {
     elCombatGrid.classList.remove('paused-deploying');
   }
 
-  // Toggle Flee button label
-  if (elCombatFleeBtn) {
-    if (STATE.combat.fleeMode) {
-      elCombatFleeBtn.innerText = 'Flee Mode: ON';
-      elCombatFleeBtn.classList.remove('btn-danger');
-      elCombatFleeBtn.classList.add('btn-primary');
-    } else {
-      elCombatFleeBtn.innerText = 'Flee Mode: OFF';
-      elCombatFleeBtn.classList.remove('btn-primary');
-      elCombatFleeBtn.classList.add('btn-danger');
-    }
-  }
+
 
   // Update active stance class on buttons
   const btnRetreat = document.getElementById('btn-stance-retreat');
@@ -2709,6 +2694,26 @@ export function handleStateNotification(event, data) {
         const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
         setScreen((locData && locData.type === 'town') ? 'world' : 'location');
       }
+    }
+  }
+  else if (event === 'COMBAT_FLEE') {
+    const stolenParts = Object.entries(data.stolen)
+      .filter(([res, amt]) => amt > 0)
+      .map(([res, amt]) => `${amt} ${res}`)
+      .join(', ');
+    const msg = stolenParts ? `Fled combat! Stolen resources during retreat: ${stolenParts}.` : 'Fled combat safely!';
+    logWorld(msg, 'warn-message');
+    showToast('You fled from combat!', '🏃', true);
+
+    delete STATE.party.pendingLocalX;
+    delete STATE.party.pendingLocalY;
+
+    const locId = STATE.party.currentLocationId;
+    if (!locId) {
+      setScreen('world');
+    } else {
+      const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
+      setScreen((locData && locData.type === 'town') ? 'world' : 'location');
     }
   }
   else if (event === 'COMBAT_DEFEAT') {

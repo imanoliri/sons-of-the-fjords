@@ -298,6 +298,36 @@ export function endCombat(isVictory) {
   }
 }
 
+export function fleeCombat() {
+  STATE.combat.active = false;
+  STATE.combat.paused = true;
+  clearInterval(combatTimer);
+  combatTimer = null;
+
+  const resTypes = ['gold', 'food', 'wood', 'sheep'];
+  const stolen = {};
+  for (const monster of STATE.combat.waveMonsters) {
+    const rType = resTypes[Math.floor(Math.random() * resTypes.length)];
+    adjustResource(rType, -CFG.enemyBreachDrain);
+    stolen[rType] = (stolen[rType] || 0) + CFG.enemyBreachDrain;
+  }
+
+  const boardUnits = [];
+  for (let r = 0; r < CFG.gridRows; r++)
+    for (let c = 0; c < CFG.gridCols; c++) {
+      const cell = STATE.combat.grid[r][c];
+      if (cell && cell.alliance === 'player') boardUnits.push(cell);
+    }
+
+  for (const member of STATE.band) {
+    const activeUnit = boardUnits.find(u => u.id === member.id) || STATE.combat.pool.find(u => u.id === member.id);
+    if (activeUnit) member.hp = Math.min(member.maxHp, activeUnit.hp);
+  }
+
+  notify('COMBAT_FLEE', { stolen });
+}
+
+
 function getMonsterStats(mClass) {
   return CFG.monsters[mClass] || CFG.monsterFallback;
 }
