@@ -2452,14 +2452,7 @@ function showGodLorePopup(gKey) {
     return `<li class="god-lore-milestone-item${isLockedClass}">${check} Milestone ${idx + 1}: ${desc || ''}</li>`;
   }).join('');
 
-  const favorActions = {
-    odin: "Appease with <b>Shard of Gungnir</b> at a Town Shrine, or kill Wolves/Giants.",
-    thor: "Appease with <b>Mjolnir's Core</b> at a Town Shrine, or kill Draugrs/Lindwurms.",
-    freya: "Appease with <b>Freya's Amber Tear</b> at a Town Shrine, or trade Sheep/Wood.",
-    hel: "Appease with <b>Hel's Urn of Ash</b> at a Town Shrine, or Sacrifice Sheep at Burial Mounds.",
-    loki: "Appease with <b>Loki's Trickster Coin</b> at a Town Shrine, or Plunder Burial Mounds."
-  };
-  const favorActionHtml = favorActions[gKey] || '';
+  const favorActionHtml = lore.favorAction || '';
 
   elModalEventBody.innerHTML = `
     <div class="god-lore-popup-body">

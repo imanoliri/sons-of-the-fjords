@@ -93,14 +93,7 @@ export const GODS_CONFIG = {
       icon: '🔮',
       color: 'var(--color-odin)',
       relic: 'Shard of Gungnir',
-      favorSteps: [
-        '1. Explore Raid Sites on the world map',
-        '2. Find a 🏆 Dolmen shrine tile — walk onto it to auto-collect the <b>Shard of Gungnir</b>',
-        '3. Sail to any 🏘️ Town on the world map',
-        '4. Open the Town screen → Temple section → click <b>Appease Odin</b>',
-        '5. Repeat: each sacrifice grants +1 Favor toward the next milestone',
-        '6. Alternative: Kill 3 Wolves (🐺) or 1 Giant (❄️) to gain 1 Favor'
-      ],
+      favorAction: 'Appease with <b>Shard of Gungnir</b> at a Town Shrine, or kill Wolves/Giants.',
       wrath: 'Wrath: Random unit loses 1 HP every 3 world steps.',
       milestoneEffects: [
         'Strategist/Master of War: Soldiers can attack adjacent lanes (prioritizing closest by Manhattan distance, same-lane counts as -1).',
@@ -116,14 +109,7 @@ export const GODS_CONFIG = {
       icon: '⚡',
       color: 'var(--color-thor)',
       relic: "Mjolnir's Core",
-      favorSteps: [
-        '1. Explore Raid Sites on the world map',
-        "2. Find a 🏆 Dolmen shrine tile — walk onto it to auto-collect <b>Mjolnir's Core</b>",
-        '3. Sail to any 🏘️ Town on the world map',
-        '4. Open the Town screen → Temple section → click <b>Appease Thor</b>',
-        '5. Repeat: each sacrifice grants +1 Favor toward the next milestone',
-        '6. Alternative: Kill 3 Draugrs (🧟) or 1 Lindwurm (🐉) to gain 1 Favor'
-      ],
+      favorAction: "Appease with <b>Mjolnir's Core</b> at a Town Shrine, or kill Draugrs/Lindwurms.",
       wrath: 'Wrath: Storms during travel cost +1 extra Food on land and +1 extra Wood on sea per step.',
       milestoneEffects: [
         'Berserkers gain +1 DMG.',
@@ -139,14 +125,7 @@ export const GODS_CONFIG = {
       icon: '🌸',
       color: 'var(--color-freya)',
       relic: "Freya's Amber Tear",
-      favorSteps: [
-        '1. Explore Raid Sites on the world map',
-        "2. Find a 🏆 Dolmen shrine tile — walk onto it to auto-collect <b>Freya's Amber Tear</b>",
-        '3. Sail to any 🏘️ Town on the world map',
-        '4. Open the Town screen → Temple section → click <b>Appease Freya</b>',
-        '5. Repeat: each sacrifice grants +1 Favor toward the next milestone',
-        '6. Alternative: Sell 3 Sheep (🐑) or 10 Wood (🪵) to gain 1 Favor'
-      ],
+      favorAction: "Appease with <b>Freya's Amber Tear</b> at a Town Shrine, or trade Sheep/Wood.",
       wrath: 'Wrath: Recruited units start with -10 max HP.',
       milestoneEffects: [
         'Shieldmaidens gain +5 max HP.',
@@ -162,13 +141,7 @@ export const GODS_CONFIG = {
       icon: '💀',
       color: 'var(--color-hel)',
       relic: "Hel's Urn of Ash",
-      favorSteps: [
-        '1a. <b>Dolmen path:</b> Find a 🏆 Dolmen shrine in a Raid Site → auto-collect <b>Hel\'s Urn of Ash</b>',
-        '1b. <b>Burial path:</b> Find a 🪦 Burial Mound in a Raid Site → choose <b>Sacrifice Sheep</b> (costs 1 🐑)',
-        '2. Sail to any 🏘️ Town on the world map',
-        '3. Open the Town screen → Temple section → click <b>Appease Hel</b>',
-        '4. Repeat: each sacrifice grants +1 Favor toward the next milestone'
-      ],
+      favorAction: "Appease with <b>Hel's Urn of Ash</b> at a Town Shrine, or Sacrifice Sheep at Burial Mounds.",
       wrath: 'Wrath: Dead band members cannot be replaced for 5 turns.',
       milestoneEffects: [
         'Enemies deal -1 DMG.',
@@ -184,13 +157,7 @@ export const GODS_CONFIG = {
       icon: '🎭',
       color: 'var(--color-loki)',
       relic: "Loki's Trickster Coin",
-      favorSteps: [
-        "1a. <b>Dolmen path:</b> Find a 🏆 Dolmen shrine in a Raid Site → auto-collect <b>Loki's Trickster Coin</b>",
-        '1b. <b>Plunder path:</b> Find a 🪦 Burial Mound in a Raid Site → choose <b>Plunder Mound</b> (+10 Gold, also pleases Loki)',
-        '2. Sail to any 🏘️ Town on the world map',
-        '3. Open the Town screen → Temple section → click <b>Appease Loki</b>',
-        '4. Repeat: each sacrifice grants +1 Favor toward the next milestone'
-      ],
+      favorAction: "Appease with <b>Loki's Trickster Coin</b> at a Town Shrine, or Plunder Burial Mounds.",
       wrath: 'Wrath: Random event triggers each world move (ambush, resource loss, or unit injury).',
       milestoneEffects: [
         'Chest loot gives +1 extra Gold.',
