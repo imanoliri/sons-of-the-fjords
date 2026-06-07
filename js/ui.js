@@ -451,6 +451,8 @@ export function initUIBindings() {
           e.preventDefault();
           if (activePortalTarget.entity.type === 'cave_entrance') {
             triggerEnterCavePortal(activePortalTarget.coordKey, activePortalTarget.entity);
+          } else if (activePortalTarget.entity.type === 'burial_mound') {
+            triggerEncounterEvent(activePortalTarget.coordKey, activePortalTarget.entity);
           }
         }
         return;
@@ -1691,8 +1693,20 @@ function renderLocationMap() {
     } else if (ent.type === 'burial_mound') {
       textSpan.innerText = '🪦 Burial Mound: ';
 
+      const btnExplore = document.createElement('button');
+      btnExplore.className = 'btn btn-sm btn-primary';
+      btnExplore.style.marginRight = '0.5rem';
+      btnExplore.innerText = '[explore]';
+      btnExplore.addEventListener('click', () => {
+        triggerEncounterEvent(`${px},${py}`, ent);
+      });
+
       const btn1 = document.createElement('button');
-      btn1.className = 'btn btn-sm btn-danger';
+      btn1.className = 'btn btn-sm';
+      btn1.style.backgroundColor = 'var(--color-thor)';
+      btn1.style.color = '#111';
+      btn1.style.borderColor = 'var(--color-thor)';
+      btn1.style.fontWeight = 'bold';
       btn1.style.marginRight = '0.5rem';
       btn1.innerText = '[1] Plunder';
       btn1.addEventListener('click', () => {
@@ -1728,6 +1742,7 @@ function renderLocationMap() {
         notify('STATE_UPDATED');
       });
 
+      elPromptPanel.appendChild(btnExplore);
       elPromptPanel.appendChild(btn1);
       elPromptPanel.appendChild(btn2);
       elPromptPanel.appendChild(btn3);
@@ -1823,7 +1838,7 @@ function renderLocationMap() {
             badge.addEventListener('click', (e) => {
               e.stopPropagation();
               if (x === px && y === py) {
-                // Do nothing: inline options [1], [2], [3] are already shown at the bottom.
+                triggerEncounterEvent(coordKey, ent);
               } else {
                 attemptLocalPathMove(x, y);
               }
@@ -1989,7 +2004,11 @@ function triggerEncounterEvent(coordKey, entity) {
       elModalEventBody.innerText = `You uncover an ancient viking Barrow Grave. Deep markings suggest a warrior tomb. Defile the grave to look for relics, or perform a sacrifice of Sheep to please Hel?`;
 
       const choice1 = document.createElement('button');
-      choice1.classList.add('btn', 'btn-danger');
+      choice1.classList.add('btn');
+      choice1.style.backgroundColor = 'var(--color-thor)';
+      choice1.style.color = '#111';
+      choice1.style.borderColor = 'var(--color-thor)';
+      choice1.style.fontWeight = 'bold';
       choice1.innerText = 'Plunder Mound (+10 Gold, pleases Loki, angers Thor)';
       choice1.addEventListener('click', () => {
         adjustResource('gold', 10);
