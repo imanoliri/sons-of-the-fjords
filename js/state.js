@@ -147,7 +147,7 @@ export function sacrificeRelic(relicId, godName) {
 export function adjustFavor(godName, amt) {
   const opposites = GC.pentagramOpposites;
   const current = STATE.godFavor[godName];
-  if (current >= GC.favorMax) return;
+  if (current >= GC.favorMax && amt > 0) return;
 
   const nextFavor = Math.min(GC.favorMax, Math.max(GC.favorMin, current + amt));
   STATE.godFavor[godName] = nextFavor;
@@ -292,4 +292,26 @@ export function resetGame() {
     ticker: null, selectedPoolIndex: null, spawnTimer: 0,
     locationId: null, entityCoordKey: null, waveMonsters: []
   };
+}
+
+// Execute plundering a burial mound
+export function executePlunderMound(entity) {
+  const action = GC.encounterActions.plunderMound;
+  adjustResource('gold', action.gain.gold);
+  entity.isExplored = true;
+  Object.entries(action.favorChanges).forEach(([god, amt]) => adjustFavor(god, amt));
+  return action;
+}
+
+// Execute sacrifice sheep to Hel
+export function executeSacrificeSheep(entity) {
+  const action = GC.encounterActions.sacrificeSheep;
+  const sheepCost = Math.abs(action.cost.sheep);
+  if (STATE.resources.sheep >= sheepCost) {
+    adjustResource('sheep', -sheepCost);
+    entity.isExplored = true;
+    Object.entries(action.favorChanges).forEach(([god, amt]) => adjustFavor(god, amt));
+    return action;
+  }
+  return null;
 }

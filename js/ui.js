@@ -2,7 +2,7 @@
    UI MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, sellSheep, sellWood } from './state.js';
+import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, sellSheep, sellWood, executePlunderMound, executeSacrificeSheep } from './state.js';
 import { getAdjacentCoords } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
 import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats } from './combat.js';
@@ -462,18 +462,14 @@ export function initUIBindings() {
         const key = e.key;
         if (key === '1') {
           e.preventDefault();
-          adjustResource('gold', 10);
-          activePortalTarget.entity.isExplored = true;
-          adjustFavor('loki', 1);
-          showToast('Plundered Burial Mound! Gained +10 Gold (Thor displeased, Loki pleased).', '🪦');
+          const action = executePlunderMound(activePortalTarget.entity);
+          showToast(action.toast, action.icon);
           notify('STATE_UPDATED');
         } else if (key === '2') {
           e.preventDefault();
-          if (STATE.resources.sheep >= 1) {
-            adjustResource('sheep', -1);
-            activePortalTarget.entity.isExplored = true;
-            adjustFavor('hel', 1);
-            showToast('Sacrificed a sheep to appease Hel.', '🐑');
+          const action = executeSacrificeSheep(activePortalTarget.entity);
+          if (action) {
+            showToast(action.toast, action.icon);
           } else {
             showToast('You have no sheep to sacrifice!', '⚠️');
           }
@@ -1671,10 +1667,8 @@ function renderLocationMap() {
       btn1.style.marginRight = '0.5rem';
       btn1.innerText = '[1] Plunder';
       btn1.addEventListener('click', () => {
-        adjustResource('gold', 10);
-        ent.isExplored = true;
-        adjustFavor('loki', 1);
-        showToast('Plundered Burial Mound! Gained +10 Gold (Thor displeased, Loki pleased).', '🪦');
+        const action = executePlunderMound(ent);
+        showToast(action.toast, action.icon);
         notify('STATE_UPDATED');
       });
 
@@ -1683,11 +1677,9 @@ function renderLocationMap() {
       btn2.style.marginRight = '0.5rem';
       btn2.innerText = '[2] Sacrifice';
       btn2.addEventListener('click', () => {
-        if (STATE.resources.sheep >= 1) {
-          adjustResource('sheep', -1);
-          ent.isExplored = true;
-          adjustFavor('hel', 1);
-          showToast('Sacrificed a sheep to appease Hel.', '🐑');
+        const action = executeSacrificeSheep(ent);
+        if (action) {
+          showToast(action.toast, action.icon);
         } else {
           showToast('You have no sheep to sacrifice!', '⚠️');
         }
@@ -1983,24 +1975,20 @@ function triggerEncounterEvent(coordKey, entity) {
       choice1.classList.add('btn', 'btn-warning');
       choice1.innerText = 'Plunder Mound (+10 Gold, pleases Loki, angers Thor)';
       choice1.addEventListener('click', () => {
-        adjustResource('gold', 10);
-        entity.isExplored = true;
-        adjustFavor('loki', 1);
+        const action = executePlunderMound(entity);
         hideOverlay(elModalEvent);
         notify('STATE_UPDATED');
-        showToast('Plundered Burial Mound! Gained +10 Gold (Thor displeased, Loki pleased).', '🪦');
+        showToast(action.toast, action.icon);
       });
 
       const choice2 = document.createElement('button');
       choice2.classList.add('btn', 'btn-primary');
       choice2.innerText = 'Sacrifice Sheep (-1 Sheep, pleases Hel)';
       choice2.addEventListener('click', () => {
-        if (STATE.resources.sheep >= 1) {
-          adjustResource('sheep', -1);
-          entity.isExplored = true;
-          adjustFavor('hel', 1);
+        const action = executeSacrificeSheep(entity);
+        if (action) {
           hideOverlay(elModalEvent);
-          showToast('Sacrificed a sheep to appease Hel.', '🐑');
+          showToast(action.toast, action.icon);
         } else {
           showToast('You have no sheep to sacrifice!', '⚠️');
         }

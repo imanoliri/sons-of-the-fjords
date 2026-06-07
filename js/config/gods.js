@@ -12,18 +12,18 @@ export const GODS_CONFIG = {
 
   // Pentagram opposites (pleasing one reduces these)
   pentagramOpposites: {
-    odin:  ['freya', 'hel'],
-    thor:  ['hel',   'loki'],
-    freya: ['loki',  'odin'],
-    hel:   ['odin',  'thor'],
-    loki:  ['thor',  'freya']
+    odin: ['freya', 'hel'],
+    thor: ['hel', 'loki'],
+    freya: ['loki', 'odin'],
+    hel: ['odin', 'thor'],
+    loki: ['thor', 'freya']
   },
 
   // Alternative favor targets
   alternativeFavor: {
-    odin: { wolvesTarget: 3, giantsTarget: 1 },
-    thor: { draugrsTarget: 3, lindwurmsTarget: 1 },
-    freya: { sheepTarget: 3, woodTarget: 10 }
+    odin: { wolvesTarget: 2, giantsTarget: 1 },
+    thor: { draugrsTarget: 2, lindwurmsTarget: 1 },
+    freya: { sheepTarget: 2, woodTarget: 5 }
   },
 
   // Relics & magic objects
@@ -36,11 +36,29 @@ export const GODS_CONFIG = {
   },
 
   relicToGod: {
-    'Shard of Gungnir':       'odin',
-    "Mjolnir's Core":         'thor',
-    "Freya's Amber Tear":     'freya',
-    "Hel's Urn of Ash":       'hel',
-    "Loki's Trickster Coin":  'loki'
+    'Shard of Gungnir': 'odin',
+    "Mjolnir's Core": 'thor',
+    "Freya's Amber Tear": 'freya',
+    "Hel's Urn of Ash": 'hel',
+    "Loki's Trickster Coin": 'loki'
+  },
+
+  // Encounter actions
+  encounterActions: {
+    plunderMound: {
+      cost: {},
+      gain: { gold: 10 },
+      favorChanges: { loki: 1 },
+      toast: 'Plundered Burial Mound! Gained +10 Gold (Thor displeased, Loki pleased).',
+      icon: '🪦'
+    },
+    sacrificeSheep: {
+      cost: { sheep: -1 },
+      gain: {},
+      favorChanges: { hel: 1 },
+      toast: 'Sacrificed a sheep to appease Hel.',
+      icon: '🐑'
+    }
   },
 
   // Combat blessings, milestones, and wrath modifiers
