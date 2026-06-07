@@ -56,7 +56,16 @@ export function startCombat(locationId, coordKey, enemyData) {
   }
   const hasLokiBlessing = activeBlessings.has('loki');
 
+  let confusedIndex = -1;
+  if (STATE.godQuests.loki?.[2]) {
+    const totalMonstersCount = enemyData.monsters.reduce((sum, m) => sum + m.count, 0);
+    if (totalMonstersCount > 0) {
+      confusedIndex = Math.floor(Math.random() * totalMonstersCount);
+    }
+  }
+
   let spawnIndex = 0;
+  let spawnedCount = 0;
   for (const m of enemyData.monsters) {
     for (let i = 0; i < m.count; i++) {
       const lane = startLanes[spawnIndex % CFG.gridRows];
@@ -64,7 +73,10 @@ export function startCombat(locationId, coordKey, enemyData) {
       const stats = getMonsterStats(m.monsterClass);
 
       const isCharmed = hasLokiBlessing && Math.random() < 0.25;
-      let spawnCol = isCharmed ? 0 : CFG.gridCols - 1;
+      const isConfused = !isCharmed && spawnedCount === confusedIndex;
+      spawnedCount++;
+
+      let spawnCol = isCharmed ? 0 : (isConfused ? CFG.gridCols - 2 : CFG.gridCols - 1);
       if (isCharmed) {
         // Find first unoccupied column from the left
         for (let c = 0; c < CFG.gridCols; c++) {
@@ -77,15 +89,17 @@ export function startCombat(locationId, coordKey, enemyData) {
 
       const mUnit = {
         id: Date.now() + Math.floor(Math.random() * 1000) + i,
-        name: m.monsterClass + (isCharmed ? ' 🌀' : ''),
+        name: m.monsterClass + (isCharmed ? ' 🌀' : (isConfused ? ' 😵' : '')),
         type: m.monsterClass,
         hp: stats.hp,
         maxHp: stats.hp,
         dmg: stats.dmg,
         speed: stats.speed,
         range: stats.range,
-        alliance: isCharmed ? 'player' : 'enemy',
+        alliance: (isCharmed || isConfused) ? 'player' : 'enemy',
         isCharmed: isCharmed,
+        isConfused: isConfused,
+        confusedTicksLeft: isConfused ? 2 : 0,
         row: lane,
         col: spawnCol
       };
@@ -115,6 +129,14 @@ function combatTick() {
   for (const unit of boardUnits) {
     if (unit.hp <= 0) continue;
 
+    // Freya Milestone 2: Any unit below 25% HP heals 1 HP/tick
+    if (unit.alliance === 'player' && STATE.godQuests.freya?.[1]) {
+      const effStats = getEffectiveStats(unit);
+      if (unit.hp < effStats.maxHp.total * 0.25) {
+        unit.hp = Math.min(effStats.maxHp.total, unit.hp + 1);
+      }
+    }
+
     if (unit.isUndead) {
       unit.undeadTicksLeft--;
       if (unit.undeadTicksLeft <= 0) {
@@ -124,9 +146,40 @@ function combatTick() {
       }
     }
 
+    // Loki Milestone 3 Confusion Tick
+    if (unit.isConfused) {
+      unit.confusedTicksLeft--;
+      if (unit.confusedTicksLeft <= 0) {
+        unit.isConfused = false;
+        unit.alliance = 'enemy';
+        unit.name = unit.type;
+        notify('COMBAT_UPDATE');
+      }
+    }
+
     const target = unit.isFleeing ? null : findTargetInLane(unit);
     if (target) {
-      target.hp -= getEffectiveStats(unit).dmg.total;
+      // Loki Milestone 2: Enemy attack speed reduced by 10%
+      if (unit.alliance === 'enemy' && STATE.godQuests.loki?.[1] && Math.random() < 0.10) {
+        continue; // Skip attack this tick
+      }
+
+      let dmgTaken = getEffectiveStats(unit).dmg.total;
+
+      // Freya Milestone 4: Shieldmaidens block 1 DMG per hit
+      if (target.alliance === 'player' && target.type === 'shieldmaiden' && STATE.godQuests.freya?.[3]) {
+        dmgTaken = Math.max(0, dmgTaken - 1);
+      }
+
+      let nextHp = target.hp - dmgTaken;
+
+      // Hel Milestone 2: Player units survive lethal hits once with 1 HP (once per battle)
+      if (nextHp <= 0 && target.alliance === 'player' && STATE.godQuests.hel?.[1] && !target.hasSurvivedLethal) {
+        target.hasSurvivedLethal = true;
+        nextHp = 1;
+      }
+
+      target.hp = nextHp;
       notify('COMBAT_DAMAGE', { attacker: unit, defender: target });
       unit.isAttacking = true;
       setTimeout(() => { unit.isAttacking = false; }, 200);
@@ -135,6 +188,11 @@ function combatTick() {
         removeUnitFromRegistry(target);
         if (target.alliance === 'enemy') {
           recordMonsterKill(target.type);
+
+          // Hel Milestone 3: Slain enemies drop +1 extra Gold
+          if (STATE.godQuests.hel?.[2]) {
+            adjustResource('gold', 1);
+          }
 
           const activeBlessings = new Set();
           if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
@@ -226,7 +284,7 @@ function findTargetInLane(unit) {
 }
 
 function removeUnitFromRegistry(unit) {
-  if (unit.alliance === 'player' && !unit.isCharmed && !unit.isUndead) {
+  if (unit.alliance === 'player' && !unit.isCharmed && !unit.isUndead && !unit.isConfused) {
     const idx = STATE.band.findIndex(u => u.id === unit.id);
     if (idx !== -1) STATE.band.splice(idx, 1);
   } else {
@@ -244,7 +302,7 @@ function handleUnitReachEnd(unit) {
       checkCombatEndConditions();
       return;
     }
-    if (unit.isUndead) {
+    if (unit.isUndead || unit.isConfused) {
       notify('COMBAT_UPDATE');
       return;
     }

@@ -552,7 +552,13 @@ function buildEntityOfType(locationId, type, terrain, x, y, locationType, diffic
     const maxLimit = ds.maxCountLimit || 6;
     countMin = Math.min(maxLimit, Math.max(1, countMin));
     countMax = Math.min(maxLimit, Math.max(countMin, countMax));
-    const count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
+    let count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
+    
+    // Thor Milestone 3: Enemy spawn rate slowed by 10%
+    if (STATE.godQuests.thor?.[2]) {
+      count = Math.max(1, Math.round(count * 0.9));
+    }
+
     return {
       type: 'enemy_army',
       monsters: [{ monsterClass: selectedMonster, count }],

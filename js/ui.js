@@ -882,12 +882,31 @@ function autoDiscoverAdjacent(locId) {
   const px = STATE.party.localX;
   const py = STATE.party.localY;
   
-  const neighbors = [
-    { x: px + 1, y: py },
-    { x: px - 1, y: py },
-    { x: px, y: py + 1 },
-    { x: px, y: py - 1 }
-  ];
+  let radius = 1;
+  if (STATE.godQuests.odin?.[1]) {
+    radius = 2; // Odin Milestone 2: Scouts reveal a 2-tile radius instead of 1
+  } else if (STATE.godQuests.odin?.[0]) {
+    radius = 2; // Odin Milestone 1: Fog of war reveals 1 extra tile on each move (radius 2 cardinal)
+  }
+
+  const neighbors = [];
+  if (radius === 1) {
+    neighbors.push(
+      { x: px + 1, y: py },
+      { x: px - 1, y: py },
+      { x: px, y: py + 1 },
+      { x: px, y: py - 1 }
+    );
+  } else {
+    // If radius 2 (Manhattan distance <= 2)
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dy = -2; dy <= 2; dy++) {
+        if (Math.abs(dx) + Math.abs(dy) <= 2 && (dx !== 0 || dy !== 0)) {
+          neighbors.push({ x: px + dx, y: py + dy });
+        }
+      }
+    }
+  }
 
   neighbors.forEach(n => {
     if (n.x >= 0 && n.x < 10 && n.y >= 0 && n.y < 10) {
@@ -1514,9 +1533,16 @@ function renderTownScreen() {
     woodSell: { baseGain: 4, minGain: 1, maxGain: 8, woodSold: 10, scarceBonus: 2 }
   };
 
-  const foodCost = Math.max(dp.food.minCost, Math.min(dp.food.maxCost, dp.food.baseCost + Math.floor((snowCount + mountainCount) / 2) - Math.floor((waterCount + plainsCount) / 2)));
-  const woodCost = Math.max(dp.woodBuy.minCost, Math.min(dp.woodBuy.maxCost, dp.woodBuy.baseCost + (forestCount === 0 ? dp.woodBuy.scarceBonus : 0) - Math.floor(forestCount / 3)));
-  const sheepBuyCost = Math.max(dp.sheepBuy.minCost, Math.min(dp.sheepBuy.maxCost, dp.sheepBuy.baseCost - Math.floor(plainsCount / 2) + Math.floor((snowCount + mountainCount + waterCount) / 3)));
+  let foodCost = Math.max(dp.food.minCost, Math.min(dp.food.maxCost, dp.food.baseCost + Math.floor((snowCount + mountainCount) / 2) - Math.floor((waterCount + plainsCount) / 2)));
+  let woodCost = Math.max(dp.woodBuy.minCost, Math.min(dp.woodBuy.maxCost, dp.woodBuy.baseCost + (forestCount === 0 ? dp.woodBuy.scarceBonus : 0) - Math.floor(forestCount / 3)));
+  let sheepBuyCost = Math.max(dp.sheepBuy.minCost, Math.min(dp.sheepBuy.maxCost, dp.sheepBuy.baseCost - Math.floor(plainsCount / 2) + Math.floor((snowCount + mountainCount + waterCount) / 3)));
+
+  if (STATE.godQuests.loki?.[3]) {
+    foodCost = Math.max(dp.food.minCost, foodCost - 1);
+    woodCost = Math.max(dp.woodBuy.minCost, woodCost - 1);
+    sheepBuyCost = Math.max(dp.sheepBuy.minCost, sheepBuyCost - 1);
+  }
+
   const sheepSellGain = Math.max(dp.sheepSell.minGain, Math.min(dp.sheepSell.maxGain, dp.sheepSell.baseGain + (plainsCount <= 1 ? dp.sheepSell.scarceBonus : 0) - Math.floor(plainsCount / 3)));
   const woodSellGain = Math.max(dp.woodSell.minGain, Math.min(dp.woodSell.maxGain, dp.woodSell.baseGain + (forestCount <= 1 ? dp.woodSell.scarceBonus : 0) - Math.floor(forestCount / 3)));
 
@@ -1710,6 +1736,27 @@ function renderTownScreen() {
       const dummy = { type: t, hp: 0, maxHp: 0, dmg: 0, speed: 0, range: 0 };
       const eff = getEffectiveStats(dummy);
       el.innerText = `HP: ${formatStat(eff.maxHp)} | ATK: ${formatStat(eff.dmg)} | SPD: ${formatStat(eff.speed)} | RNG: ${formatStat(eff.range)}`;
+    }
+  });
+
+  // Hel milestone 4: Gold cost to recruit is reduced by 1
+  const baseCosts = {
+    shieldmaiden: { gold: 5, food: 10 },
+    berserker: { gold: 7, sheep: 1 },
+    huntsman: { gold: 6, wood: 3 }
+  };
+  ['shieldmaiden', 'berserker', 'huntsman'].forEach(t => {
+    const labelEl = document.getElementById(`label-recruit-${t}`);
+    if (labelEl) {
+      let gCost = baseCosts[t].gold;
+      if (STATE.godQuests.hel?.[3]) {
+        gCost = Math.max(0, gCost - 1);
+      }
+      const otherRes = Object.keys(baseCosts[t]).find(k => k !== 'gold');
+      const otherAmt = baseCosts[t][otherRes];
+      const otherLabel = otherRes.charAt(0).toUpperCase() + otherRes.slice(1);
+      const capName = t.charAt(0).toUpperCase() + t.slice(1);
+      labelEl.innerText = `Hire ${capName} (-${gCost} Gold, -${otherAmt} ${otherLabel})`;
     }
   });
 }
@@ -2074,9 +2121,13 @@ function triggerEnterCavePortal(coordKey, entity) {
 // Renders choice dialogs for location interactions
 function triggerEncounterEvent(coordKey, entity) {
   if (entity.type === 'treasure') {
-    adjustResource('gold', entity.silver);
+    let goldGained = entity.silver;
+    if (STATE.godQuests.loki?.[0]) {
+      goldGained += 1;
+    }
+    adjustResource('gold', goldGained);
     entity.isLooted = true;
-    showToast(`Uncovered buried chest! Looted +${entity.silver} Gold.`, '🪙');
+    showToast(`Uncovered buried chest! Looted +${goldGained} Gold.${STATE.godQuests.loki?.[0] ? ' (Loki bonus +1)' : ''}`, '🪙');
     notify('STATE_UPDATED');
   } 
   else if (entity.type === 'wood_source') {

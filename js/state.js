@@ -393,8 +393,14 @@ export function buyRecruit(type, cost) {
     return { success: false, message: `Your Drakkar deck is full (max ${SC.maxBandSize} soldiers)!` };
   }
   
+  // Hel milestone 4: Gold cost to recruit is reduced by 1
+  let finalCost = { ...cost };
+  if (STATE.godQuests.hel?.[3] && finalCost.gold) {
+    finalCost.gold = Math.max(0, finalCost.gold - 1);
+  }
+  
   // Check all resource requirements
-  for (const [res, amt] of Object.entries(cost)) {
+  for (const [res, amt] of Object.entries(finalCost)) {
     if ((STATE.resources[res] || 0) < amt) {
       const resLabel = res.charAt(0).toUpperCase() + res.slice(1);
       return { success: false, message: `Not enough ${resLabel} to hire recruit!` };
@@ -402,7 +408,7 @@ export function buyRecruit(type, cost) {
   }
 
   // Deduct resources
-  for (const [res, amt] of Object.entries(cost)) {
+  for (const [res, amt] of Object.entries(finalCost)) {
     adjustResource(res, -amt);
   }
 
