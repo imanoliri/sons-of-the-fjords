@@ -13,6 +13,11 @@ import { WORLD_CONFIG } from './config/world.js';
 import { GODS_CONFIG } from './config/gods.js';
 import { SOLDIERS_CONFIG } from './config/soldiers.js';
 
+function formatStat(statObj) {
+  const sign = statObj.bonus >= 0 ? '+' : '';
+  return `${statObj.base} (${sign}${statObj.bonus})`;
+}
+
 // DOM Selectors
 const elHeader = document.getElementById('game-header');
 const elGold = document.getElementById('res-gold').querySelector('.val');
@@ -806,20 +811,11 @@ function initTooltipEvents() {
           const allianceText = unit.alliance === 'player' ? 'Viking Soldier' : 'Monster';
           headerText = `${unit.name} (${allianceText})`;
           
-          const formatVal = (statObj) => {
-            if (statObj.bonus !== 0) {
-              const sign = statObj.bonus > 0 ? ' + ' : ' - ';
-              const absBonus = Math.abs(statObj.bonus);
-              return `${statObj.base}${sign}${absBonus} (Total: ${statObj.total})`;
-            }
-            return `${statObj.base}`;
-          };
-
-          const contents = [
-            `<b>HP:</b> ${unit.hp} / ${formatVal(stats.maxHp)}`,
-            `<b>Damage:</b> ${formatVal(stats.dmg)}`,
-            `<b>Range:</b> ${formatVal(stats.range)}`,
-            `<b>Speed:</b> ${formatVal(stats.speed)}`
+           const contents = [
+            `<b>HP:</b> ${unit.hp} / ${formatStat(stats.maxHp)}`,
+            `<b>Damage:</b> ${formatStat(stats.dmg)}`,
+            `<b>Range:</b> ${formatStat(stats.range)}`,
+            `<b>Speed:</b> ${formatStat(stats.speed)}`
           ];
           contentsText = contents.join('<br>');
         } else {
@@ -1706,6 +1702,16 @@ function renderTownScreen() {
       }
     }
   }
+
+  // Render recruiting stats with modifiers
+  ['shieldmaiden', 'berserker', 'huntsman'].forEach(t => {
+    const el = document.getElementById(`recruit-stats-${t}`);
+    if (el) {
+      const dummy = { type: t, hp: 0, maxHp: 0, dmg: 0, speed: 0, range: 0 };
+      const eff = getEffectiveStats(dummy);
+      el.innerText = `HP: ${formatStat(eff.maxHp)} | ATK: ${formatStat(eff.dmg)} | SPD: ${formatStat(eff.speed)} | RNG: ${formatStat(eff.range)}`;
+    }
+  });
 }
 
 // Render 10x10 Dungeon Discovery View (Carcassonne)
@@ -2489,6 +2495,8 @@ function renderPartyPanel() {
       details.style.flexDirection = 'column';
       details.style.gap = '2px';
       
+      const effStats = getEffectiveStats(unit);
+
       const name = document.createElement('span');
       const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
       name.innerHTML = `<b>${icons[unit.type] || '⚔️'} ${unit.name}</b> (${unit.type.toUpperCase()})`;
@@ -2496,7 +2504,7 @@ function renderPartyPanel() {
       const stats = document.createElement('span');
       stats.style.fontSize = '0.75rem';
       stats.style.color = 'var(--text-muted)';
-      stats.innerText = `ATK: ${unit.dmg} | SPD: ${unit.speed} | RNG: ${unit.range}`;
+      stats.innerText = `ATK: ${formatStat(effStats.dmg)} | SPD: ${formatStat(effStats.speed)} | RNG: ${formatStat(effStats.range)}`;
       
       details.appendChild(name);
       details.appendChild(stats);
@@ -2510,7 +2518,7 @@ function renderPartyPanel() {
 
       const hpText = document.createElement('span');
       hpText.style.fontSize = '0.8rem';
-      hpText.innerHTML = `HP: <b>${unit.hp}</b> / ${unit.maxHp}`;
+      hpText.innerHTML = `HP: <b>${unit.hp}</b> / ${formatStat(effStats.maxHp)}`;
 
       const hbContainer = document.createElement('div');
       hbContainer.className = 'health-bar-container';
@@ -2524,7 +2532,7 @@ function renderPartyPanel() {
       const hbFill = document.createElement('div');
       hbFill.className = 'health-bar-fill';
       hbFill.style.height = '100%';
-      hbFill.style.width = `${(unit.hp / unit.maxHp) * 100}%`;
+      hbFill.style.width = `${(unit.hp / effStats.maxHp.total) * 100}%`;
       hbFill.style.background = 'var(--color-success)';
 
       hbContainer.appendChild(hbFill);

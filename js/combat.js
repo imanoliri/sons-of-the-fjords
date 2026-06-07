@@ -409,7 +409,7 @@ function shuffleArray(arr) {
 }
 
 export function getEffectiveStats(unit) {
-  const isPlayer = unit.alliance === 'player';
+  const isPlayer = unit.alliance === 'player' || ['shieldmaiden', 'berserker', 'huntsman'].includes(unit.type);
   let baseMaxHp = unit.maxHp;
   let baseDmg = unit.dmg;
   let baseSpeed = unit.speed;
