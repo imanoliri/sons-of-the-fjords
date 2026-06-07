@@ -68,6 +68,7 @@ export const STATE = {
 
   // Active Champion Buff
   activeBlessing: null,
+  permanentlyActivatedBlessings: [],
 
   // Combat details
   combat: {
@@ -287,6 +288,7 @@ export function resetGame() {
   STATE.freyaWoodSold = 0;
   STATE.day = 1;
   STATE.activeBlessing = null;
+  STATE.permanentlyActivatedBlessings = [];
   STATE.combat = {
     active: false, grid: [], pool: [], paused: true,
     ticker: null, selectedPoolIndex: null, spawnTimer: 0,

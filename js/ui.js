@@ -1170,9 +1170,22 @@ function renderResourceBar() {
 
   const activeWraths = Object.keys(STATE.godFavor).filter(g => STATE.godFavor[g] <= -4);
   let blessingHtml = '';
+  const tempBlessings = [];
   if (STATE.activeBlessing) {
     const lore = GOD_LORE[STATE.activeBlessing];
-    blessingHtml = `<span class="icon">${lore.icon}</span> <span style="color: var(--color-${STATE.activeBlessing})">${STATE.activeBlessing.toUpperCase()}'S BLESSING</span>`;
+    tempBlessings.push(`<span style="color: var(--color-${STATE.activeBlessing})">${lore.icon} ${STATE.activeBlessing.toUpperCase()}</span>`);
+  }
+  if (STATE.permanentlyActivatedBlessings && STATE.permanentlyActivatedBlessings.length > 0) {
+    STATE.permanentlyActivatedBlessings.forEach(b => {
+      if (b !== STATE.activeBlessing) {
+        const lore = GOD_LORE[b];
+        tempBlessings.push(`<span style="color: var(--color-${b})">${lore.icon} ${b.toUpperCase()} (Perm)</span>`);
+      }
+    });
+  }
+
+  if (tempBlessings.length > 0) {
+    blessingHtml = `Buffs: ${tempBlessings.join(', ')}`;
   } else {
     blessingHtml = `<span>No Active Buff</span>`;
   }
@@ -1561,35 +1574,63 @@ function renderTownScreen() {
     ascendedGods.forEach(god => {
       const lore = GOD_LORE[god];
       const isActive = STATE.activeBlessing === god;
+      const isPermanent = STATE.permanentlyActivatedBlessings && STATE.permanentlyActivatedBlessings.includes(god);
+      
       const row = document.createElement('div');
       row.classList.add('trade-row');
+      
       const label = document.createElement('span');
-      label.innerHTML = isActive
-        ? `<b style="color:${lore.color}">${lore.icon} ${god.charAt(0).toUpperCase() + god.slice(1)}</b> <span style="color:var(--color-success);font-size:0.8em">● ACTIVE</span><br><i style="font-size:0.82em;opacity:0.75">${lore.buff}</i>`
-        : `${lore.icon} ${god.charAt(0).toUpperCase() + god.slice(1)}<br><i style="font-size:0.82em;opacity:0.75">${lore.buff}</i>`;
-      const btn = document.createElement('button');
-      btn.classList.add('btn', 'btn-sm');
-      if (isActive) {
-        btn.innerText = 'Active';
-        btn.disabled = true;
+      if (isPermanent) {
+        label.innerHTML = `<b style="color:${lore.color}">${lore.icon} ${god.charAt(0).toUpperCase() + god.slice(1)}</b> <span style="color:var(--color-success);font-size:0.8em">✨ PERMANENT ACTIVE</span><br><i style="font-size:0.82em;opacity:0.75">${lore.buff}</i>`;
+      } else if (isActive) {
+        label.innerHTML = `<b style="color:${lore.color}">${lore.icon} ${god.charAt(0).toUpperCase() + god.slice(1)}</b> <span style="color:var(--text-muted);font-size:0.8em">● CURRENT PATRON</span><br><i style="font-size:0.82em;opacity:0.75">${lore.buff}</i>`;
       } else {
-        btn.classList.add('btn-primary');
-        const cost = GODS_CONFIG.patronSwitchCost || 5;
-        btn.innerText = `Switch (${cost} Gold)`;
-        btn.addEventListener('click', () => {
-          if (STATE.resources.gold < cost) {
-            showToast('Not enough Gold to switch Divine Patron.', '💰');
+        label.innerHTML = `${lore.icon} ${god.charAt(0).toUpperCase() + god.slice(1)}<br><i style="font-size:0.82em;opacity:0.75">${lore.buff}</i>`;
+      }
+
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display: flex; gap: 0.5rem;';
+
+      if (!isPermanent) {
+        if (!isActive) {
+          const switchBtn = document.createElement('button');
+          switchBtn.classList.add('btn', 'btn-sm', 'btn-primary');
+          const cost = GODS_CONFIG.patronSwitchCost || 5;
+          switchBtn.innerText = `Switch (${cost}g)`;
+          switchBtn.addEventListener('click', () => {
+            if (STATE.resources.gold < cost) {
+              showToast('Not enough Gold to switch Divine Patron.', '💰');
+              return;
+            }
+            adjustResource('gold', -cost);
+            STATE.activeBlessing = god;
+            notify('STATE_UPDATED');
+            showToast(`${lore.icon} ${god.charAt(0).toUpperCase() + god.slice(1)} is now your Divine Patron!`, lore.icon);
+            renderTownScreen();
+          });
+          actions.appendChild(switchBtn);
+        }
+
+        const permBtn = document.createElement('button');
+        permBtn.classList.add('btn', 'btn-sm', 'btn-warning');
+        permBtn.innerText = 'Perm Unlock (100g)';
+        permBtn.addEventListener('click', () => {
+          if (STATE.resources.gold < 100) {
+            showToast('Not enough Gold for permanent activation.', '💰');
             return;
           }
-          adjustResource('gold', -cost);
-          STATE.activeBlessing = god;
+          adjustResource('gold', -100);
+          if (!STATE.permanentlyActivatedBlessings) STATE.permanentlyActivatedBlessings = [];
+          STATE.permanentlyActivatedBlessings.push(god);
           notify('STATE_UPDATED');
-          showToast(`${lore.icon} ${god.charAt(0).toUpperCase() + god.slice(1)} is now your Divine Patron!`, lore.icon);
+          showToast(`${lore.icon} ${god.charAt(0).toUpperCase() + god.slice(1)} Buff permanently activated!`, lore.icon, true);
           renderTownScreen();
         });
+        actions.appendChild(permBtn);
       }
+
       row.appendChild(label);
-      row.appendChild(btn);
+      row.appendChild(actions);
       elPatronList.appendChild(row);
     });
   } else {
@@ -2337,7 +2378,12 @@ function renderQuestsScreen() {
       btn.dataset.godTooltip = gKey;
       btn.dataset.tooltipSection = 'champion';
       
-      if (STATE.activeBlessing === gKey) {
+      const isPermanent = STATE.permanentlyActivatedBlessings && STATE.permanentlyActivatedBlessings.includes(gKey);
+      if (isPermanent) {
+        btn.innerText = 'Always Active ✨';
+        btn.classList.add('btn-success');
+        btn.disabled = true;
+      } else if (STATE.activeBlessing === gKey) {
         btn.innerText = 'Active ✨';
         btn.classList.add('btn-primary');
       } else {

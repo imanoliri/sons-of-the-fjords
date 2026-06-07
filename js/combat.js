@@ -318,15 +318,24 @@ export function getEffectiveStats(unit) {
   let bonusRange = 0;
 
   if (isPlayer) {
-    // Apply Active Blessing modifiers
-    const blessing = STATE.activeBlessing;
-    if (blessing && GC.modifiers.blessings[blessing]) {
-      const bMod = GC.modifiers.blessings[blessing];
-      if (bMod.targetType === 'all' || bMod.targetType === unit.type) {
-        if (bMod.maxHp) bonusMaxHp += bMod.maxHp;
-        if (bMod.dmg) bonusDmg += bMod.dmg;
-        if (bMod.speed) bonusSpeed += bMod.speed;
-        if (bMod.range) bonusRange += bMod.range;
+    // Apply Active and Permanently Activated Blessing modifiers
+    const activeBlessings = new Set();
+    if (STATE.activeBlessing) {
+      activeBlessings.add(STATE.activeBlessing);
+    }
+    if (STATE.permanentlyActivatedBlessings) {
+      STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
+    }
+
+    for (const blessing of activeBlessings) {
+      if (GC.modifiers.blessings[blessing]) {
+        const bMod = GC.modifiers.blessings[blessing];
+        if (bMod.targetType === 'all' || bMod.targetType === unit.type) {
+          if (bMod.maxHp) bonusMaxHp += bMod.maxHp;
+          if (bMod.dmg) bonusDmg += bMod.dmg;
+          if (bMod.speed) bonusSpeed += bMod.speed;
+          if (bMod.range) bonusRange += bMod.range;
+        }
       }
     }
 
