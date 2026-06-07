@@ -2424,6 +2424,68 @@ function renderCombatGrid() {
   });
 }
 
+function showGodLorePopup(gKey) {
+  const lore = GOD_LORE[gKey];
+  if (!lore) return;
+
+  elModalEventTitle.innerText = lore.title;
+  elModalEventTitle.style.color = lore.color;
+
+  const track = STATE.godQuests[gKey];
+  const milestoneList = lore.milestoneEffects.map((effect, idx) => {
+    let desc = effect;
+    if (!desc && idx === 4) {
+      desc = "Unlocks this god's secret Blessing!";
+    }
+    const check = track[idx] ? '✅' : '🔒';
+    return `<li style="margin-bottom: 4px; color: ${track[idx] ? 'var(--text-primary)' : 'var(--text-muted)'}">${check} Milestone ${idx + 1}: ${desc || ''}</li>`;
+  }).join('');
+
+  const favorStepsHtml = lore.favorSteps.map(step => `<li style="margin-bottom: 4px;">${step}</li>`).join('');
+
+  elModalEventBody.innerHTML = `
+    <div style="text-align: left; display: flex; flex-direction: column; gap: 1rem; max-height: 400px; overflow-y: auto; padding-right: 8px;">
+      <p><b>🏺 Relic:</b> ${lore.relic}</p>
+      
+      <div>
+        <p style="font-weight: bold; color: ${lore.color}; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;">👑 Active Blessing (Champion Buff)</p>
+        <p style="margin-top: 4px; font-style: italic;">${lore.buff}</p>
+      </div>
+
+      <div>
+        <p style="font-weight: bold; color: var(--color-danger); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;">⚠️ Active Curse (Wrath)</p>
+        <p style="margin-top: 4px; font-style: italic;">${lore.wrath}</p>
+      </div>
+
+      <div>
+        <p style="font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;">📋 How to gain Favor</p>
+        <ul style="margin-top: 4px; padding-left: 1.2rem; font-size: 0.85rem; line-height: 1.4;">
+          ${favorStepsHtml}
+        </ul>
+      </div>
+
+      <div>
+        <p style="font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;">ᚱ Milestones Progression</p>
+        <ul style="margin-top: 4px; padding-left: 0; list-style: none; font-size: 0.85rem; line-height: 1.4;">
+          ${milestoneList}
+        </ul>
+      </div>
+    </div>
+  `;
+
+  elModalEventChoices.innerHTML = '';
+  const btnClose = document.createElement('button');
+  btnClose.classList.add('btn', 'btn-primary');
+  btnClose.innerText = 'Close';
+  btnClose.addEventListener('click', () => {
+    hideOverlay(elModalEvent);
+  });
+  elModalEventChoices.appendChild(btnClose);
+  
+  showOverlay(elModalEvent);
+  updateModalKeyboardNavigation();
+}
+
 // Render Gods Progress screens
 function renderQuestsScreen() {
   elQuestsList.innerHTML = '';
@@ -2440,7 +2502,10 @@ function renderQuestsScreen() {
     idCol.classList.add('god-identity');
     idCol.dataset.godTooltip = gKey;
     idCol.dataset.tooltipSection = 'identity';
-    idCol.style.cursor = 'help';
+    idCol.style.cursor = 'pointer';
+    idCol.addEventListener('click', () => {
+      showGodLorePopup(gKey);
+    });
     
     const favor = STATE.godFavor[gKey];
     const favorColor = favor > 0 ? 'var(--color-success)' : favor < 0 ? 'var(--color-danger)' : 'var(--text-muted)';
