@@ -103,29 +103,24 @@ export function initUIBindings() {
     setScreen('world');
   });
 
-  // Helper: figure out where to return after a quest/overlay — towns go to world, raids go to location
-  function screenAfterOverlay() {
-    const locId = STATE.party.currentLocationId;
-    if (!locId) return 'world';
-    const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
-    return (locData && locData.type === 'town') ? 'world' : 'location';
-  }
-
   // Toggle Quest Screen
   document.getElementById('btn-toggle-quests').addEventListener('click', () => {
+    if (STATE.activeScreen === 'combat') return;
     if (STATE.activeScreen === 'quests') {
-      setScreen(screenAfterOverlay());
+      setScreen(STATE.questsReturnScreen || 'world');
     } else {
+      STATE.questsReturnScreen = STATE.activeScreen;
       setScreen('quests');
     }
   });
 
   document.getElementById('btn-close-quests').addEventListener('click', () => {
-    setScreen(screenAfterOverlay());
+    setScreen(STATE.questsReturnScreen || 'world');
   });
 
   // Toggle Party Screen
   bindButton('btn-toggle-party', () => {
+    if (STATE.activeScreen === 'combat') return;
     renderPartyPanel();
     showOverlay(elPartyModal);
   });
