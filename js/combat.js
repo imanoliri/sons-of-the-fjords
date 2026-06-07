@@ -189,9 +189,31 @@ function handleUnitReachEnd(unit) {
     const resTypes = ['gold', 'food', 'wood', 'sheep'];
     const rType = resTypes[Math.floor(Math.random() * resTypes.length)];
     adjustResource(rType, -CFG.enemyBreachDrain);
-    const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
-    if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
     notify('COMBAT_BREACH', { unit, stolen: rType });
+
+    // Reappear in a random lane on the side opposite to you
+    const sizeR = CFG.gridRows;
+    const sizeC = CFG.gridCols;
+    const grid = STATE.combat.grid;
+
+    const startLanes = Array.from({ length: sizeR }, (_, i) => i);
+    startLanes.sort(() => Math.random() - 0.5);
+
+    let relocated = false;
+    for (const lane of startLanes) {
+      if (!grid[lane][sizeC - 1]) {
+        unit.row = lane;
+        unit.col = sizeC - 1;
+        grid[lane][sizeC - 1] = unit;
+        relocated = true;
+        break;
+      }
+    }
+
+    if (!relocated) {
+      const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
+      if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
+    }
   }
 }
 
