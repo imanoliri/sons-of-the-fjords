@@ -253,10 +253,79 @@ function combatTick() {
       }
 
       if (shouldMove) {
-        const speedVal = getEffectiveStats(unit).speed?.total || 1;
+        const fullSpeedVal = getEffectiveStats(unit).speed?.total || 1;
+        let speedVal = 1; // Default normal movement
+
+        // Check if any of the three leap conditions are satisfied:
+        // 1. An enemy is in range of the unit's full leap distance
+        // 2. An engaged ally in front can be pushed back
+        // 3. The unit can reach the enemy base at the end of the lane
+        let canLeap = false;
+        
+        // Condition 3: Reach enemy base (col sizeC for player, col -1 for enemy / fleeing)
+        if (dir === 1 && unit.col + fullSpeedVal >= sizeC) {
+          canLeap = true;
+        } else if (dir === -1 && unit.col - fullSpeedVal < 0) {
+          canLeap = true;
+        }
+
+        // Condition 1 & 2: Search cells in front up to full speed distance
+        if (!canLeap) {
+          for (let step = 1; step <= fullSpeedVal; step++) {
+            const testCol = unit.col + (dir * step);
+            if (testCol >= 0 && testCol < sizeC) {
+              const cell = grid[unit.row][testCol];
+              if (cell) {
+                // If it's an enemy, it's in range (Condition 1)
+                if (cell.alliance !== unit.alliance) {
+                  canLeap = true;
+                  break;
+                }
+                // If it's an ally and the moving unit is a Berserker (Condition 2)
+                if (unit.type === 'berserker' && cell.alliance === unit.alliance) {
+                  const engaged = findTargetInLane(cell);
+                  if (engaged) {
+                    // engaged ally push possibility check
+                    const pushDir = -dir;
+                    let currentPushCol = cell.col;
+                    let pushPossible = true;
+                    while (true) {
+                      const checkCol = currentPushCol + pushDir;
+                      if (checkCol < 0 || checkCol >= sizeC) {
+                        pushPossible = false;
+                        break;
+                      }
+                      const other = grid[unit.row][checkCol];
+                      if (other) {
+                        if (other.alliance !== unit.alliance) {
+                          pushPossible = false;
+                          break;
+                        } else if (other.id === unit.id) {
+                          break; // can push into ourselves
+                        } else {
+                          currentPushCol = checkCol;
+                        }
+                      } else {
+                        break;
+                      }
+                    }
+                    if (pushPossible) {
+                      canLeap = true;
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        if (canLeap) {
+          speedVal = fullSpeedVal;
+        }
+
         let lastValidCol = unit.col;
         let reachedBoundary = false;
-        
         let berserkerPushedAlly = false;
 
         for (let step = 1; step <= speedVal; step++) {
