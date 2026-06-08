@@ -146,7 +146,7 @@ export const GODS_CONFIG = {
       milestoneEffects: [
         'Enemies deal -1 DMG.',
         'Player units survive lethal hits once with 1 HP (once per battle).',
-        'Slain enemies drop +1 extra Gold.',
+        'Slain enemies drop 1 Gold.',
         'Enemies move 10% slower and attack 10% slower.',
         null
       ],
