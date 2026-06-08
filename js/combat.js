@@ -341,7 +341,8 @@ function combatTick() {
                   if (cell && cell.alliance !== unit.alliance) {
                     // If the enemy has no target in range, they will move 1 step forward (moving)
                     const isMoving = !findTargetInLane(cell);
-                    const maxDistance = isMoving ? (fullLeapVal + 2) : (fullLeapVal + 1);
+                    const rowDist = Math.abs(unit.row - r);
+                    const maxDistance = (isMoving ? (fullLeapVal + 2) : (fullLeapVal + 1)) - rowDist;
                     if (step <= maxDistance) {
                       canLeap = true;
                       break;
@@ -541,18 +542,21 @@ function findTargetInLane(unit) {
     for (const rToCheck of targetRows) {
       for (let cToCheck = 0; cToCheck < CFG.gridCols; cToCheck++) {
         const colDist = (cToCheck - unit.col) * dir;
-        if (colDist >= 0 && colDist <= range) {
-          const cell = grid[rToCheck][cToCheck];
-          if (cell && cell.alliance !== unit.alliance) {
-            const manhattan = Math.abs(unit.row - rToCheck) + Math.abs(unit.col - cToCheck);
-            const priorityDist = (rToCheck === unit.row) ? (manhattan - 1) : manhattan;
+        if (colDist >= 0) {
+          const rowDist = Math.abs(unit.row - rToCheck);
+          const manhattan = colDist + rowDist;
+          if (manhattan <= range) {
+            const cell = grid[rToCheck][cToCheck];
+            if (cell && cell.alliance !== unit.alliance) {
+              const priorityDist = (rToCheck === unit.row) ? (manhattan - 1) : manhattan;
 
-            if (priorityDist < bestPriority) {
-              bestPriority = priorityDist;
-              bestTarget = cell;
-            } else if (priorityDist === bestPriority) {
-              if (rToCheck === unit.row) {
+              if (priorityDist < bestPriority) {
+                bestPriority = priorityDist;
                 bestTarget = cell;
+              } else if (priorityDist === bestPriority) {
+                if (rToCheck === unit.row) {
+                  bestTarget = cell;
+                }
               }
             }
           }
