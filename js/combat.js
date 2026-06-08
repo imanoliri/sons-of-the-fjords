@@ -142,6 +142,7 @@ function combatTick() {
   if (STATE.combat.paused || !STATE.combat.active) return;
 
   const grid = STATE.combat.grid;
+  const gridSnapshot = grid.map(row => [...row]);
   const sizeR = CFG.gridRows;
   const sizeC = CFG.gridCols;
 
@@ -165,7 +166,7 @@ function combatTick() {
     if (unit.alliance === 'player' && unit.type === 'shieldmaiden') {
       const isFreyaActive = STATE.activeBlessing === 'freya' || (STATE.permanentlyActivatedBlessings && STATE.permanentlyActivatedBlessings.includes('freya'));
       if (isFreyaActive) {
-        const currentTarget = findTargetInLane(unit);
+        const currentTarget = findTargetInLane(unit, gridSnapshot);
         // "not in melee": target is null or distance to target is greater than 1
         const inMelee = currentTarget && Math.abs(currentTarget.col - unit.col) <= 1;
         if (!inMelee) {
@@ -207,7 +208,7 @@ function combatTick() {
       }
     }
 
-    const target = unit.isFleeing ? null : findTargetInLane(unit);
+    const target = unit.isFleeing ? null : findTargetInLane(unit, gridSnapshot);
     if (target) {
       // Loki Milestone 2: Enemy attack speed reduced by 10% (10% miss chance)
       if (unit.alliance === 'enemy' && STATE.godQuests.loki?.[1] && Math.random() < 0.10) {
@@ -230,7 +231,7 @@ function combatTick() {
       const attackCount = isDoubleAttack ? 2 : 1;
 
       for (let i = 0; i < attackCount; i++) {
-        const currentTarget = (i === 0) ? target : (unit.isFleeing ? null : findTargetInLane(unit));
+        const currentTarget = (i === 0) ? target : (unit.isFleeing ? null : findTargetInLane(unit, gridSnapshot));
         if (!currentTarget) break;
 
         let dmgTaken = getEffectiveStats(unit).dmg.total;
@@ -340,7 +341,7 @@ function combatTick() {
                   const cell = grid[r][testCol];
                   if (cell && cell.alliance !== unit.alliance) {
                     // If the enemy has no target in range, they will move 1 step forward (moving)
-                    const isMoving = !findTargetInLane(cell);
+                    const isMoving = !findTargetInLane(cell, gridSnapshot);
                     const maxDistance = isMoving ? (fullLeapVal + 2) : (fullLeapVal + 1);
                     if (step <= maxDistance) {
                       canLeap = true;
@@ -359,7 +360,7 @@ function combatTick() {
             if (nextCol >= 0 && nextCol < sizeC) {
               const cell = grid[unit.row][nextCol];
               if (cell && cell.alliance === unit.alliance) {
-                const engaged = findTargetInLane(cell);
+                const engaged = findTargetInLane(cell, gridSnapshot);
                 if (engaged) {
                   const pushDir = -dir;
                   let currentPushCol = cell.col;
@@ -420,7 +421,7 @@ function combatTick() {
             // Berserker specific pushback logic:
             // If the moving unit is a Berserker, and the ally in front (obstacle) is engaged in combat:
             if (unit.type === 'berserker' && !berserkerPushedAlly) {
-              const engaged = findTargetInLane(obstacle);
+              const engaged = findTargetInLane(obstacle, gridSnapshot);
               if (engaged) {
                 // Determine push chain to the left (reverse of movement direction)
                 // Direction of push is -dir
@@ -527,8 +528,7 @@ function combatTick() {
   checkCombatEndConditions();
 }
 
-function findTargetInLane(unit) {
-  const grid = STATE.combat.grid;
+function findTargetInLane(unit, grid = STATE.combat.grid) {
   const dir = unit.alliance === 'player' ? 1 : -1;
   const range = getEffectiveStats(unit).range.total;
 
