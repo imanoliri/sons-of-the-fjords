@@ -94,7 +94,7 @@ export function startCombat(locationId, coordKey, enemyData) {
       }
 
       const mUnit = {
-        id: Date.now() + Math.floor(Math.random() * 1000) + i,
+        id: Date.now() + "_" + spawnedCount + "_" + Math.floor(Math.random() * 1000),
         name: m.monsterClass + (isCharmed ? ' 🌀' : (isConfused ? ' 😵' : '')),
         type: m.monsterClass,
         hp: stats.hp,
