@@ -2515,12 +2515,19 @@ function renderQuestsScreen() {
   // To map opposites exactly across the star, the gods must be arranged in the polar coordinate order:
   // odin, thor, freya, hel, loki. (Top starts at -90 degrees, increments by 72 deg).
   const gods = ['odin', 'thor', 'freya', 'hel', 'loki'];
+  // Larger Pentagram Coordinates with Radius = 44 (Center = 50, 50)
+  // top = 50 - 44 * cos(angle), left = 50 + 44 * sin(angle)
+  // odin: angle = 0   => top: 6%, left: 50%
+  // thor: angle = 72  => top: 36.40%, left: 91.85%
+  // freya: angle = 144 => top: 85.60%, left: 75.86%
+  // hel: angle = 216   => top: 85.60%, left: 24.14%
+  // loki: angle = 288  => top: 36.40%, left: 8.15%
   const coordinates = {
-    odin: { top: '10%', left: '50%' },
-    thor: { top: '37.64%', left: '88.04%' },
-    freya: { top: '82.36%', left: '73.51%' },
-    hel: { top: '82.36%', left: '26.49%' },
-    loki: { top: '37.64%', left: '11.96%' }
+    odin: { top: '6%', left: '50%' },
+    thor: { top: '36.40%', left: '91.85%' },
+    freya: { top: '85.60%', left: '75.86%' },
+    hel: { top: '85.60%', left: '24.14%' },
+    loki: { top: '36.40%', left: '8.15%' }
   };
 
   // Re-append the SVG to make sure it is behind the elements
@@ -2528,9 +2535,9 @@ function renderQuestsScreen() {
   pentagramSvg.setAttribute('class', 'pentagram-svg');
   pentagramSvg.setAttribute('viewBox', '0 0 100 100');
   pentagramSvg.innerHTML = `
-    <circle cx="50" cy="50" r="40" class="pentagram-outer-circle" />
-    <polygon points="50,10 88.04,37.64 73.51,82.36 26.49,82.36 11.96,37.64" class="pentagram-pentagon" />
-    <polygon points="50,10 73.51,82.36 11.96,37.64 88.04,37.64 26.49,82.36" class="pentagram-star" />
+    <circle cx="50" cy="50" r="44" class="pentagram-outer-circle" />
+    <polygon points="50,6 91.85,36.40 75.86,85.60 24.14,85.60 8.15,36.40" class="pentagram-pentagon" />
+    <polygon points="50,6 75.86,85.60 8.15,36.40 91.85,36.40 24.14,85.60" class="pentagram-star" />
   `;
   elQuestsList.appendChild(pentagramSvg);
   
