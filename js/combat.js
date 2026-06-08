@@ -279,8 +279,11 @@ function combatTick() {
       }
 
       if (shouldMove) {
-        const fullSpeedVal = getEffectiveStats(unit).speed?.total || 1;
-        let speedVal = 1; // Default normal movement
+        // Base leap value is 1 (moves 1 column normally).
+        // Thor's milestone/blessings will add to unit.leap.total
+        const effectiveLeap = getEffectiveStats(unit).leap?.total || 0;
+        const fullLeapVal = 1 + effectiveLeap;
+        let leapVal = 1; // Default normal movement
 
         // Check if any of the three leap conditions are satisfied:
         // 1. An enemy is in range of the unit's full leap distance
@@ -293,16 +296,16 @@ function combatTick() {
         
         if (!isRetreatingOrFleeing) {
           // Condition 3: Reach enemy base (col sizeC for player moving right, col -1 for enemy moving left)
-          if (unit.alliance === 'player' && dir === 1 && unit.col + fullSpeedVal >= sizeC) {
+          if (unit.alliance === 'player' && dir === 1 && unit.col + fullLeapVal >= sizeC) {
             canLeap = true;
-          } else if (unit.alliance === 'enemy' && dir === -1 && unit.col - fullSpeedVal < 0) {
+          } else if (unit.alliance === 'enemy' && dir === -1 && unit.col - fullLeapVal < 0) {
             canLeap = true;
           }
         }
 
-        // Condition 1 & 2: Search cells in front up to full speed distance
+        // Condition 1 & 2: Search cells in front up to full leap distance
         if (!canLeap && !isRetreatingOrFleeing) {
-          for (let step = 1; step <= fullSpeedVal; step++) {
+          for (let step = 1; step <= fullLeapVal; step++) {
             const testCol = unit.col + (dir * step);
             if (testCol >= 0 && testCol < sizeC) {
               const cell = grid[unit.row][testCol];
@@ -352,14 +355,14 @@ function combatTick() {
         }
 
         if (canLeap) {
-          speedVal = fullSpeedVal;
+          leapVal = fullLeapVal;
         }
 
         let lastValidCol = unit.col;
         let reachedBoundary = false;
         let berserkerPushedAlly = false;
 
-        for (let step = 1; step <= speedVal; step++) {
+        for (let step = 1; step <= leapVal; step++) {
           const testCol = unit.col + (dir * step);
           if (testCol < 0 || testCol >= sizeC) {
             reachedBoundary = true;
@@ -371,8 +374,8 @@ function combatTick() {
               break;
             }
             
-            // If the unit is moving at normal speed (speedVal === 1), it cannot leap over allies.
-            if (speedVal === 1) {
+            // If the unit is moving at normal speed (leapVal === 1), it cannot leap over allies.
+            if (leapVal === 1) {
               break;
             }
             
@@ -746,6 +749,7 @@ export function getEffectiveStats(unit) {
   let bonusDmg = 0;
   let bonusSpeed = 0;
   let bonusRange = 0;
+  let bonusLeap = 0;
 
   if (isPlayer) {
     // Apply Active and Permanently Activated Blessing modifiers
@@ -765,6 +769,7 @@ export function getEffectiveStats(unit) {
           if (bMod.dmg) bonusDmg += bMod.dmg;
           if (bMod.speed) bonusSpeed += bMod.speed;
           if (bMod.range) bonusRange += bMod.range;
+          if (bMod.leap) bonusLeap += bMod.leap;
         }
       }
     }
@@ -781,6 +786,7 @@ export function getEffectiveStats(unit) {
               if (mMod.dmg) bonusDmg += mMod.dmg;
               if (mMod.speed) bonusSpeed += mMod.speed;
               if (mMod.range) bonusRange += mMod.range;
+              if (mMod.leap) bonusLeap += mMod.leap;
             }
           }
         }
@@ -799,6 +805,7 @@ export function getEffectiveStats(unit) {
     maxHp: { base: baseMaxHp, bonus: bonusMaxHp, total: Math.max(1, baseMaxHp + bonusMaxHp) },
     dmg: { base: baseDmg, bonus: bonusDmg, total: Math.max(0, baseDmg + bonusDmg) },
     speed: { base: baseSpeed, bonus: bonusSpeed, total: Math.max(0, baseSpeed + bonusSpeed) },
-    range: { base: baseRange, bonus: bonusRange, total: Math.max(1, baseRange + bonusRange) }
+    range: { base: baseRange, bonus: bonusRange, total: Math.max(1, baseRange + bonusRange) },
+    leap: { base: 0, bonus: bonusLeap, total: Math.max(0, 0 + bonusLeap) }
   };
 }

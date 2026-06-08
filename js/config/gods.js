@@ -72,7 +72,7 @@ export const GODS_CONFIG = {
       ],
       thor: [
         { index: 0, targetType: 'berserker', dmg: 1 },
-        { index: 1, targetType: 'berserker', speed: 1 },
+        { index: 1, targetType: 'berserker', leap: 1 },
         { index: 3, targetType: 'all', maxHp: 5 }
       ],
       freya: [
@@ -82,7 +82,7 @@ export const GODS_CONFIG = {
     },
     blessings: {
       odin: { targetType: 'huntsman', range: 2, dmg: 1 },
-      thor: { targetType: 'berserker', dmg: 3, speed: 1 }
+      thor: { targetType: 'berserker', dmg: 3, leap: 1 }
     }
   },
 
