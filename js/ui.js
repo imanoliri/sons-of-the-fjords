@@ -2807,19 +2807,58 @@ function renderPartyPanel() {
 
 /* --- Logging & Overlays helpers --- */
 
+let currentActiveScreen = '';
+let lastWorldMsg = '';
+let lastWorldCount = 1;
+let lastWorldElement = null;
+
+let lastLocMsg = '';
+let lastLocCount = 1;
+let lastLocElement = null;
+
+function checkScreenReset() {
+  if (STATE.activeScreen !== currentActiveScreen) {
+    currentActiveScreen = STATE.activeScreen;
+    lastWorldMsg = '';
+    lastWorldCount = 1;
+    lastWorldElement = null;
+    lastLocMsg = '';
+    lastLocCount = 1;
+    lastLocElement = null;
+  }
+}
+
 export function logWorld(msg, typeClass = 'system-message') {
-  const p = document.createElement('p');
-  p.classList.add(typeClass);
-  p.innerText = msg;
-  elWorldLog.appendChild(p);
+  checkScreenReset();
+  if (msg === lastWorldMsg && lastWorldElement) {
+    lastWorldCount++;
+    lastWorldElement.innerText = `${msg} (x${lastWorldCount})`;
+  } else {
+    lastWorldMsg = msg;
+    lastWorldCount = 1;
+    const p = document.createElement('p');
+    p.classList.add(typeClass);
+    p.innerText = msg;
+    elWorldLog.appendChild(p);
+    lastWorldElement = p;
+  }
   elWorldLog.scrollTop = elWorldLog.scrollHeight;
 }
 
 export function logLocation(msg, typeClass = 'system-message') {
-  const p = document.createElement('p');
-  p.classList.add(typeClass);
-  p.innerText = msg;
-  elLocLog.appendChild(p);
+  checkScreenReset();
+  if (msg === lastLocMsg && lastLocElement) {
+    lastLocCount++;
+    lastLocElement.innerText = `${msg} (x${lastLocCount})`;
+  } else {
+    lastLocMsg = msg;
+    lastLocCount = 1;
+    const p = document.createElement('p');
+    p.classList.add(typeClass);
+    p.innerText = msg;
+    elLocLog.appendChild(p);
+    lastLocElement = p;
+  }
   elLocLog.scrollTop = elLocLog.scrollHeight;
 }
 

@@ -79,19 +79,30 @@ export function startCombat(locationId, coordKey, enemyData) {
 
   let spawnIndex = 0;
   let spawnedCount = 0;
+  let charmedMonsterData = null;
+
   for (const m of enemyData.monsters) {
     for (let i = 0; i < m.count; i++) {
-      const lane = startLanes[spawnIndex % CFG.gridRows];
-      spawnIndex++;
-      const stats = getMonsterStats(m.monsterClass);
-
       const isCharmed = spawnedCount === charmedIndex;
       const isConfused = !isCharmed && spawnedCount === confusedIndex;
-      spawnedCount++;
+      const stats = getMonsterStats(m.monsterClass);
 
-      let spawnCol = isCharmed ? CFG.gridCols - 2 : (isConfused ? CFG.gridCols - 2 : CFG.gridCols - 1);
-      if (isCharmed || isConfused) {
-        // Find first unoccupied column from the right side start
+      if (isCharmed) {
+        // Delay placement of the charmed unit until we place the non-charmed enemies
+        charmedMonsterData = {
+          mClass: m.monsterClass,
+          stats: stats,
+          spawnedCount: spawnedCount
+        };
+        spawnedCount++;
+        continue;
+      }
+
+      const lane = startLanes[spawnIndex % CFG.gridRows];
+      spawnIndex++;
+
+      let spawnCol = isConfused ? CFG.gridCols - 2 : CFG.gridCols - 1;
+      if (isConfused) {
         for (let c = CFG.gridCols - 2; c >= 0; c--) {
           if (!grid[lane][c]) {
             spawnCol = c;
@@ -100,24 +111,22 @@ export function startCombat(locationId, coordKey, enemyData) {
         }
       }
 
-      if (isCharmed) {
-        notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_charm', unit: { name: m.monsterClass } });
-      } else if (isConfused) {
+      if (isConfused) {
         notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_confuse', unit: { name: m.monsterClass } });
       }
 
       const mUnit = {
         id: Date.now() + "_" + spawnedCount + "_" + Math.floor(Math.random() * 1000),
-        name: m.monsterClass + (isCharmed ? ' 🌀' : (isConfused ? ' 😵' : '')),
+        name: m.monsterClass + (isConfused ? ' 😵' : ''),
         type: m.monsterClass,
         hp: stats.hp,
         maxHp: stats.hp,
         dmg: stats.dmg,
         speed: stats.speed,
         range: stats.range,
-        alliance: (isCharmed || isConfused) ? 'player' : 'enemy',
-        isCharmed: isCharmed,
-        charmedTicksLeft: isCharmed ? (lokiBlessing?.charmDurationTicks ?? 2) : 0,
+        alliance: isConfused ? 'player' : 'enemy',
+        isCharmed: false,
+        charmedTicksLeft: 0,
         isConfused: isConfused,
         confusedTicksLeft: isConfused ? (lokiM3?.confuseDurationTicks ?? 2) : 0,
         row: lane,
@@ -125,7 +134,72 @@ export function startCombat(locationId, coordKey, enemyData) {
       };
       monsters.push(mUnit);
       grid[lane][spawnCol] = mUnit;
+      spawnedCount++;
     }
+  }
+
+  // Position and spawn the charmed unit in front of a random enemy
+  if (charmedMonsterData) {
+    notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_charm', unit: { name: charmedMonsterData.mClass } });
+
+    const enemies = monsters.filter(m => m.alliance === 'enemy');
+    let targetEnemy = null;
+    if (enemies.length > 0) {
+      targetEnemy = enemies[Math.floor(Math.random() * enemies.length)];
+    }
+
+    let spawnLane = startLanes[spawnIndex % CFG.gridRows];
+    spawnIndex++;
+    let spawnCol = CFG.gridCols - 2;
+
+    if (targetEnemy) {
+      spawnLane = targetEnemy.row;
+      let checkCol = targetEnemy.col - 1;
+      let found = false;
+      for (let c = checkCol; c >= 0; c--) {
+        if (!grid[spawnLane][c]) {
+          spawnCol = c;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        for (let c = targetEnemy.col + 1; c < CFG.gridCols; c++) {
+          if (!grid[spawnLane][c]) {
+            spawnCol = c;
+            found = true;
+            break;
+          }
+        }
+      }
+    } else {
+      for (let c = CFG.gridCols - 2; c >= 0; c--) {
+        if (!grid[spawnLane][c]) {
+          spawnCol = c;
+          break;
+        }
+      }
+    }
+
+    const mUnit = {
+      id: Date.now() + "_" + charmedMonsterData.spawnedCount + "_" + Math.floor(Math.random() * 1000),
+      name: charmedMonsterData.mClass + ' 🌀',
+      type: charmedMonsterData.mClass,
+      hp: charmedMonsterData.stats.hp,
+      maxHp: charmedMonsterData.stats.hp,
+      dmg: charmedMonsterData.stats.dmg,
+      speed: charmedMonsterData.stats.speed,
+      range: charmedMonsterData.stats.range,
+      alliance: 'player',
+      isCharmed: true,
+      charmedTicksLeft: lokiBlessing?.charmDurationTicks ?? 2,
+      isConfused: false,
+      confusedTicksLeft: 0,
+      row: spawnLane,
+      col: spawnCol
+    };
+    monsters.push(mUnit);
+    grid[spawnLane][spawnCol] = mUnit;
   }
 
   STATE.combat.waveMonsters = monsters;
