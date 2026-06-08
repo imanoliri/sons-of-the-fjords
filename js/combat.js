@@ -173,19 +173,25 @@ function combatTick() {
 
     const target = unit.isFleeing ? null : findTargetInLane(unit);
     if (target) {
-      // Loki Milestone 2: Enemy attack speed reduced by 10%
+      // Loki Milestone 2: Enemy attack speed reduced by 10% (10% miss chance)
       if (unit.alliance === 'enemy' && STATE.godQuests.loki?.[1] && Math.random() < 0.10) {
+        notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_miss', unit: unit });
         continue; // Skip attack this tick
       }
-      // Hel Milestone 4: Enemy attack speed reduced by 10%
+      // Hel Milestone 4: Enemy attack speed reduced by 10% (10% miss chance)
       if (unit.alliance === 'enemy' && STATE.godQuests.hel?.[3] && Math.random() < 0.10) {
+        notify('COMBAT_EFFECT_TRIGGER', { effect: 'hel_miss', unit: unit });
         continue; // Skip attack this tick
       }
 
       // Thor Milestone 3: Player units attack speed increased by 10% (10% chance to attack again)
       const isPlayer = unit.alliance === 'player';
       const hasThorAttackSpeed = isPlayer && STATE.godQuests.thor?.[2];
-      const attackCount = (hasThorAttackSpeed && Math.random() < 0.10) ? 2 : 1;
+      const isDoubleAttack = hasThorAttackSpeed && Math.random() < 0.10;
+      if (isDoubleAttack) {
+        notify('COMBAT_EFFECT_TRIGGER', { effect: 'thor_double', unit: unit });
+      }
+      const attackCount = isDoubleAttack ? 2 : 1;
 
       for (let i = 0; i < attackCount; i++) {
         const currentTarget = (i === 0) ? target : (unit.isFleeing ? null : findTargetInLane(unit));

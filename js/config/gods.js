@@ -114,7 +114,7 @@ export const GODS_CONFIG = {
       milestoneEffects: [
         'Berserkers gain +1 DMG.',
         'Berserkers gain Leap of 1.',
-        'All soldiers gain +10% faster Attack Speed.',
+        'All soldiers gain 10% chance for a Double Attack.',
         'All units gain +5 max HP.',
         null
       ],
@@ -147,7 +147,7 @@ export const GODS_CONFIG = {
         'Enemies deal -1 DMG.',
         'Player units survive lethal hits once with 1 HP (once per battle).',
         'Slain enemies drop 1 Gold.',
-        'Enemies move 10% slower and attack 10% slower.',
+        'Enemies move 10% slower and have 10% chance to miss attacks.',
         null
       ],
       buff: 'Fallen enemies have a 50% chance to rise as allied undead for 3 ticks.'
@@ -161,7 +161,7 @@ export const GODS_CONFIG = {
       wrath: 'Wrath: Random event triggers each world move (ambush, resource loss, or unit injury).',
       milestoneEffects: [
         'Chest loot gives +1 extra Gold.',
-        'Enemy attack speed reduced by 10%.',
+        'Enemies have 10% chance to miss attacks.',
         'One enemy per wave spawns confused (fights allies for 2 ticks).',
         'Town prices reduced by 1 Gold each.',
         null

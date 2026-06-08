@@ -2901,6 +2901,18 @@ export function handleStateNotification(event, data) {
   else if (event === 'COMBAT_DEATH') {
     logWorld(`Dead: Unit '${data.name}' was slain on the lanes.`, 'combat-message');
   }
+  else if (event === 'COMBAT_EFFECT_TRIGGER') {
+    if (data.effect === 'loki_miss') {
+      logWorld(`🎭 Loki's Trick: Enemy missed their attack!`, 'warn-message');
+      showToast(`Enemy missed (Loki)`, '🎭');
+    } else if (data.effect === 'hel_miss') {
+      logWorld(`💀 Hel's Chill: Enemy missed their attack!`, 'warn-message');
+      showToast(`Enemy missed (Hel)`, '💀');
+    } else if (data.effect === 'thor_double') {
+      logWorld(`⚡ Thor's Wrath: Allied unit '${data.unit.name}' strikes twice!`, 'gain-message');
+      showToast(`Double Strike!`, '⚡');
+    }
+  }
   else if (event === 'COMBAT_BREACH') {
     logWorld(`Line breached! Monster '${data.unit.name}' reached base and stole 2 ${data.stolen}!`, 'warn-message');
   }
