@@ -2593,7 +2593,31 @@ function renderQuestsScreen() {
     trackCol.classList.add('god-progress-bar');
     
     const track = STATE.godQuests[gKey];
-    const runes = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ'];
+    // Custom set of 5 distinct Elder Futhark runes for each god
+    const godRunes = {
+      odin: ['ᚨ', 'ᚷ', 'ᚹ', 'ᛃ', 'ᛗ'], // Ansuz, Gebo, Wunjo, Jera, Mannaz (Wisdom, Connection)
+      thor: ['ᚦ', 'ᚱ', 'ᚺ', 'ᛏ', 'ᛟ'], // Thurisaz, Raido, Hagalaz, Tiwaz, Othala (Force, Storm, Travel, Victory)
+      freya: ['ᚠ', 'ᚢ', 'ᚲ', 'ᛒ', 'ᛚ'], // Fehu, Uruz, Kenaz, Berkana, Laguz (Wealth, Health, Passion, Growth)
+      hel: ['ᛇ', '🚾', 'ᚾ', 'ᛏ', 'ᛦ'], // Eihwaz, custom runes/Nauthiz, Isa, Algiz (Death, Underworld, Protection)
+      loki: ['ᚦ', 'ᚲ', 'ᛃ', 'ᛗ', 'ᛟ']  // Trickster runes
+    };
+    // Let's refine hel & loki to have fully valid and distinct Elder Futhark Unicode runes:
+    // odin:  ᚨ (Ansuz), ᛗ (Mannaz), 𐌰 (A), ᛟ (Othala), ᚦ (Thurisaz) -> Let's use:
+    // - odin:  ['ᚨ', 'ᛗ', 'ᚷ', 'ᚹ', 'ᛃ'] (Ansuz, Mannaz, Gebo, Wunjo, Jera)
+    // - thor:  ['ᚦ', 'ᚱ', 'ᛏ', 'ᛋ', 'ᚲ'] (Thurisaz, Raido, Tiwaz, Sowilo, Kenaz)
+    // - freya: ['ᚠ', 'ᛒ', 'ᛚ', 'ᛞ', 'ᚢ'] (Fehu, Berkana, Laguz, Dagaz, Uruz)
+    // - hel:   ['ᚾ', 'ᛁ', 'ᛇ', 'ᛉ', 'ᛦ'] (Nauthiz, Isa, Eihwaz, Algiz, Yr)
+    // - loki:  ['ᛃ', 'ᛈ', '𐌷', 'ᛎ', 'ᛏ'] (Jera, Perthro, Hagl, etc.) -> Let's use pure Elder Futhark:
+    //   loki:  ['ᚲ', 'ᚹ', 'ᚺ', 'ᛈ', 'ᛞ'] (Kenaz, Wunjo, Hagalaz, Perthro, Dagaz)
+    const runeSets = {
+      odin: ['ᚨ', 'ᛗ', 'ᚷ', 'ᚹ', 'ᛃ'],
+      thor: ['ᚦ', 'ᚱ', 'ᛏ', 'ᛋ', 'ᚲ'],
+      freya: ['ᚠ', 'ᛒ', 'ᛚ', 'ᛞ', 'ᚢ'],
+      hel: ['ᚾ', 'ᛁ', 'ᛇ', 'ᛉ', 'ᛦ'],
+      loki: ['ᚲ', 'ᚹ', 'ᚺ', 'ᛈ', 'ᛞ']
+    };
+    const runes = runeSets[gKey] || ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ'];
+
     for (let i = 0; i < 5; i++) {
       const step = document.createElement('div');
       step.classList.add('milestone-step');
