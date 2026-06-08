@@ -309,84 +309,12 @@ function combatTick() {
       }
 
       if (shouldMove) {
-        // Base leap value is 1 (moves 1 column normally).
-        // Thor's milestone/blessings will add to unit.leap.total
         const effectiveLeap = getEffectiveStats(unit).leap?.total || 0;
         const fullLeapVal = 1 + effectiveLeap;
-        let leapVal = 1; // Default normal movement
-
-        // Check if any of the three leap conditions are satisfied:
-        // 1. An enemy is in range of the unit's full leap distance
-        // 2. An engaged ally in front can be pushed back
-        // 3. The unit can reach the target base at the end of the lane
-        let canLeap = false;
         
         // Fleeing or retreating units do NOT leap
         const isRetreatingOrFleeing = unit.isFleeing || (unit.alliance === 'player' && STATE.combat.stance === 'retreat');
-        
-        if (!isRetreatingOrFleeing) {
-          // Condition 3: Reach enemy base (col sizeC for player moving right, col -1 for enemy moving left)
-          if (unit.alliance === 'player' && dir === 1 && unit.col + fullLeapVal >= sizeC) {
-            canLeap = true;
-          } else if (unit.alliance === 'enemy' && dir === -1 && unit.col - fullLeapVal < 0) {
-            canLeap = true;
-          }
-        }
-
-        // Condition 1 & 2: Search cells in front up to full leap distance
-        if (!canLeap && !isRetreatingOrFleeing) {
-          for (let step = 1; step <= fullLeapVal; step++) {
-            const testCol = unit.col + (dir * step);
-            if (testCol >= 0 && testCol < sizeC) {
-              const cell = grid[unit.row][testCol];
-              if (cell) {
-                // If it's an enemy, it's in range (Condition 1)
-                if (cell.alliance !== unit.alliance) {
-                  canLeap = true;
-                  break;
-                }
-                // If it's an ally and the moving unit is a Berserker (Condition 2)
-                if (unit.type === 'berserker' && cell.alliance === unit.alliance) {
-                  const engaged = findTargetInLane(cell);
-                  if (engaged) {
-                    // engaged ally push possibility check
-                    const pushDir = -dir;
-                    let currentPushCol = cell.col;
-                    let pushPossible = true;
-                    while (true) {
-                      const checkCol = currentPushCol + pushDir;
-                      if (checkCol < 0 || checkCol >= sizeC) {
-                        pushPossible = false;
-                        break;
-                      }
-                      const other = grid[unit.row][checkCol];
-                      if (other) {
-                        if (other.alliance !== unit.alliance) {
-                          pushPossible = false;
-                          break;
-                        } else if (other.id === unit.id) {
-                          break; // can push into ourselves
-                        } else {
-                          currentPushCol = checkCol;
-                        }
-                      } else {
-                        break;
-                      }
-                    }
-                    if (pushPossible) {
-                      canLeap = true;
-                      break;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        if (canLeap) {
-          leapVal = fullLeapVal;
-        }
+        let leapVal = isRetreatingOrFleeing ? 1 : fullLeapVal;
 
         let lastValidCol = unit.col;
         let reachedBoundary = false;
