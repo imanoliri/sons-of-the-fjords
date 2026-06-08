@@ -366,6 +366,11 @@ function combatTick() {
               break;
             }
             
+            // If the unit is moving at normal speed (speedVal === 1), it cannot leap over allies.
+            if (speedVal === 1) {
+              break;
+            }
+            
             // Berserker specific pushback logic:
             // If the moving unit is a Berserker, and the ally in front (obstacle) is engaged in combat:
             if (unit.type === 'berserker' && !berserkerPushedAlly) {
