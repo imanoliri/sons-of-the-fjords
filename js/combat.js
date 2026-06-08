@@ -311,10 +311,77 @@ function combatTick() {
       if (shouldMove) {
         const effectiveLeap = getEffectiveStats(unit).leap?.total || 0;
         const fullLeapVal = 1 + effectiveLeap;
-        
-        // Fleeing or retreating units do NOT leap
+        let leapVal = 1; // Default normal movement
+
         const isRetreatingOrFleeing = unit.isFleeing || (unit.alliance === 'player' && STATE.combat.stance === 'retreat');
-        let leapVal = isRetreatingOrFleeing ? 1 : fullLeapVal;
+
+        if (!isRetreatingOrFleeing && effectiveLeap > 0) {
+          let canLeap = false;
+
+          // 1. Can reach the enemy base
+          if (unit.alliance === 'player' && dir === 1 && unit.col + fullLeapVal >= sizeC) {
+            canLeap = true;
+          } else if (unit.alliance === 'enemy' && dir === -1 && unit.col - fullLeapVal < 0) {
+            canLeap = true;
+          }
+
+          // 2. Can meet an enemy (enemy is within fullLeapVal + 1 cells in front)
+          if (!canLeap) {
+            for (let step = 1; step <= fullLeapVal + 1; step++) {
+              const testCol = unit.col + (dir * step);
+              if (testCol >= 0 && testCol < sizeC) {
+                const cell = grid[unit.row][testCol];
+                if (cell && cell.alliance !== unit.alliance) {
+                  canLeap = true;
+                  break;
+                }
+              }
+            }
+          }
+
+          // 3. Can push back an engaged ally (for Berserkers)
+          if (!canLeap && unit.type === 'berserker') {
+            const nextCol = unit.col + dir;
+            if (nextCol >= 0 && nextCol < sizeC) {
+              const cell = grid[unit.row][nextCol];
+              if (cell && cell.alliance === unit.alliance) {
+                const engaged = findTargetInLane(cell);
+                if (engaged) {
+                  const pushDir = -dir;
+                  let currentPushCol = cell.col;
+                  let pushPossible = true;
+                  while (true) {
+                    const checkCol = currentPushCol + pushDir;
+                    if (checkCol < 0 || checkCol >= sizeC) {
+                      pushPossible = false;
+                      break;
+                    }
+                    const other = grid[unit.row][checkCol];
+                    if (other) {
+                      if (other.alliance !== unit.alliance) {
+                        pushPossible = false;
+                        break;
+                      } else if (other.id === unit.id) {
+                        break;
+                      } else {
+                        currentPushCol = checkCol;
+                      }
+                    } else {
+                      break;
+                    }
+                  }
+                  if (pushPossible) {
+                    canLeap = true;
+                  }
+                }
+              }
+            }
+          }
+
+          if (canLeap) {
+            leapVal = fullLeapVal;
+          }
+        }
 
         let lastValidCol = unit.col;
         let reachedBoundary = false;
