@@ -59,7 +59,7 @@ export function startCombat(locationId, coordKey, enemyData) {
   const totalMonstersCount = enemyData.monsters.reduce((sum, m) => sum + m.count, 0);
 
   let confusedIndex = -1;
-  if (STATE.godQuests.loki?.[2]) {
+  if (STATE.godQuests.loki?.[2] && Math.random() < 0.25) {
     if (totalMonstersCount > 0) {
       confusedIndex = Math.floor(Math.random() * totalMonstersCount);
     }

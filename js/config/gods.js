@@ -162,7 +162,7 @@ export const GODS_CONFIG = {
       milestoneEffects: [
         'Chest loot gives +1 extra Gold.',
         'Enemies have 10% chance to miss attacks.',
-        'One enemy per wave spawns confused (fights allies for 2 ticks).',
+        '25% chance for one enemy per wave to spawn confused (fights allies for 2 ticks).',
         'Town prices reduced by 1 Gold each.',
         null
       ],
