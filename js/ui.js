@@ -2508,17 +2508,40 @@ function showGodLorePopup(gKey) {
 }
 
 // Render Gods Progress screens
+// Render Gods Progress screens
 function renderQuestsScreen() {
   elQuestsList.innerHTML = '';
 
+  // To map opposites exactly across the star, the gods must be arranged in the polar coordinate order:
+  // odin, thor, freya, hel, loki. (Top starts at -90 degrees, increments by 72 deg).
   const gods = ['odin', 'thor', 'freya', 'hel', 'loki'];
+  const coordinates = {
+    odin: { top: '10%', left: '50%' },
+    thor: { top: '37.64%', left: '88.04%' },
+    freya: { top: '82.36%', left: '73.51%' },
+    hel: { top: '82.36%', left: '26.49%' },
+    loki: { top: '37.64%', left: '11.96%' }
+  };
+
+  // Re-append the SVG to make sure it is behind the elements
+  const pentagramSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  pentagramSvg.setAttribute('class', 'pentagram-svg');
+  pentagramSvg.setAttribute('viewBox', '0 0 100 100');
+  pentagramSvg.innerHTML = `
+    <circle cx="50" cy="50" r="40" class="pentagram-outer-circle" />
+    <polygon points="50,10 88.04,37.64 73.51,82.36 26.49,82.36 11.96,37.64" class="pentagram-pentagon" />
+    <polygon points="50,10 73.51,82.36 11.96,37.64 88.04,37.64 26.49,82.36" class="pentagram-star" />
+  `;
+  elQuestsList.appendChild(pentagramSvg);
   
   gods.forEach(gKey => {
     const lore = GOD_LORE[gKey];
-    const row = document.createElement('div');
-    row.classList.add('god-row');
+    const node = document.createElement('div');
+    node.classList.add('god-pentagram-node', `deity-${gKey}`);
+    node.style.top = coordinates[gKey].top;
+    node.style.left = coordinates[gKey].left;
     
-    // ── God Identity column (hover = full god info tooltip) ──
+    // ── God Identity (hover = full god info tooltip) ──
     const idCol = document.createElement('div');
     idCol.classList.add('god-identity');
     idCol.dataset.godTooltip = gKey;
@@ -2540,20 +2563,14 @@ function renderQuestsScreen() {
     const favorEl = document.createElement('span');
     favorEl.classList.add('god-favor-score');
     favorEl.innerHTML = `Favor: <b style="color:${favorColor}">${favorSign}${favor}</b> / 5`;
-
-    // Relic hint under the name
-    const relicHint = document.createElement('span');
-    relicHint.style.cssText = 'font-size:0.7rem;color:var(--text-muted);margin-top:2px;';
-    relicHint.innerHTML = `🏺 ${lore.relic}`;
     
     idCol.appendChild(name);
     idCol.appendChild(favorEl);
-    idCol.appendChild(relicHint);
-    row.appendChild(idCol);
+    node.appendChild(idCol);
 
-    // ── Milestones track column (each rune = tooltip for that milestone) ──
+    // ── Milestones track ──
     const trackCol = document.createElement('div');
-    trackCol.classList.add('god-progress-bar', `deity-${gKey}`);
+    trackCol.classList.add('god-progress-bar');
     
     const track = STATE.godQuests[gKey];
     const runes = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ'];
@@ -2570,9 +2587,9 @@ function renderQuestsScreen() {
       }
       trackCol.appendChild(step);
     }
-    row.appendChild(trackCol);
+    node.appendChild(trackCol);
 
-    // ── Champion toggle column (hover = buff tooltip) ──
+    // ── Champion toggle button/label ──
     const toggleCol = document.createElement('div');
     toggleCol.classList.add('champion-selector-cell');
     
@@ -2601,17 +2618,16 @@ function renderQuestsScreen() {
       }
       toggleCol.appendChild(btn);
     } else {
-      // Show a locked hint — hovering shows locked info
       const locked = document.createElement('span');
-      locked.style.cssText = 'font-size:0.8rem;color:var(--text-muted);cursor:help;';
+      locked.style.cssText = 'font-size:0.75rem;color:var(--text-muted);cursor:help;';
       locked.innerText = '🔒 Locked';
       locked.dataset.godTooltip = gKey;
       locked.dataset.tooltipSection = 'champion_locked';
       toggleCol.appendChild(locked);
     }
     
-    row.appendChild(toggleCol);
-    elQuestsList.appendChild(row);
+    node.appendChild(toggleCol);
+    elQuestsList.appendChild(node);
   });
 }
 
