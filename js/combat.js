@@ -253,19 +253,36 @@ function combatTick() {
       }
 
       if (shouldMove) {
-        const nextCol = unit.col + dir;
-        if (nextCol >= 0 && nextCol < sizeC) {
-          if (!grid[unit.row][nextCol]) {
-            grid[unit.row][unit.col] = null;
-            unit.col = nextCol;
-            grid[unit.row][nextCol] = unit;
+        const speedVal = getEffectiveStats(unit).speed?.total || 1;
+        let lastValidCol = unit.col;
+        let reachedBoundary = false;
+        
+        for (let step = 1; step <= speedVal; step++) {
+          const testCol = unit.col + (dir * step);
+          if (testCol < 0 || testCol >= sizeC) {
+            reachedBoundary = true;
+            break;
           }
-        } else {
-          if (unit.alliance === 'player' && STATE.combat.stance === 'defend' && nextCol < 0) {
+          // If there is any unit in the way (ally or enemy), they cannot pass through it
+          if (grid[unit.row][testCol]) {
+            break;
+          }
+          lastValidCol = testCol;
+        }
+
+        if (lastValidCol !== unit.col) {
+          grid[unit.row][unit.col] = null;
+          unit.col = lastValidCol;
+          grid[unit.row][lastValidCol] = unit;
+        }
+
+        if (reachedBoundary) {
+          const boundaryCol = unit.col + dir; // The column that crossed the boundary
+          if (unit.alliance === 'player' && STATE.combat.stance === 'defend' && boundaryCol < 0) {
             // Hold at col 0
           } else {
             grid[unit.row][unit.col] = null;
-            if (unit.alliance === 'player' && (unit.isFleeing || STATE.combat.stance === 'retreat') && nextCol < 0) {
+            if (unit.alliance === 'player' && (unit.isFleeing || STATE.combat.stance === 'retreat') && boundaryCol < 0) {
               const poolUnit = { ...unit, hp: unit.hp, row: undefined, col: undefined, isFleeing: false };
               STATE.combat.pool.push(poolUnit);
               sortPoolByPoints();
