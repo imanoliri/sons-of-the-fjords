@@ -257,6 +257,8 @@ function combatTick() {
         let lastValidCol = unit.col;
         let reachedBoundary = false;
         
+        let berserkerPushedAlly = false;
+
         for (let step = 1; step <= speedVal; step++) {
           const testCol = unit.col + (dir * step);
           if (testCol < 0 || testCol >= sizeC) {
@@ -265,19 +267,89 @@ function combatTick() {
           }
           const obstacle = grid[unit.row][testCol];
           if (obstacle) {
-            // Cannot leap over or land on an enemy unit
             if (obstacle.alliance !== unit.alliance) {
               break;
             }
-            // Can leap over an ally, but cannot land on an ally's cell
-            // So we don't 'break' the loop, but we also don't mark it as a valid landing cell
+            
+            // Berserker specific pushback logic:
+            // If the moving unit is a Berserker, and the ally in front (obstacle) is engaged in combat:
+            if (unit.type === 'berserker' && !berserkerPushedAlly) {
+              const engaged = findTargetInLane(obstacle);
+              if (engaged) {
+                // Determine push chain to the left (reverse of movement direction)
+                // Direction of push is -dir
+                const pushDir = -dir;
+                let pushChain = [];
+                let currentPushCol = obstacle.col;
+                let pushPossible = true;
+
+                while (true) {
+                  const checkCol = currentPushCol + pushDir;
+                  if (checkCol < 0 || checkCol >= sizeC) {
+                    // Pushes outside the grid
+                    pushPossible = false;
+                    break;
+                  }
+                  const other = grid[unit.row][checkCol];
+                  if (other) {
+                    if (other.alliance !== unit.alliance) {
+                      // Cannot push an enemy or non-ally
+                      pushPossible = false;
+                      break;
+                    } else if (other.id === unit.id) {
+                      // That's the Berserker itself!
+                      // The Berserker starts moving from its current position, so its own cell is vacated when it moves.
+                      // This means we can push allies into the Berserker's starting cell (unit.col)!
+                      // We treat the Berserker's starting cell as "empty" for the purpose of the pushback chain.
+                      pushChain.push(other);
+                      break;
+                    } else {
+                      pushChain.push(other);
+                      currentPushCol = checkCol;
+                    }
+                  } else {
+                    // Empty space found, chain can stop here
+                    break;
+                  }
+                }
+
+                if (pushPossible) {
+                  // Push the chain (including the engaged obstacle)
+                  // We must do the shift backwards starting from the end of the chain
+                  const fullChain = [obstacle, ...pushChain];
+                  // If the Berserker's own position is in the chain, we only push up to the cell before it
+                  const selfIndex = fullChain.findIndex(u => u.id === unit.id);
+                  const pushList = selfIndex !== -1 ? fullChain.slice(0, selfIndex) : fullChain;
+
+                  // Clear grid positions for everyone in the pushList
+                  pushList.forEach(u => {
+                    grid[u.row][u.col] = null;
+                  });
+                  // Update their columns and re-place them
+                  pushList.forEach(u => {
+                    u.col = u.col + pushDir;
+                    grid[u.row][u.col] = u;
+                  });
+
+                  // Place the Berserker at the pushed ally's original position
+                  lastValidCol = testCol;
+                  berserkerPushedAlly = true;
+                  break;
+                }
+              }
+            }
+
+            // Can leap over an ally, but cannot land on an ally's cell ordinarily
             continue;
           }
           lastValidCol = testCol;
         }
 
         if (lastValidCol !== unit.col) {
-          grid[unit.row][unit.col] = null;
+          // If the Berserker pushed someone back into its own starting position, it is already updated
+          if (grid[unit.row][unit.col] === unit) {
+            grid[unit.row][unit.col] = null;
+          }
           unit.col = lastValidCol;
           grid[unit.row][lastValidCol] = unit;
         }
