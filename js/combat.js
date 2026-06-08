@@ -2,7 +2,7 @@
    COMBAT MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, notify, adjustResource, recordMonsterKill } from './state.js';
+import { STATE, notify, adjustResource, recordMonsterKill, getEffectiveStats } from './state.js';
 import { COMBAT_CONFIG as CFG } from './config/combat.js';
 import { SOLDIERS_CONFIG } from './config/soldiers.js';
 import { GODS_CONFIG as GC } from './config/gods.js';
@@ -59,7 +59,9 @@ export function startCombat(locationId, coordKey, enemyData) {
   const totalMonstersCount = enemyData.monsters.reduce((sum, m) => sum + m.count, 0);
 
   let confusedIndex = -1;
-  if (STATE.godQuests.loki?.[2] && Math.random() < 0.25) {
+  const lokiM3 = GC.modifiers.milestones.loki.find(m => m.index === 2);
+  const confuseChance = lokiM3?.confuseChance ?? 0.25;
+  if (STATE.godQuests.loki?.[2] && Math.random() < confuseChance) {
     if (totalMonstersCount > 0) {
       confusedIndex = Math.floor(Math.random() * totalMonstersCount);
     }
@@ -67,7 +69,9 @@ export function startCombat(locationId, coordKey, enemyData) {
 
   // Loki Champion blessing: 25% chance overall to charm exactly one spawned monster in the combat wave
   let charmedIndex = -1;
-  if (hasLokiBlessing && Math.random() < 0.25) {
+  const lokiBlessing = GC.modifiers.blessings.loki;
+  const charmChance = lokiBlessing?.charmChance ?? 0.25;
+  if (hasLokiBlessing && Math.random() < charmChance) {
     if (totalMonstersCount > 0) {
       charmedIndex = Math.floor(Math.random() * totalMonstersCount);
     }
@@ -113,9 +117,9 @@ export function startCombat(locationId, coordKey, enemyData) {
         range: stats.range,
         alliance: (isCharmed || isConfused) ? 'player' : 'enemy',
         isCharmed: isCharmed,
-        charmedTicksLeft: isCharmed ? 2 : 0,
+        charmedTicksLeft: isCharmed ? (lokiBlessing?.charmDurationTicks ?? 2) : 0,
         isConfused: isConfused,
-        confusedTicksLeft: isConfused ? 2 : 0,
+        confusedTicksLeft: isConfused ? (lokiM3?.confuseDurationTicks ?? 2) : 0,
         row: lane,
         col: spawnCol
       };
@@ -157,8 +161,11 @@ function combatTick() {
     // Freya Milestone 2: Any unit below 25% HP heals 1 HP/tick
     if (unit.alliance === 'player' && STATE.godQuests.freya?.[1]) {
       const effStats = getEffectiveStats(unit);
-      if (unit.hp < effStats.maxHp.total * 0.25) {
-        unit.hp = Math.min(effStats.maxHp.total, unit.hp + 1);
+      const m2Config = GC.modifiers.milestones.freya.find(m => m.index === 1);
+      const healThreshold = m2Config?.healThreshold ?? 0.25;
+      const healAmount = m2Config?.healAmount ?? 1;
+      if (unit.hp < effStats.maxHp.total * healThreshold) {
+        unit.hp = Math.min(effStats.maxHp.total, unit.hp + healAmount);
       }
     }
 
@@ -171,7 +178,8 @@ function combatTick() {
         const inMelee = currentTarget && Math.abs(currentTarget.col - unit.col) <= 1;
         if (!inMelee) {
           const effStats = getEffectiveStats(unit);
-          unit.hp = Math.min(effStats.maxHp.total, unit.hp + 2);
+          const healAmount = GC.modifiers.blessings.freya?.healAmount ?? 2;
+          unit.hp = Math.min(effStats.maxHp.total, unit.hp + healAmount);
         }
       }
     }
@@ -211,20 +219,30 @@ function combatTick() {
     const target = unit.isFleeing ? null : findTargetInLane(unit, gridSnapshot);
     if (target) {
       // Loki Milestone 2: Enemy attack speed reduced by 10% (10% miss chance)
-      if (unit.alliance === 'enemy' && STATE.godQuests.loki?.[1] && Math.random() < 0.10) {
-        notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_miss', unit: unit });
-        continue; // Skip attack this tick
+      if (unit.alliance === 'enemy' && STATE.godQuests.loki?.[1]) {
+        const lokiM2 = GC.modifiers.milestones.loki.find(m => m.index === 1);
+        const missChance = lokiM2?.enemyMissChance ?? 0.10;
+        if (Math.random() < missChance) {
+          notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_miss', unit: unit });
+          continue; // Skip attack this tick
+        }
       }
       // Hel Milestone 4: Enemy attack speed reduced by 10% (10% miss chance)
-      if (unit.alliance === 'enemy' && STATE.godQuests.hel?.[3] && Math.random() < 0.10) {
-        notify('COMBAT_EFFECT_TRIGGER', { effect: 'hel_miss', unit: unit });
-        continue; // Skip attack this tick
+      if (unit.alliance === 'enemy' && STATE.godQuests.hel?.[3]) {
+        const helM4 = GC.modifiers.milestones.hel.find(m => m.index === 3);
+        const missChance = helM4?.enemyMissChance ?? 0.10;
+        if (Math.random() < missChance) {
+          notify('COMBAT_EFFECT_TRIGGER', { effect: 'hel_miss', unit: unit });
+          continue; // Skip attack this tick
+        }
       }
 
       // Thor Milestone 3: Player units attack speed increased by 10% (10% chance to attack again)
       const isPlayer = unit.alliance === 'player';
       const hasThorAttackSpeed = isPlayer && STATE.godQuests.thor?.[2];
-      const isDoubleAttack = hasThorAttackSpeed && Math.random() < 0.10;
+      const thorM3 = GC.modifiers.milestones.thor.find(m => m.index === 2);
+      const doubleAttackChance = thorM3?.doubleAttackChance ?? 0.10;
+      const isDoubleAttack = hasThorAttackSpeed && Math.random() < doubleAttackChance;
       if (isDoubleAttack) {
         notify('COMBAT_EFFECT_TRIGGER', { effect: 'thor_double', unit: unit });
       }
@@ -238,15 +256,20 @@ function combatTick() {
 
         // Freya Milestone 4: Shieldmaidens block 1 DMG per hit
         if (currentTarget.alliance === 'player' && currentTarget.type === 'shieldmaiden' && STATE.godQuests.freya?.[3]) {
-          dmgTaken = Math.max(0, dmgTaken - 1);
+          const m4Config = GC.modifiers.milestones.freya.find(m => m.index === 3);
+          const blockAmount = m4Config?.blockAmount ?? 1;
+          dmgTaken = Math.max(0, dmgTaken - blockAmount);
         }
 
         let nextHp = currentTarget.hp - dmgTaken;
 
         // Hel Milestone 2: Player units survive lethal hits once with 1 HP (once per battle)
         if (nextHp <= 0 && currentTarget.alliance === 'player' && STATE.godQuests.hel?.[1] && !currentTarget.hasSurvivedLethal) {
-          currentTarget.hasSurvivedLethal = true;
-          nextHp = 1;
+          const helM2 = GC.modifiers.milestones.hel.find(m => m.index === 1);
+          if (helM2?.surviveLethal ?? true) {
+            currentTarget.hasSurvivedLethal = true;
+            nextHp = 1;
+          }
         }
 
         currentTarget.hp = nextHp;
@@ -261,7 +284,9 @@ function combatTick() {
 
             // Hel Milestone 3: Slain enemies drop +1 extra Gold
             if (STATE.godQuests.hel?.[2]) {
-              adjustResource('gold', 1);
+              const helM3 = GC.modifiers.milestones.hel.find(m => m.index === 2);
+              const goldDrop = helM3?.goldDrop ?? 1;
+              adjustResource('gold', goldDrop);
             }
 
             const activeBlessings = new Set();
@@ -269,7 +294,10 @@ function combatTick() {
             if (STATE.permanentlyActivatedBlessings) {
               STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
             }
-            if (activeBlessings.has('hel') && Math.random() < 0.5) {
+            const helBlessing = GC.modifiers.blessings.hel;
+            const raiseChance = helBlessing?.raiseChance ?? 0.5;
+            if (activeBlessings.has('hel') && Math.random() < raiseChance) {
+              const duration = helBlessing?.raiseDurationTicks ?? 3;
               const undead = {
                 id: Date.now() + Math.floor(Math.random() * 1000),
                 name: 'Draugr (Undead) 💀',
@@ -281,7 +309,7 @@ function combatTick() {
                 range: 1,
                 alliance: 'player',
                 isUndead: true,
-                undeadTicksLeft: 3,
+                undeadTicksLeft: duration,
                 row: currentTarget.row,
                 col: currentTarget.col
               };
@@ -297,8 +325,12 @@ function combatTick() {
       if (unit.alliance === 'enemy') {
         dir = -1;
         // Hel Milestone 4: Enemy movement speed reduced by 10%
-        if (STATE.godQuests.hel?.[3] && Math.random() < 0.10) {
-          shouldMove = false;
+        if (STATE.godQuests.hel?.[3]) {
+          const helM4 = GC.modifiers.milestones.hel.find(m => m.index === 3);
+          const slowChance = Math.abs(helM4?.enemySpeedModifier ?? -0.10);
+          if (Math.random() < slowChance) {
+            shouldMove = false;
+          }
         }
       } else if (unit.isFleeing) {
         dir = -1;
@@ -770,92 +802,3 @@ function shuffleArray(arr) {
   }
 }
 
-export function getEffectiveStats(unit) {
-  const isPlayer = unit.alliance === 'player' || ['shieldmaiden', 'berserker', 'huntsman'].includes(unit.type);
-  let baseMaxHp = unit.maxHp;
-  let baseDmg = unit.dmg;
-  let baseSpeed = unit.speed;
-  let baseRange = unit.range;
-
-  if (isPlayer) {
-    const base = SOLDIERS_CONFIG.recruitStats[unit.type];
-    if (base) {
-      baseMaxHp = base.maxHp;
-      baseDmg = base.dmg;
-      baseSpeed = base.speed;
-      baseRange = base.range;
-    }
-  } else {
-    const base = CFG.monsters[unit.type] || CFG.monsterFallback;
-    if (base) {
-      baseMaxHp = base.hp;
-      baseDmg = base.dmg;
-      baseSpeed = base.speed;
-      baseRange = base.range;
-    }
-  }
-
-  let bonusMaxHp = 0;
-  let bonusDmg = 0;
-  let bonusSpeed = 0;
-  let bonusRange = 0;
-  let bonusLeap = 0;
-
-  if (isPlayer) {
-    // Apply Active and Permanently Activated Blessing modifiers
-    const activeBlessings = new Set();
-    if (STATE.activeBlessing) {
-      activeBlessings.add(STATE.activeBlessing);
-    }
-    if (STATE.permanentlyActivatedBlessings) {
-      STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
-    }
-
-    for (const blessing of activeBlessings) {
-      if (GC.modifiers.blessings[blessing]) {
-        const bMod = GC.modifiers.blessings[blessing];
-        if (bMod.targetType === 'all' || bMod.targetType === unit.type) {
-          if (bMod.maxHp) bonusMaxHp += bMod.maxHp;
-          if (bMod.dmg) bonusDmg += bMod.dmg;
-          if (bMod.speed) bonusSpeed += bMod.speed;
-          if (bMod.range) bonusRange += bMod.range;
-          if (bMod.leap) bonusLeap += bMod.leap;
-        }
-      }
-    }
-
-    // Apply Quest Milestone modifiers
-    for (const godName of Object.keys(STATE.godQuests)) {
-      const track = STATE.godQuests[godName];
-      const godMiles = GC.modifiers.milestones[godName];
-      if (godMiles) {
-        for (const mMod of godMiles) {
-          if (track[mMod.index]) {
-            if (mMod.targetType === 'all' || mMod.targetType === unit.type) {
-              if (mMod.maxHp) bonusMaxHp += mMod.maxHp;
-              if (mMod.dmg) bonusDmg += mMod.dmg;
-              if (mMod.speed) bonusSpeed += mMod.speed;
-              if (mMod.range) bonusRange += mMod.range;
-              if (mMod.leap) bonusLeap += mMod.leap;
-            }
-          }
-        }
-      }
-    }
-  } else {
-    // Enemy units
-    // Hel milestone 1: Enemies deal -1 DMG
-    if (STATE.godQuests.hel?.[0]) {
-      bonusDmg -= 1;
-    }
-  }
-
-  return {
-    hp: unit.hp,
-    maxHp: { base: baseMaxHp, bonus: bonusMaxHp, total: Math.max(1, baseMaxHp + bonusMaxHp) },
-    dmg: { base: baseDmg, bonus: bonusDmg, total: Math.max(0, baseDmg + bonusDmg) },
-    speed: { base: baseSpeed, bonus: bonusSpeed, total: Math.max(0, baseSpeed + bonusSpeed) },
-    range: { base: baseRange, bonus: bonusRange, total: Math.max(1, baseRange + bonusRange) },
-    leap: { base: 0, bonus: bonusLeap, total: Math.max(0, 0 + bonusLeap) }
-  };
-}

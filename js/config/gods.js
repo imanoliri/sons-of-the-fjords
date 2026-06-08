@@ -63,26 +63,49 @@ export const GODS_CONFIG = {
 
   modifiers: {
     wrath: {
-      freya: { maxHpPenalty: -10 }
+      freya: { maxHpPenalty: -10 },
+      thor: { extraLandFoodCost: 1, extraSeaWoodCost: 1 },
+      odin: { stepsTrigger: 3, hpLoss: 1 },
+      hel: { blockRecruitment: true },
+      loki: { maxGoldLoss: 3, maxInjuryDmg: 5, maxFoodLoss: 3 }
     },
     milestones: {
       odin: [
+        { index: 1, scoutRadius: 2 },
         { index: 2, targetType: 'huntsman', range: 1 },
         { index: 3, targetType: 'berserker', dmg: 1 }
       ],
       thor: [
         { index: 0, targetType: 'berserker', dmg: 1 },
         { index: 1, targetType: 'berserker', leap: 1 },
+        { index: 2, doubleAttackChance: 0.10 },
         { index: 3, targetType: 'all', maxHp: 5 }
       ],
       freya: [
         { index: 0, targetType: 'shieldmaiden', maxHp: 5 },
-        { index: 2, targetType: 'shieldmaiden', dmg: 2 }
+        { index: 1, healThreshold: 0.5, healAmount: 1 },
+        { index: 2, targetType: 'shieldmaiden', dmg: 2 },
+        { index: 3, targetType: 'shieldmaiden', blockAmount: 1 }
+      ],
+      hel: [
+        { index: 0, enemyDmgModifier: -1 },
+        { index: 1, surviveLethal: true },
+        { index: 2, goldDrop: 1 },
+        { index: 3, enemySpeedModifier: -0.10, enemyMissChance: 0.10 }
+      ],
+      loki: [
+        { index: 0, chestGoldBonus: 1 },
+        { index: 1, enemyMissChance: 0.10 },
+        { index: 2, confuseChance: 0.25, confuseDurationTicks: 2 },
+        { index: 3, priceReduction: 1 }
       ]
     },
     blessings: {
       odin: { targetType: 'huntsman', range: 2, dmg: 1 },
-      thor: { targetType: 'berserker', dmg: 3, leap: 1 }
+      thor: { targetType: 'berserker', dmg: 3, leap: 1 },
+      freya: { targetType: 'shieldmaiden', healAmount: 2 },
+      hel: { targetType: 'enemy_corpse', raiseChance: 0.75, raiseDurationTicks: 3 },
+      loki: { targetType: 'enemy_spawn', charmChance: 0.25, charmDurationTicks: 2 }
     }
   },
 
@@ -129,7 +152,7 @@ export const GODS_CONFIG = {
       wrath: 'Wrath: Recruited units start with -10 max HP.',
       milestoneEffects: [
         'Shieldmaidens gain +5 max HP.',
-        'Any unit below 25% HP heals 1 HP/tick.',
+        'Any unit below 50% HP heals 1 HP/tick.',
         'Shieldmaidens gain +2 DMG.',
         'Shieldmaidens block 1 DMG per hit.',
         null
@@ -150,7 +173,7 @@ export const GODS_CONFIG = {
         'Enemies move 10% slower and have 10% chance to miss attacks.',
         null
       ],
-      buff: 'Fallen enemies have a 50% chance to rise as allied undead for 3 ticks.'
+      buff: 'Fallen enemies have a 75% chance to rise as allied undead for 3 ticks.'
     },
     loki: {
       title: 'Loki — The Trickster',

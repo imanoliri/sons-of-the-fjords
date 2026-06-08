@@ -2,10 +2,10 @@
    UI MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, executePlunderMound, executeSacrificeSheep, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, buyRecruit, getHealCost, healWarriors } from './state.js';
+import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, executePlunderMound, executeSacrificeSheep, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, buyRecruit, getHealCost, healWarriors, getEffectiveStats } from './state.js';
 import { getAdjacentCoords } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
-import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats, fleeCombat, adjustCombatSpeed } from './combat.js';
+import { togglePause, deployUnit, undeployUnit, startCombat, fleeCombat, adjustCombatSpeed } from './combat.js';
 import { TOWN_CONFIG } from './config/town.js';
 import { MOVEMENT_CONFIG } from './config/movement.js';
 import { LOCATION_CONFIG } from './config/location.js';
@@ -924,7 +924,8 @@ function autoDiscoverAdjacent(locId) {
   
   let radius = 1;
   if (STATE.godQuests.odin?.[1]) {
-    radius = 2; // Odin Milestone 2: Scouts reveal a 2-tile radius instead of 1
+    const m1Config = GODS_CONFIG.modifiers.milestones.odin.find(m => m.index === 1);
+    radius = m1Config?.scoutRadius ?? 2; // Odin Milestone 2: Scouts reveal a 2-tile radius instead of 1
   }
 
   const neighbors = [];
@@ -1320,9 +1321,11 @@ function movePartyOnWorld(x, y) {
   let woodCost = 0;
   
   if (targetTerrain === 'water' || targetTerrain === 'river') {
+    const thorWrath = GODS_CONFIG.modifiers.wrath.thor;
+    const extraSeaWood = thorWrath?.extraSeaWoodCost ?? 1;
     let requiredWood = 1;
     if (targetTerrain === 'water' && STATE.godFavor.thor === -5) {
-      requiredWood = 2;
+      requiredWood = 1 + extraSeaWood;
     }
     if (STATE.resources.wood >= requiredWood) {
       cost = 1;
@@ -1340,8 +1343,9 @@ function movePartyOnWorld(x, y) {
 
   // Thor's Wrath: Storms during land travel cost +1 extra Food per step (only at -5 favor)
   if (targetTerrain !== 'water' && targetTerrain !== 'river' && STATE.godFavor.thor === -5) {
-    cost += 1;
-    logWorld("Thor's Wrath: Lightning storms increase land travel food cost (+1).", 'warn-message');
+    const extraLandFood = GODS_CONFIG.modifiers.wrath.thor?.extraLandFoodCost ?? 1;
+    cost += extraLandFood;
+    logWorld(`Thor's Wrath: Lightning storms increase land travel food cost (+${extraLandFood}).`, 'warn-message');
   }
 
   // Deduct food & wood
@@ -1406,13 +1410,16 @@ function movePartyOnWorld(x, y) {
   if (STATE.godFavor.odin === -5) {
     if (STATE.odinWrathSteps === undefined) STATE.odinWrathSteps = 0;
     STATE.odinWrathSteps++;
-    if (STATE.odinWrathSteps >= 3) {
+    const odinWrath = GODS_CONFIG.modifiers.wrath.odin;
+    const stepsTrigger = odinWrath?.stepsTrigger ?? 3;
+    if (STATE.odinWrathSteps >= stepsTrigger) {
       STATE.odinWrathSteps = 0;
       if (STATE.band.length > 0) {
         const idx = Math.floor(Math.random() * STATE.band.length);
         const target = STATE.band[idx];
-        target.hp -= 1;
-        logWorld(`Odin's Wrath: Blizzard claimed 1 HP from ${target.name}.`, 'warn-message');
+        const hpLoss = odinWrath?.hpLoss ?? 1;
+        target.hp -= hpLoss;
+        logWorld(`Odin's Wrath: Blizzard claimed ${hpLoss} HP from ${target.name}.`, 'warn-message');
         if (target.hp <= 0) {
           STATE.band.splice(idx, 1);
           logWorld(`Odin's Wrath: ${target.name} perished in the tundra.`, 'warn-message');
@@ -1429,8 +1436,10 @@ function movePartyOnWorld(x, y) {
   // Loki's Wrath: Random event triggers each world move (only at -5 favor)
   if (STATE.godFavor.loki === -5) {
     const roll = Math.random();
+    const lokiWrath = GODS_CONFIG.modifiers.wrath.loki;
     if (roll < 0.33) {
-      const goldLoss = Math.min(STATE.resources.gold, 3);
+      const maxGold = lokiWrath?.maxGoldLoss ?? 3;
+      const goldLoss = Math.min(STATE.resources.gold, maxGold);
       if (goldLoss > 0) {
         adjustResource('gold', -goldLoss);
         logWorld(`Loki's Wrath: Trickster sprites purloined ${goldLoss} Gold from your chest!`, 'warn-message');
@@ -1439,14 +1448,16 @@ function movePartyOnWorld(x, y) {
       if (STATE.band.length > 0) {
         const idx = Math.floor(Math.random() * STATE.band.length);
         const target = STATE.band[idx];
-        const dmg = Math.min(target.hp - 1, 5);
+        const maxDmg = lokiWrath?.maxInjuryDmg ?? 5;
+        const dmg = Math.min(target.hp - 1, maxDmg);
         if (dmg > 0) {
           target.hp -= dmg;
           logWorld(`Loki's Wrath: Loki tripped ${target.name}, dealing ${dmg} injury damage.`, 'warn-message');
         }
       }
     } else {
-      const foodLoss = Math.min(STATE.resources.food, 3);
+      const maxFood = lokiWrath?.maxFoodLoss ?? 3;
+      const foodLoss = Math.min(STATE.resources.food, maxFood);
       if (foodLoss > 0) {
         adjustResource('food', -foodLoss);
         logWorld(`Loki's Wrath: Ravens ruined ${foodLoss} Food rations!`, 'warn-message');
@@ -1576,9 +1587,11 @@ function renderTownScreen() {
   let sheepBuyCost = Math.max(dp.sheepBuy.minCost, Math.min(dp.sheepBuy.maxCost, dp.sheepBuy.baseCost - Math.floor(plainsCount / 2) + Math.floor((snowCount + mountainCount + waterCount) / 3)));
 
   if (STATE.godQuests.loki?.[3]) {
-    foodCost = Math.max(dp.food.minCost, foodCost - 1);
-    woodCost = Math.max(dp.woodBuy.minCost, woodCost - 1);
-    sheepBuyCost = Math.max(dp.sheepBuy.minCost, sheepBuyCost - 1);
+    const m4Config = GODS_CONFIG.modifiers.milestones.loki.find(m => m.index === 3);
+    const reduction = m4Config?.priceReduction ?? 1;
+    foodCost = Math.max(dp.food.minCost, foodCost - reduction);
+    woodCost = Math.max(dp.woodBuy.minCost, woodCost - reduction);
+    sheepBuyCost = Math.max(dp.sheepBuy.minCost, sheepBuyCost - reduction);
   }
 
   const sheepSellGain = Math.max(dp.sheepSell.minGain, Math.min(dp.sheepSell.maxGain, dp.sheepSell.baseGain + (plainsCount <= 1 ? dp.sheepSell.scarceBonus : 0) - Math.floor(plainsCount / 3)));
@@ -2157,12 +2170,15 @@ function triggerEnterCavePortal(coordKey, entity) {
 function triggerEncounterEvent(coordKey, entity) {
   if (entity.type === 'treasure') {
     let goldGained = entity.silver;
+    let bonus = 0;
     if (STATE.godQuests.loki?.[0]) {
-      goldGained += 1;
+      const m1Config = GODS_CONFIG.modifiers.milestones.loki.find(m => m.index === 0);
+      bonus = m1Config?.chestGoldBonus ?? 1;
+      goldGained += bonus;
     }
     adjustResource('gold', goldGained);
     entity.isLooted = true;
-    showToast(`Uncovered buried chest! Looted +${goldGained} Gold.${STATE.godQuests.loki?.[0] ? ' (Loki bonus +1)' : ''}`, '🪙');
+    showToast(`Uncovered buried chest! Looted +${goldGained} Gold.${STATE.godQuests.loki?.[0] ? ` (Loki bonus +${bonus})` : ''}`, '🪙');
     notify('STATE_UPDATED');
   } 
   else if (entity.type === 'wood_source') {

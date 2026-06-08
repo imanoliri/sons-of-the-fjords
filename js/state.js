@@ -5,6 +5,7 @@
 import { SOLDIERS_CONFIG as SC } from './config/soldiers.js';
 import { GODS_CONFIG as GC } from './config/gods.js';
 import { WORLD_CONFIG as WC } from './config/world.js';
+import { COMBAT_CONFIG as CC } from './config/combat.js';
 
 // Event emitter subscription list
 const listeners = [];
@@ -393,7 +394,9 @@ export function buySheepDynamic(cost, amount = 1) {
 
 export function buyRecruit(type, cost) {
   if (STATE.godFavor.hel === -5) {
-    return { success: false, message: "Hel's Wrath: Dead band members cannot be replaced!" };
+    if (GC.modifiers.wrath.hel?.blockRecruitment ?? true) {
+      return { success: false, message: "Hel's Wrath: Dead band members cannot be replaced!" };
+    }
   }
   if (STATE.band.length >= SC.maxBandSize) {
     return { success: false, message: `Your Drakkar deck is full (max ${SC.maxBandSize} soldiers)!` };
@@ -422,10 +425,11 @@ export function buyRecruit(type, cost) {
 export function getHealCost() {
   let totalCost = 0;
   for (const warrior of STATE.band) {
-    if (warrior.hp < warrior.maxHp) {
-      if (warrior.hp < warrior.maxHp * 0.2) {
+    const effStats = getEffectiveStats(warrior);
+    if (warrior.hp < effStats.maxHp.total) {
+      if (warrior.hp < effStats.maxHp.total * 0.2) {
         totalCost += 4;
-      } else if (warrior.hp < warrior.maxHp * 0.8) {
+      } else if (warrior.hp < effStats.maxHp.total * 0.8) {
         totalCost += 2;
       }
     }
@@ -438,8 +442,9 @@ export function healWarriors() {
   if (STATE.resources.gold >= cost) {
     let healedCount = 0;
     for (const warrior of STATE.band) {
-      if (warrior.hp < warrior.maxHp) {
-        warrior.hp = warrior.maxHp;
+      const effStats = getEffectiveStats(warrior);
+      if (warrior.hp < effStats.maxHp.total) {
+        warrior.hp = effStats.maxHp.total;
         healedCount++;
       }
     }
@@ -448,5 +453,96 @@ export function healWarriors() {
     return { success: true, message: `Healed ${healedCount} warriors for ${cost} gold.` };
   }
   return { success: false, message: `Not enough gold! Need ${cost} gold.` };
+}
+
+export function getEffectiveStats(unit) {
+  const isPlayer = unit.alliance === 'player' || ['shieldmaiden', 'berserker', 'huntsman'].includes(unit.type);
+  let baseMaxHp = unit.maxHp;
+  let baseDmg = unit.dmg;
+  let baseSpeed = unit.speed;
+  let baseRange = unit.range;
+
+  if (isPlayer) {
+    const base = SC.recruitStats[unit.type];
+    if (base) {
+      baseMaxHp = base.maxHp;
+      baseDmg = base.dmg;
+      baseSpeed = base.speed;
+      baseRange = base.range;
+    }
+  } else {
+    const base = CC.monsters[unit.type] || CC.monsterFallback;
+    if (base) {
+      baseMaxHp = base.hp;
+      baseDmg = base.dmg;
+      baseSpeed = base.speed;
+      baseRange = base.range;
+    }
+  }
+
+  let bonusMaxHp = 0;
+  let bonusDmg = 0;
+  let bonusSpeed = 0;
+  let bonusRange = 0;
+  let bonusLeap = 0;
+
+  if (isPlayer) {
+    // Apply Active and Permanently Activated Blessing modifiers
+    const activeBlessings = new Set();
+    if (STATE.activeBlessing) {
+      activeBlessings.add(STATE.activeBlessing);
+    }
+    if (STATE.permanentlyActivatedBlessings) {
+      STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
+    }
+
+    for (const blessing of activeBlessings) {
+      if (GC.modifiers.blessings[blessing]) {
+        const bMod = GC.modifiers.blessings[blessing];
+        if (bMod.targetType === 'all' || bMod.targetType === unit.type) {
+          if (bMod.maxHp) bonusMaxHp += bMod.maxHp;
+          if (bMod.dmg) bonusDmg += bMod.dmg;
+          if (bMod.speed) bonusSpeed += bMod.speed;
+          if (bMod.range) bonusRange += bMod.range;
+          if (bMod.leap) bonusLeap += bMod.leap;
+        }
+      }
+    }
+
+    // Apply Quest Milestone modifiers
+    for (const godName of Object.keys(STATE.godQuests)) {
+      const track = STATE.godQuests[godName];
+      const godMiles = GC.modifiers.milestones[godName];
+      if (godMiles) {
+        for (const mMod of godMiles) {
+          if (track[mMod.index]) {
+            if (mMod.targetType === 'all' || mMod.targetType === unit.type) {
+              if (mMod.maxHp) bonusMaxHp += mMod.maxHp;
+              if (mMod.dmg) bonusDmg += mMod.dmg;
+              if (mMod.speed) bonusSpeed += mMod.speed;
+              if (mMod.range) bonusRange += mMod.range;
+              if (mMod.leap) bonusLeap += mMod.leap;
+            }
+          }
+        }
+      }
+    }
+  } else {
+    // Enemy units
+    // Hel milestone 1: Enemies deal -1 DMG
+    if (STATE.godQuests.hel?.[0]) {
+      const m1Config = GC.modifiers.milestones.hel.find(m => m.index === 0);
+      bonusDmg += m1Config?.enemyDmgModifier ?? -1;
+    }
+  }
+
+  return {
+    hp: unit.hp,
+    maxHp: { base: baseMaxHp, bonus: bonusMaxHp, total: Math.max(1, baseMaxHp + bonusMaxHp) },
+    dmg: { base: baseDmg, bonus: bonusDmg, total: Math.max(0, baseDmg + bonusDmg) },
+    speed: { base: baseSpeed, bonus: bonusSpeed, total: Math.max(0, baseSpeed + bonusSpeed) },
+    range: { base: baseRange, bonus: bonusRange, total: Math.max(1, baseRange + bonusRange) },
+    leap: { base: 0, bonus: bonusLeap, total: Math.max(0, 0 + bonusLeap) }
+  };
 }
 
