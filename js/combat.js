@@ -558,13 +558,23 @@ function findTargetInLane(unit) {
         }
       }
     }
-    if (bestTarget) return bestTarget;
+    if (bestTarget) {
+      if (unit.type === 'huntsman') {
+        console.log(`[TARGET DEBUG] (Odin Strategist) Huntsman ${unit.name} at row ${unit.row}, col ${unit.col} targeted ${bestTarget.name} at row ${bestTarget.row}, col ${bestTarget.col}, colDist: ${Math.abs(bestTarget.col - unit.col)}, range: ${range}`);
+      }
+      return bestTarget;
+    }
   } else {
     for (let r = 1; r <= range; r++) {
       const checkCol = unit.col + (r * dir);
       if (checkCol >= 0 && checkCol < CFG.gridCols) {
         const cell = grid[unit.row][checkCol];
-        if (cell && cell.alliance !== unit.alliance) return cell;
+        if (cell && cell.alliance !== unit.alliance) {
+          if (unit.type === 'huntsman') {
+            console.log(`[TARGET DEBUG] (Normal) Huntsman ${unit.name} at row ${unit.row}, col ${unit.col} targeted ${cell.name} at row ${cell.row}, col ${cell.col}, colDist: ${r}, range: ${range}`);
+          }
+          return cell;
+        }
       }
     }
   }
