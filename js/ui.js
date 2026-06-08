@@ -2927,6 +2927,9 @@ export function handleStateNotification(event, data) {
     } else if (data.effect === 'loki_confuse') {
       logWorld(`😵 Loki's Chaos: Spawning enemy '${data.unit.name}' is Confused!`, 'warn-message');
       showToast(`Confused: ${data.unit.name}`, '😵');
+    } else if (data.effect === 'loki_charm_wearoff') {
+      logWorld(`🎭 Loki's Charm faded: Charmed unit '${data.unit.name}' broke free!`, 'warn-message');
+      showToast(`Charm wore off`, '🎭');
     }
   }
   else if (event === 'COMBAT_BREACH') {

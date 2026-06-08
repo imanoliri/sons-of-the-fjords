@@ -166,7 +166,7 @@ export const GODS_CONFIG = {
         'Town prices reduced by 1 Gold each.',
         null
       ],
-      buff: 'Chaos Mirror: 25% chance for spawning monsters to be Charmed, spawning on the left and fighting for you.'
+      buff: 'Chaos Mirror: 25% chance for spawning monsters to be Charmed, spawning in front of enemies and fighting for you for 2 ticks.'
     }
   }
 };

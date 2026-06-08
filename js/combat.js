@@ -76,10 +76,10 @@ export function startCombat(locationId, coordKey, enemyData) {
       const isConfused = !isCharmed && spawnedCount === confusedIndex;
       spawnedCount++;
 
-      let spawnCol = isCharmed ? 0 : (isConfused ? CFG.gridCols - 2 : CFG.gridCols - 1);
-      if (isCharmed) {
-        // Find first unoccupied column from the left
-        for (let c = 0; c < CFG.gridCols; c++) {
+      let spawnCol = isCharmed ? CFG.gridCols - 2 : (isConfused ? CFG.gridCols - 2 : CFG.gridCols - 1);
+      if (isCharmed || isConfused) {
+        // Find first unoccupied column from the right side start
+        for (let c = CFG.gridCols - 2; c >= 0; c--) {
           if (!grid[lane][c]) {
             spawnCol = c;
             break;
@@ -104,6 +104,7 @@ export function startCombat(locationId, coordKey, enemyData) {
         range: stats.range,
         alliance: (isCharmed || isConfused) ? 'player' : 'enemy',
         isCharmed: isCharmed,
+        charmedTicksLeft: isCharmed ? 2 : 0,
         isConfused: isConfused,
         confusedTicksLeft: isConfused ? 2 : 0,
         row: lane,
@@ -181,6 +182,18 @@ function combatTick() {
         unit.isConfused = false;
         unit.alliance = 'enemy';
         unit.name = unit.type;
+        notify('COMBAT_UPDATE');
+      }
+    }
+
+    // Loki Champion Blessing: Charm Tick Countdown
+    if (unit.isCharmed) {
+      unit.charmedTicksLeft--;
+      if (unit.charmedTicksLeft <= 0) {
+        unit.isCharmed = false;
+        unit.alliance = 'enemy';
+        unit.name = unit.type;
+        notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_charm_wearoff', unit: unit });
         notify('COMBAT_UPDATE');
       }
     }
