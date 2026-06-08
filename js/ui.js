@@ -2515,29 +2515,42 @@ function renderQuestsScreen() {
   // To map opposites exactly across the star, the gods must be arranged in the polar coordinate order:
   // odin, thor, freya, hel, loki. (Top starts at -90 degrees, increments by 72 deg).
   const gods = ['odin', 'thor', 'freya', 'hel', 'loki'];
-  // Larger Pentagram Coordinates with Radius = 44 (Center = 50, 50)
-  // top = 50 - 44 * cos(angle), left = 50 + 44 * sin(angle)
-  // odin: angle = 0   => top: 6%, left: 50%
-  // thor: angle = 72  => top: 36.40%, left: 91.85%
-  // freya: angle = 144 => top: 85.60%, left: 75.86%
-  // hel: angle = 216   => top: 85.60%, left: 24.14%
-  // loki: angle = 288  => top: 36.40%, left: 8.15%
-  const coordinates = {
-    odin: { top: '6%', left: '50%' },
-    thor: { top: '36.40%', left: '91.85%' },
-    freya: { top: '85.60%', left: '75.86%' },
-    hel: { top: '85.60%', left: '24.14%' },
-    loki: { top: '36.40%', left: '8.15%' }
-  };
+  
+  // Calculate polar coordinates dynamically
+  // Center is (50, 50), Radius is 44
+  const cx = 50;
+  const cy = 50;
+  const radius = 44;
+
+  const points = gods.map((_, i) => {
+    // Odin starts at top (-90 degrees / -PI/2 radians), incrementing by 72 degrees (2 * PI / 5)
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+    const x = cx + radius * Math.cos(angle);
+    const y = cy + radius * Math.sin(angle);
+    return { x: parseFloat(x.toFixed(2)), y: parseFloat(y.toFixed(2)) };
+  });
+
+  const coordinates = {};
+  gods.forEach((gKey, idx) => {
+    coordinates[gKey] = {
+      top: `${points[idx].y}%`,
+      left: `${points[idx].x}%`
+    };
+  });
+
+  // Star ordering traces vertices by skipping index by 2: 0 -> 2 -> 4 -> 1 -> 3
+  const starIndices = [0, 2, 4, 1, 3];
+  const starPointsStr = starIndices.map(idx => `${points[idx].x},${points[idx].y}`).join(' ');
+  const pentagonPointsStr = points.map(p => `${p.x},${p.y}`).join(' ');
 
   // Re-append the SVG to make sure it is behind the elements
   const pentagramSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   pentagramSvg.setAttribute('class', 'pentagram-svg');
   pentagramSvg.setAttribute('viewBox', '0 0 100 100');
   pentagramSvg.innerHTML = `
-    <circle cx="50" cy="50" r="44" class="pentagram-outer-circle" />
-    <polygon points="50,6 91.85,36.40 75.86,85.60 24.14,85.60 8.15,36.40" class="pentagram-pentagon" />
-    <polygon points="50,6 75.86,85.60 8.15,36.40 91.85,36.40 24.14,85.60" class="pentagram-star" />
+    <circle cx="${cx}" cy="${cy}" r="${radius}" class="pentagram-outer-circle" />
+    <polygon points="${pentagonPointsStr}" class="pentagram-pentagon" />
+    <polygon points="${starPointsStr}" class="pentagram-star" />
   `;
   elQuestsList.appendChild(pentagramSvg);
   
