@@ -377,7 +377,6 @@ function combatTick() {
               }
             }
           }
-
           if (canLeap) {
             leapVal = fullLeapVal;
           }
@@ -415,7 +414,6 @@ function combatTick() {
                 let pushChain = [];
                 let currentPushCol = obstacle.col;
                 let pushPossible = true;
-
                 while (true) {
                   const checkCol = currentPushCol + pushDir;
                   if (checkCol < 0 || checkCol >= sizeC) {
@@ -476,6 +474,10 @@ function combatTick() {
             continue;
           }
           lastValidCol = testCol;
+        }
+
+        if (effectiveLeap > 0) {
+          console.log(`[LEAP DEBUG] Unit: ${unit.name}, col: ${unit.col} -> ${lastValidCol}, leapVal: ${leapVal}, effectiveLeap: ${effectiveLeap}`);
         }
 
         if (lastValidCol !== unit.col) {
