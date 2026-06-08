@@ -65,9 +65,9 @@ export const GODS_CONFIG = {
     wrath: {
       freya: { maxHpPenalty: -10 },
       thor: { extraLandFoodCost: 1, extraSeaWoodCost: 1 },
-      odin: { stepsTrigger: 3, hpLoss: 1 },
+      odin: { stepsTrigger: 3, hpLoss: 3 },
       hel: { blockRecruitment: true },
-      loki: { maxGoldLoss: 3, maxInjuryDmg: 5, maxFoodLoss: 3 }
+      loki: { maxGoldLoss: 3, maxInjuryDmg: 3, maxFoodLoss: 2 }
     },
     milestones: {
       odin: [
@@ -91,11 +91,11 @@ export const GODS_CONFIG = {
         { index: 0, enemyDmgModifier: -1 },
         { index: 1, surviveLethal: true },
         { index: 2, goldDrop: 1 },
-        { index: 3, enemySpeedModifier: -0.10, enemyMissChance: 0.10 }
+        { index: 3, enemySpeedModifier: -0.20, enemyMissChance: 0.20 }
       ],
       loki: [
         { index: 0, chestGoldBonus: 1 },
-        { index: 1, enemyMissChance: 0.10 },
+        { index: 1, enemyMissChance: 0.20 },
         { index: 2, confuseChance: 0.25, confuseDurationTicks: 2 },
         { index: 3, priceReduction: 1 }
       ]
@@ -117,7 +117,7 @@ export const GODS_CONFIG = {
       color: 'var(--color-odin)',
       relic: 'Shard of Gungnir',
       favorAction: 'Appease with <b>Shard of Gungnir</b> at a Town Shrine, or kill Wolves/Giants.',
-      wrath: 'Wrath: Random unit loses 1 HP every 3 world steps.',
+      wrath: 'Wrath: Random unit loses 3 HP every 3 world steps.',
       milestoneEffects: [
         'Strategist: Soldiers can attack adjacent lanes.',
         'Scouts reveal a 2-tile radius instead of 1.',
@@ -170,7 +170,7 @@ export const GODS_CONFIG = {
         'Enemies deal -1 DMG.',
         'Player units survive lethal hits once with 1 HP (once per battle).',
         'Slain enemies drop 1 Gold.',
-        'Enemies move 10% slower and have 10% chance to miss attacks.',
+        'Enemies 20% chance to miss a step and 20% chance to miss attacks.',
         null
       ],
       buff: 'Fallen enemies have a 75% chance to rise as allied undead for 3 ticks.'
@@ -184,7 +184,7 @@ export const GODS_CONFIG = {
       wrath: 'Wrath: Random event triggers each world move (ambush, resource loss, or unit injury).',
       milestoneEffects: [
         'Chest loot gives +1 extra Gold.',
-        'Enemies have 10% chance to miss attacks.',
+        'Enemies have 20% chance to miss attacks.',
         '25% chance for one enemy per wave to spawn confused (fights allies for 2 ticks).',
         'Town prices reduced by 1 Gold each.',
         null
