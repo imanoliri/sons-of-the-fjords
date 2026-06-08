@@ -796,7 +796,7 @@ export function undeployUnit(row, col) {
 }
 
 function checkCombatEndConditions() {
-  const activeEnemies = STATE.combat.waveMonsters.filter(m => m.alliance === 'enemy');
+  const activeEnemies = STATE.combat.waveMonsters.filter(m => m.alliance === 'enemy' || m.isCharmed || m.isConfused);
   if (activeEnemies.length === 0) {
     endCombat(true);
   } else {
