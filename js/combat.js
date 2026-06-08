@@ -338,7 +338,7 @@ function combatTick() {
               const testCol = unit.col + (dir * step);
               if (testCol >= 0 && testCol < sizeC) {
                 for (const r of targetRows) {
-                  const cell = grid[r][testCol];
+                  const cell = gridSnapshot[r][testCol];
                   if (cell && cell.alliance !== unit.alliance) {
                     // If the enemy has no target in range, they will move 1 step forward (moving)
                     const isMoving = !findTargetInLane(cell, gridSnapshot);
