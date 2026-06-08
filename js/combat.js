@@ -56,11 +56,20 @@ export function startCombat(locationId, coordKey, enemyData) {
   }
   const hasLokiBlessing = activeBlessings.has('loki');
 
+  const totalMonstersCount = enemyData.monsters.reduce((sum, m) => sum + m.count, 0);
+
   let confusedIndex = -1;
   if (STATE.godQuests.loki?.[2]) {
-    const totalMonstersCount = enemyData.monsters.reduce((sum, m) => sum + m.count, 0);
     if (totalMonstersCount > 0) {
       confusedIndex = Math.floor(Math.random() * totalMonstersCount);
+    }
+  }
+
+  // Loki Champion blessing: 25% chance overall to charm exactly one spawned monster in the combat wave
+  let charmedIndex = -1;
+  if (hasLokiBlessing && Math.random() < 0.25) {
+    if (totalMonstersCount > 0) {
+      charmedIndex = Math.floor(Math.random() * totalMonstersCount);
     }
   }
 
@@ -72,7 +81,7 @@ export function startCombat(locationId, coordKey, enemyData) {
       spawnIndex++;
       const stats = getMonsterStats(m.monsterClass);
 
-      const isCharmed = hasLokiBlessing && Math.random() < 0.25;
+      const isCharmed = spawnedCount === charmedIndex;
       const isConfused = !isCharmed && spawnedCount === confusedIndex;
       spawnedCount++;
 
