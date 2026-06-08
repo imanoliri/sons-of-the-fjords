@@ -2517,10 +2517,10 @@ function renderQuestsScreen() {
   const gods = ['odin', 'thor', 'freya', 'hel', 'loki'];
   
   // Calculate polar coordinates dynamically
-  // Center is (50, 50), Radius is 44
+  // Center is (50, 50), Radius is 40
   const cx = 50;
   const cy = 50;
-  const radius = 44;
+  const radius = 40;
 
   const points = gods.map((_, i) => {
     // Odin starts at top (-90 degrees / -PI/2 radians), incrementing by 72 degrees (2 * PI / 5)
