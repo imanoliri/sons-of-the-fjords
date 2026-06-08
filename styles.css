@@ -1107,16 +1107,16 @@ body {
   position: fixed;
   z-index: 10000;
   pointer-events: none;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(11, 14, 17, 0.95);
+  border: 1px solid var(--border-color);
   border-left: 3px solid var(--text-accent);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
   padding: 0.6rem 0.9rem;
   border-radius: 4px;
   max-width: 280px;
   font-family: var(--font-body);
   font-size: 0.85rem;
-  color: #111;
+  color: var(--text-primary);
   display: none;
   flex-direction: column;
   gap: 0.25rem;
@@ -1135,17 +1135,17 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  color: #111;
+  color: var(--text-primary);
 }
 
 .game-tooltip-coords {
   font-family: var(--font-runes);
-  color: #555;
+  color: var(--text-muted);
   font-size: 0.7rem;
 }
 
 .game-tooltip-contents {
-  color: #333;
+  color: var(--text-primary);
   font-size: 0.8rem;
   line-height: 1.35;
 }
