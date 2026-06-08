@@ -2911,6 +2911,12 @@ export function handleStateNotification(event, data) {
     } else if (data.effect === 'thor_double') {
       logWorld(`⚡ Thor's Wrath: Allied unit '${data.unit.name}' strikes twice!`, 'gain-message');
       showToast(`Double Strike!`, '⚡');
+    } else if (data.effect === 'loki_charm') {
+      logWorld(`🌀 Loki's Mirror: Spawning enemy '${data.unit.name}' is Charmed to fight for you!`, 'gain-message');
+      showToast(`Charm: ${data.unit.name}!`, '🌀');
+    } else if (data.effect === 'loki_confuse') {
+      logWorld(`😵 Loki's Chaos: Spawning enemy '${data.unit.name}' is Confused!`, 'warn-message');
+      showToast(`Confused: ${data.unit.name}`, '😵');
     }
   }
   else if (event === 'COMBAT_BREACH') {

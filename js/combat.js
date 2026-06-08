@@ -87,6 +87,12 @@ export function startCombat(locationId, coordKey, enemyData) {
         }
       }
 
+      if (isCharmed) {
+        notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_charm', unit: { name: m.monsterClass } });
+      } else if (isConfused) {
+        notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_confuse', unit: { name: m.monsterClass } });
+      }
+
       const mUnit = {
         id: Date.now() + Math.floor(Math.random() * 1000) + i,
         name: m.monsterClass + (isCharmed ? ' 🌀' : (isConfused ? ' 😵' : '')),
