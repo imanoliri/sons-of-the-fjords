@@ -544,8 +544,7 @@ function findTargetInLane(unit) {
         if (colDist >= 0 && colDist <= range) {
           const cell = grid[rToCheck][cToCheck];
           if (cell && cell.alliance !== unit.alliance) {
-            const manhattan = colDist + Math.abs(unit.row - rToCheck);
-            const priorityDist = (rToCheck === unit.row) ? (manhattan - 1) : manhattan;
+            const priorityDist = (rToCheck === unit.row) ? (colDist - 0.1) : colDist;
 
             if (priorityDist < bestPriority) {
               bestPriority = priorityDist;
