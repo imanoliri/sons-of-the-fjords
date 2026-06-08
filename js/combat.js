@@ -325,21 +325,30 @@ function combatTick() {
             canLeap = true;
           }
 
-          // 2. Can meet an enemy (accounting for whether they are moving or static)
+          // 2. Can meet an enemy (accounting for whether they are moving or static, and adjacent lanes if Odin's Strategist is active)
           if (!canLeap) {
+            const targetRows = [unit.row];
+            if (unit.alliance === 'player' && STATE.godQuests.odin?.[0]) {
+              if (unit.row > 0) targetRows.push(unit.row - 1);
+              if (unit.row < CFG.gridRows - 1) targetRows.push(unit.row + 1);
+            }
+
             for (let step = 1; step <= fullLeapVal + 2; step++) {
               const testCol = unit.col + (dir * step);
               if (testCol >= 0 && testCol < sizeC) {
-                const cell = grid[unit.row][testCol];
-                if (cell && cell.alliance !== unit.alliance) {
-                  // If the enemy has no target in range, they will move 1 step forward (moving)
-                  const isMoving = !findTargetInLane(cell);
-                  const maxDistance = isMoving ? (fullLeapVal + 2) : (fullLeapVal + 1);
-                  if (step <= maxDistance) {
-                    canLeap = true;
-                    break;
+                for (const r of targetRows) {
+                  const cell = grid[r][testCol];
+                  if (cell && cell.alliance !== unit.alliance) {
+                    // If the enemy has no target in range, they will move 1 step forward (moving)
+                    const isMoving = !findTargetInLane(cell);
+                    const maxDistance = isMoving ? (fullLeapVal + 2) : (fullLeapVal + 1);
+                    if (step <= maxDistance) {
+                      canLeap = true;
+                      break;
+                    }
                   }
                 }
+                if (canLeap) break;
               }
             }
           }
