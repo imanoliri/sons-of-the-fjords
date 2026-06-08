@@ -291,7 +291,7 @@ function combatTick() {
     }
 
     const target = unit.isFleeing ? null : findTargetInLane(unit, gridSnapshot);
-    if (target) {
+    if (target && target.hp > 0) {
       // Loki Milestone 2: Enemy attack speed reduced by 10% (10% miss chance)
       if (unit.alliance === 'enemy' && STATE.godQuests.loki?.[1]) {
         const lokiM2 = GC.modifiers.milestones.loki.find(m => m.index === 1);
@@ -324,7 +324,7 @@ function combatTick() {
 
       for (let i = 0; i < attackCount; i++) {
         const currentTarget = (i === 0) ? target : (unit.isFleeing ? null : findTargetInLane(unit, gridSnapshot));
-        if (!currentTarget) break;
+        if (!currentTarget || currentTarget.hp <= 0) break;
 
         let dmgTaken = getEffectiveStats(unit).dmg.total;
 
