@@ -263,9 +263,15 @@ function combatTick() {
             reachedBoundary = true;
             break;
           }
-          // If there is any unit in the way (ally or enemy), they cannot pass through it
-          if (grid[unit.row][testCol]) {
-            break;
+          const obstacle = grid[unit.row][testCol];
+          if (obstacle) {
+            // Cannot leap over or land on an enemy unit
+            if (obstacle.alliance !== unit.alliance) {
+              break;
+            }
+            // Can leap over an ally, but cannot land on an ally's cell
+            // So we don't 'break' the loop, but we also don't mark it as a valid landing cell
+            continue;
           }
           lastValidCol = testCol;
         }
