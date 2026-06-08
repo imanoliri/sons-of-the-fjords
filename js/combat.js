@@ -116,7 +116,15 @@ export function startCombat(locationId, coordKey, enemyData) {
 
   STATE.combat.waveMonsters = monsters;
   notify('COMBAT_START');
-  combatTimer = setInterval(combatTick, CFG.tickIntervalMs);
+  combatTimer = setInterval(combatTick, STATE.combat.combatIntervalMs || CFG.tickIntervalMs);
+}
+
+export function adjustCombatSpeed(newSpeedMs) {
+  STATE.combat.combatIntervalMs = newSpeedMs;
+  if (STATE.combat.active && combatTimer) {
+    clearInterval(combatTimer);
+    combatTimer = setInterval(combatTick, newSpeedMs);
+  }
 }
 
 // Tick execution: updates units movement, attacks, and bounds

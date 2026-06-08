@@ -82,7 +82,8 @@ export const STATE = {
     locationId: null,
     entityCoordKey: null,
     waveMonsters: [],
-    stance: 'attack'
+    stance: 'attack',
+    combatIntervalMs: 600
   }
 };
 

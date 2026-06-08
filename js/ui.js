@@ -5,7 +5,7 @@
 import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, executePlunderMound, executeSacrificeSheep, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, buyRecruit, getHealCost, healWarriors } from './state.js';
 import { getAdjacentCoords } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
-import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats, fleeCombat } from './combat.js';
+import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats, fleeCombat, adjustCombatSpeed } from './combat.js';
 import { TOWN_CONFIG } from './config/town.js';
 import { MOVEMENT_CONFIG } from './config/movement.js';
 import { LOCATION_CONFIG } from './config/location.js';
@@ -244,6 +244,16 @@ export function initUIBindings() {
     STATE.combat.stance = 'attack';
     notify('COMBAT_UPDATE');
   });
+
+  const speedSlider = document.getElementById('slider-combat-speed');
+  const speedLabel = document.getElementById('label-combat-speed');
+  if (speedSlider && speedLabel) {
+    speedSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      speedLabel.innerText = `${val}ms`;
+      adjustCombatSpeed(val);
+    });
+  }
 
   // Game over restart
   bindButton('btn-restart-game', () => {

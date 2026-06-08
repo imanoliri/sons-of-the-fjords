@@ -203,7 +203,7 @@
         <div class="combat-layout">
           <div class="combat-grid-wrapper glass-panel">
             <div class="combat-ticker-header">
-              <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
                 <span style="font-size: 0.8rem; opacity: 0.8;">Orders:</span>
                 <button class="btn btn-sm" id="btn-stance-retreat">Retreat [Y]</button>
                 <button class="btn btn-sm" id="btn-stance-defend">Defend [X]</button>
@@ -214,6 +214,14 @@
                 
                 <button class="btn btn-sm btn-warning" id="btn-combat-pause">Pause / Deploy</button>
                 <button class="btn btn-sm btn-danger" id="btn-combat-flee">Flee Combat</button>
+
+                <div style="width: 2px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 0.25rem;"></div>
+
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto;">
+                  <span style="font-size: 0.8rem; opacity: 0.8; white-space: nowrap;">Speed:</span>
+                  <input type="range" id="slider-combat-speed" min="200" max="1500" value="600" step="50" style="width: 100px; cursor: pointer; accent-color: var(--text-accent);">
+                  <span id="label-combat-speed" style="font-size: 0.8rem; min-width: 45px; font-family: monospace;">600ms</span>
+                </div>
               </div>
             </div>
             
