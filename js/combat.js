@@ -137,6 +137,20 @@ function combatTick() {
       }
     }
 
+    // Freya Champion Blessing: Shieldmaidens heal 2 HP per tick when not in melee
+    if (unit.alliance === 'player' && unit.type === 'shieldmaiden') {
+      const isFreyaActive = STATE.activeBlessing === 'freya' || (STATE.permanentlyActivatedBlessings && STATE.permanentlyActivatedBlessings.includes('freya'));
+      if (isFreyaActive) {
+        const currentTarget = findTargetInLane(unit);
+        // "not in melee": target is null or distance to target is greater than 1
+        const inMelee = currentTarget && Math.abs(currentTarget.col - unit.col) <= 1;
+        if (!inMelee) {
+          const effStats = getEffectiveStats(unit);
+          unit.hp = Math.min(effStats.maxHp.total, unit.hp + 2);
+        }
+      }
+    }
+
     if (unit.isUndead) {
       unit.undeadTicksLeft--;
       if (unit.undeadTicksLeft <= 0) {
