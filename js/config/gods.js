@@ -104,7 +104,7 @@ export const GODS_CONFIG = {
       odin: { targetType: 'huntsman', range: 2, dmg: 1 },
       thor: { targetType: 'berserker', dmg: 3, leap: 1 },
       freya: { targetType: 'shieldmaiden', healAmount: 2 },
-      hel: { targetType: 'enemy_corpse', raiseChance: 0.75, raiseDurationTicks: 3 },
+      hel: { targetType: 'enemy_hurt', threshold: 0.5, raiseChance: 0.5, raiseDurationTicks: 3 },
       loki: { targetType: 'enemy_spawn', charmChance: 0.25, charmDurationTicks: 2 }
     }
   },
@@ -173,7 +173,7 @@ export const GODS_CONFIG = {
         'Enemies 20% chance to miss a step and 20% chance to miss attacks.',
         null
       ],
-      buff: 'Fallen enemies have a 75% chance to rise as allied undead for 3 ticks.'
+      buff: 'Necromancy: Hurt enemies (under 50% HP) have a once-in-a-battle 50% chance to rise as allied undead for 3 ticks.'
     },
     loki: {
       title: 'Loki — The Trickster',

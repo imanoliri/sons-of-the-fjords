@@ -2985,6 +2985,9 @@ export function handleStateNotification(event, data) {
     } else if (data.effect === 'loki_charm_wearoff') {
       logWorld(`🎭 Loki's Charm faded: Charmed unit '${data.unit.name}' broke free!`, 'warn-message');
       showToast(`Charm wore off`, '🎭');
+    } else if (data.effect === 'hel_undead') {
+      logWorld(`💀 Hel's Necromancy: Hurt enemy '${data.unit.name}' converted into an allied Undead Draugr!`, 'gain-message');
+      showToast(`Draugr Rises!`, '💀');
     }
   }
   else if (event === 'COMBAT_BREACH') {

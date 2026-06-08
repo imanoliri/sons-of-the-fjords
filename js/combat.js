@@ -350,6 +350,40 @@ function combatTick() {
         notify('COMBAT_DAMAGE', { attacker: unit, defender: currentTarget });
         unit.isAttacking = true;
         setTimeout(() => { unit.isAttacking = false; }, 200);
+
+        // Hel Champion Blessing: Once-per-battle 50% chance to turn into an undead when hurt under 50% max HP
+        if (currentTarget.alliance === 'enemy' && currentTarget.hp > 0 && !currentTarget.helUndeadChecked) {
+          currentTarget.helUndeadChecked = true;
+          const activeBlessings = new Set();
+          if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
+          if (STATE.permanentlyActivatedBlessings) {
+            STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
+          }
+          if (activeBlessings.has('hel')) {
+            const helBlessing = GC.modifiers.blessings.hel;
+            const threshold = helBlessing?.threshold ?? 0.5;
+            if (currentTarget.hp < currentTarget.maxHp * threshold) {
+              const raiseChance = helBlessing?.raiseChance ?? 0.5;
+              if (Math.random() < raiseChance) {
+                const duration = helBlessing?.raiseDurationTicks ?? 3;
+                currentTarget.name = 'Draugr (Undead) 💀';
+                currentTarget.type = 'Draugr Warrior';
+                currentTarget.hp = 15;
+                currentTarget.maxHp = 15;
+                currentTarget.dmg = 4;
+                currentTarget.speed = 1;
+                currentTarget.range = 1;
+                currentTarget.alliance = 'player';
+                currentTarget.isUndead = true;
+                currentTarget.undeadTicksLeft = duration;
+                
+                notify('COMBAT_EFFECT_TRIGGER', { effect: 'hel_undead', unit: currentTarget });
+                notify('COMBAT_UPDATE');
+              }
+            }
+          }
+        }
+
         if (currentTarget.hp <= 0) {
           grid[currentTarget.row][currentTarget.col] = null;
           removeUnitFromRegistry(currentTarget);
@@ -361,33 +395,6 @@ function combatTick() {
               const helM3 = GC.modifiers.milestones.hel.find(m => m.index === 2);
               const goldDrop = helM3?.goldDrop ?? 1;
               adjustResource('gold', goldDrop);
-            }
-
-            const activeBlessings = new Set();
-            if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
-            if (STATE.permanentlyActivatedBlessings) {
-              STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
-            }
-            const helBlessing = GC.modifiers.blessings.hel;
-            const raiseChance = helBlessing?.raiseChance ?? 0.5;
-            if (activeBlessings.has('hel') && Math.random() < raiseChance) {
-              const duration = helBlessing?.raiseDurationTicks ?? 3;
-              const undead = {
-                id: Date.now() + Math.floor(Math.random() * 1000),
-                name: 'Draugr (Undead) 💀',
-                type: 'Draugr Warrior',
-                hp: 15,
-                maxHp: 15,
-                dmg: 4,
-                speed: 1,
-                range: 1,
-                alliance: 'player',
-                isUndead: true,
-                undeadTicksLeft: duration,
-                row: currentTarget.row,
-                col: currentTarget.col
-              };
-              grid[currentTarget.row][currentTarget.col] = undead;
             }
           }
           notify('COMBAT_DEATH', currentTarget);
@@ -789,7 +796,8 @@ export function undeployUnit(row, col) {
 }
 
 function checkCombatEndConditions() {
-  if (STATE.combat.waveMonsters.length === 0) {
+  const activeEnemies = STATE.combat.waveMonsters.filter(m => m.alliance === 'enemy');
+  if (activeEnemies.length === 0) {
     endCombat(true);
   } else {
     const hasPlayerUnitsOnBoard = STATE.combat.grid.some(row =>
