@@ -325,15 +325,20 @@ function combatTick() {
             canLeap = true;
           }
 
-          // 2. Can meet an enemy (enemy is within fullLeapVal + 1 cells in front)
+          // 2. Can meet an enemy (accounting for whether they are moving or static)
           if (!canLeap) {
-            for (let step = 1; step <= fullLeapVal + 1; step++) {
+            for (let step = 1; step <= fullLeapVal + 2; step++) {
               const testCol = unit.col + (dir * step);
               if (testCol >= 0 && testCol < sizeC) {
                 const cell = grid[unit.row][testCol];
                 if (cell && cell.alliance !== unit.alliance) {
-                  canLeap = true;
-                  break;
+                  // If the enemy has no target in range, they will move 1 step forward (moving)
+                  const isMoving = !findTargetInLane(cell);
+                  const maxDistance = isMoving ? (fullLeapVal + 2) : (fullLeapVal + 1);
+                  if (step <= maxDistance) {
+                    canLeap = true;
+                    break;
+                  }
                 }
               }
             }
