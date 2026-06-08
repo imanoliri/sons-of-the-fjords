@@ -113,12 +113,12 @@ export const GODS_CONFIG = {
       wrath: 'Wrath: Storms during travel cost +1 extra Food on land and +1 extra Wood on sea per step.',
       milestoneEffects: [
         'Berserkers gain +1 DMG.',
-        'Berserkers move +1 Speed.',
+        'Berserkers gain Leap +1.',
         'All soldiers gain +10% faster Attack Speed.',
         'All units gain +5 max HP.',
         null
       ],
-      buff: 'Berserkers gain +3 DMG and +1 Speed.'
+      buff: 'Berserkers gain +3 DMG and Leap +1.'
     },
     freya: {
       title: 'Freya — Goddess of Love & Life',
