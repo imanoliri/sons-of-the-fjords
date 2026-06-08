@@ -40,7 +40,9 @@
         <span>No Active Buff</span>
       </div>
       <button class="btn btn-menu" id="btn-toggle-party" style="margin-right: 0.5rem;">Band [B]</button>
-      <button class="btn btn-menu" id="btn-toggle-quests">Quests [Q]</button>
+      <button class="btn btn-menu" id="btn-toggle-quests" style="margin-right: 0.5rem;">Quests [Q]</button>
+      <button class="btn btn-menu" id="btn-save-game" style="margin-right: 0.5rem;">Save Game</button>
+      <button class="btn btn-menu" id="btn-toggle-console">Console</button>
     </header>
 
     <!-- MAIN GAME PANEL -->
@@ -217,11 +219,12 @@
 
                 <div style="width: 2px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 0.25rem;"></div>
 
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto;">
-                  <span style="font-size: 0.8rem; opacity: 0.8; white-space: nowrap;">Speed:</span>
-                  <input type="range" id="slider-combat-speed" min="200" max="1500" value="600" step="50" style="width: 100px; cursor: pointer; accent-color: var(--text-accent);">
-                  <span id="label-combat-speed" style="font-size: 0.8rem; min-width: 45px; font-family: monospace;">600ms</span>
+                <div style="display: flex; align-items: center; gap: 0.4rem; margin-left: auto;">
+                  <span style="font-size: 0.8rem; opacity: 0.8; white-space: nowrap;">Formation:</span>
+                  <div id="formation-container" style="display: flex; gap: 0.3rem; align-items: center;"></div>
                 </div>
+                <input type="range" id="slider-combat-speed" min="200" max="1500" value="600" step="50" style="display: none;">
+                <span id="label-combat-speed" style="display: none;">600ms</span>
               </div>
             </div>
             
@@ -313,6 +316,22 @@
       </div>
     </div>
     
+    <!-- OVERLAY MODAL: DEV CONSOLE -->
+    <div class="modal-overlay hidden" id="modal-console">
+      <div class="modal-box glass-panel animate-glow" style="max-width: 600px; width: 90%; position: relative;">
+        <button class="btn-close-x" id="btn-close-console" title="Close Panel">✕</button>
+        <h2 class="logo-text">Dev Console</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+          Modify the JSON state below and click "Apply" to update the live game state.
+        </p>
+        <textarea id="console-state-textarea" style="width: 100%; height: 250px; font-family: monospace; font-size: 0.8rem; background: #111; color: #0f0; border: 1px solid var(--border-color); padding: 0.5rem; resize: vertical; box-sizing: border-box;"></textarea>
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+          <button class="btn" id="btn-console-refresh">Refresh State</button>
+          <button class="btn btn-primary" id="btn-console-apply">Apply Changes</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Floating Custom Tooltip -->
     <div id="game-tooltip" class="game-tooltip"></div>
     

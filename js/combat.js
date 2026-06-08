@@ -10,10 +10,15 @@ import { GODS_CONFIG as GC } from './config/gods.js';
 let combatTimer = null;
 
 export function sortPoolByPoints() {
-  const pts = CFG.poolSortPoints;
+  const order = STATE.combat.formationOrder || ['shieldmaiden', 'berserker', 'huntsman'];
   STATE.combat.pool.sort((a, b) => {
-    const pA = (pts[a.type] || 1) * (a.hp / a.maxHp);
-    const pB = (pts[b.type] || 1) * (b.hp / b.maxHp);
+    const idxA = order.indexOf(a.type);
+    const idxB = order.indexOf(b.type);
+    const ptsA = idxA !== -1 ? (3 - idxA) : 1;
+    const ptsB = idxB !== -1 ? (3 - idxB) : 1;
+    
+    const pA = ptsA * (a.hp / a.maxHp);
+    const pB = ptsB * (b.hp / b.maxHp);
     return pB - pA;
   });
 }

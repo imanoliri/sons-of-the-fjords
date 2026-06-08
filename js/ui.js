@@ -5,7 +5,7 @@
 import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, executePlunderMound, executeSacrificeSheep, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, buyRecruit, getHealCost, healWarriors, getEffectiveStats } from './state.js';
 import { getAdjacentCoords } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
-import { togglePause, deployUnit, undeployUnit, startCombat, fleeCombat, adjustCombatSpeed } from './combat.js';
+import { togglePause, deployUnit, undeployUnit, startCombat, fleeCombat, adjustCombatSpeed, sortPoolByPoints } from './combat.js';
 import { TOWN_CONFIG } from './config/town.js';
 import { MOVEMENT_CONFIG } from './config/movement.js';
 import { LOCATION_CONFIG } from './config/location.js';
@@ -91,6 +91,8 @@ const elModalAscension = document.getElementById('modal-ascension');
 const elModalAscensionText = document.getElementById('modal-ascension-text');
 
 const elModalGameOver = document.getElementById('modal-gameover');
+const elConsoleModal = document.getElementById('modal-console');
+const elConsoleTextarea = document.getElementById('console-state-textarea');
 
 const elPatronCard = document.getElementById('town-patron-card');
 const elPatronList = document.getElementById('town-patron-list');
@@ -136,6 +138,81 @@ export function initUIBindings() {
 
   bindButton('btn-close-party', () => {
     hideOverlay(elPartyModal);
+  });
+
+  bindButton('btn-save-game', () => {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}_${pad(now.getMonth() + 1)}_${pad(now.getDate())}_${pad(now.getHours())}_${pad(now.getMinutes())}_${pad(now.getSeconds())}`;
+
+    // Gods at milestone 5 in order of unlock
+    const milestone5Order = STATE.milestone5Order || [];
+    const activeMilestone5 = Object.keys(STATE.godQuests).filter(god => STATE.godQuests[god]?.[4] === true);
+    const godsMilestone5 = [];
+    for (const god of milestone5Order) {
+      if (activeMilestone5.includes(god)) {
+        godsMilestone5.push(god);
+      }
+    }
+    for (const god of activeMilestone5) {
+      if (!godsMilestone5.includes(god)) {
+        godsMilestone5.push(god);
+      }
+    }
+    const godsStr = godsMilestone5.length > 0 ? godsMilestone5.join('_') : 'atheist';
+
+    // Composition of party
+    const compCounts = {};
+    for (const unit of STATE.band) {
+      compCounts[unit.type] = (compCounts[unit.type] || 0) + 1;
+    }
+    const compStr = Object.entries(compCounts).map(([type, count]) => `${count}${type}`).join('_');
+    const composition = compStr || 'crewless';
+
+    // Filename
+    const filename = `save_${godsStr}_${composition}_${timestamp}.json`;
+
+    // Download state
+    const stateStr = JSON.stringify(STATE, null, 2);
+    const blob = new Blob([stateStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast('Game saved successfully!', '💾');
+    logWorld(`Game saved as ${filename}`, 'gain-message');
+  });
+
+  bindButton('btn-toggle-console', () => {
+    elConsoleTextarea.value = JSON.stringify(STATE, null, 2);
+    showOverlay(elConsoleModal);
+  });
+
+  bindButton('btn-close-console', () => {
+    hideOverlay(elConsoleModal);
+  });
+
+  bindButton('btn-console-refresh', () => {
+    elConsoleTextarea.value = JSON.stringify(STATE, null, 2);
+    showToast('State refreshed!', '🔄');
+  });
+
+  bindButton('btn-console-apply', () => {
+    try {
+      const parsed = JSON.parse(elConsoleTextarea.value);
+      Object.assign(STATE, parsed);
+      notify('STATE_UPDATED');
+      hideOverlay(elConsoleModal);
+      showToast('State updated successfully!', '🛠️');
+      logWorld('Game state updated via Dev Console.', 'gain-message');
+    } catch (e) {
+      showToast('Invalid JSON: ' + e.message, '⚠️');
+    }
   });
 
   bindButton('modal-event-close-btn', () => {
@@ -280,6 +357,16 @@ export function initUIBindings() {
 
   // Keyboard Arrow Movement
   window.addEventListener('keydown', (e) => {
+    if (document.activeElement && (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT')) {
+      if (e.key === 'Escape') {
+        if (!elConsoleModal.classList.contains('hidden')) {
+          e.preventDefault();
+          document.getElementById('btn-close-console')?.click();
+        }
+      }
+      return;
+    }
+
     // Handle B to toggle Band, Q to toggle Quests (only if not in combat screen)
     if (STATE.activeScreen !== 'combat') {
       if (e.key === 'b' || e.key === 'B') {
@@ -316,6 +403,11 @@ export function initUIBindings() {
           return;
         }
       }
+      if (!elConsoleModal.classList.contains('hidden')) {
+        e.preventDefault();
+        document.getElementById('btn-close-console')?.click();
+        return;
+      }
       if (!elPartyModal.classList.contains('hidden')) {
         e.preventDefault();
         document.getElementById('btn-close-party')?.click();
@@ -341,7 +433,7 @@ export function initUIBindings() {
     const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
     if (visibleOverlay) {
       const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'))
-        .filter(btn => !btn.classList.contains('btn-close-x') && !btn.classList.contains('modal-close-btn'));
+        .filter(btn => !btn.classList.contains('btn-close-x') && !btn.classList.contains('modal-close-btn') && !btn.classList.contains('btn-no-shortcut'));
       if (buttons.length > 0) {
         // Number keys (1 to buttons.length)
         const keyNum = parseInt(e.key);
@@ -1523,8 +1615,20 @@ function tryEnterCurrentLocation() {
 function enterLocation(locData) {
   if (locData.type === 'town') {
     STATE.party.currentLocationId = locData.id;
+    let autoHealed = 0;
+    for (const warrior of STATE.band) {
+      const effStats = getEffectiveStats(warrior);
+      if (warrior.hp < effStats.maxHp.total && warrior.hp >= effStats.maxHp.total * 0.8) {
+        warrior.hp = effStats.maxHp.total;
+        autoHealed++;
+      }
+    }
     setScreen('town');
-    logWorld(`Entered town: ${locData.name}.`);
+    if (autoHealed > 0) {
+      logWorld(`Entered town: ${locData.name}. ${autoHealed} warrior(s) at >=80% HP healed automatically.`, 'gain-message');
+    } else {
+      logWorld(`Entered town: ${locData.name}.`);
+    }
   } else {
     // Generate/Load Location Sub-Grid
     STATE.party.currentLocationId = locData.id;
@@ -2278,6 +2382,80 @@ function triggerCombatTransition(coordKey, entity) {
   startCombat(STATE.party.currentLocationId, coordKey, entity);
 }
 
+function renderFormationElement() {
+  const container = document.getElementById('formation-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const order = STATE.combat.formationOrder || ['berserker', 'shieldmaiden', 'huntsman'];
+  const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
+
+  order.forEach((type, idx) => {
+    // Separator arrow between icons
+    if (idx > 0) {
+      const arrow = document.createElement('span');
+      arrow.textContent = '›';
+      arrow.style.opacity = '0.4';
+      arrow.style.fontSize = '1rem';
+      container.appendChild(arrow);
+    }
+
+    const chip = document.createElement('span');
+    chip.draggable = true;
+    chip.title = `${type.charAt(0).toUpperCase() + type.slice(1)} (${3 - idx} pts) — drag to reorder`;
+    chip.style.cssText = `
+      font-size: 1.2rem;
+      cursor: grab;
+      padding: 2px 5px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    `;
+    chip.textContent = icons[type] || '⚔️';
+    chip.dataset.index = idx;
+
+    chip.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', idx);
+      e.dataTransfer.effectAllowed = 'move';
+      chip.style.opacity = '0.4';
+    });
+
+    chip.addEventListener('dragend', () => {
+      chip.style.opacity = '1';
+    });
+
+    chip.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      chip.style.borderColor = 'var(--text-accent)';
+      chip.style.background = 'rgba(0,240,255,0.1)';
+    });
+
+    chip.addEventListener('dragleave', () => {
+      chip.style.borderColor = 'transparent';
+      chip.style.background = 'transparent';
+    });
+
+    chip.addEventListener('drop', (e) => {
+      e.preventDefault();
+      chip.style.borderColor = 'transparent';
+      chip.style.background = 'transparent';
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      const toIdx = idx;
+      if (!isNaN(fromIdx) && fromIdx !== toIdx) {
+        const temp = order[fromIdx];
+        order[fromIdx] = order[toIdx];
+        order[toIdx] = temp;
+        STATE.combat.formationOrder = order;
+        sortPoolByPoints();
+        notify('COMBAT_UPDATE');
+      }
+    });
+
+    container.appendChild(chip);
+  });
+}
+
 // Render 10x8 Combat lanes grid
 function renderCombatGrid() {
   elCombatGrid.innerHTML = '';
@@ -2375,6 +2553,14 @@ function renderCombatGrid() {
         hbFill.classList.add('health-bar-fill');
         const hpPct = (unit.hp / stats.maxHp.total) * 100;
         hbFill.style.width = `${Math.max(0, hpPct)}%`;
+        const ratio = unit.hp / stats.maxHp.total;
+        if (ratio >= 0.8) {
+          hbFill.style.background = 'var(--color-success)';
+        } else if (ratio >= 0.2) {
+          hbFill.style.background = 'orange';
+        } else {
+          hbFill.style.background = 'var(--color-danger)';
+        }
 
         hbContainer.appendChild(hbFill);
         elUnit.appendChild(hbContainer);
@@ -2424,13 +2610,20 @@ function renderCombatGrid() {
 
     const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
     const numHint = idx < SOLDIERS_CONFIG.maxBandSize ? `<span class="pool-number-hint">[${idx + 1}]</span> ` : '';
-    const hpPct = (unit.hp / unit.maxHp) * 100;
+    const ratio = unit.hp / unit.maxHp;
+    const hpPct = ratio * 100;
+    let bgColor = 'var(--color-success)';
+    if (ratio < 0.2) {
+      bgColor = 'var(--color-danger)';
+    } else if (ratio < 0.8) {
+      bgColor = 'orange';
+    }
     
     card.innerHTML = `
       <span>${numHint}${icons[unit.type]} ${unit.name}</span>
       <span style="font-size:0.75rem">${unit.type}</span>
       <div class="health-bar-container" style="position: absolute; bottom: 4px; left: 6px; right: 6px; height: 4px;">
-        <div class="health-bar-fill" style="width: ${Math.max(0, hpPct)}%"></div>
+        <div class="health-bar-fill" style="width: ${Math.max(0, hpPct)}%; background: ${bgColor}"></div>
       </div>
     `;
     // Enable Drag and Drop to reorder pool cards
@@ -2477,6 +2670,8 @@ function renderCombatGrid() {
 
     elCombatPoolList.appendChild(card);
   });
+
+  renderFormationElement();
 }
 
 function showGodLorePopup(gKey) {
@@ -2762,14 +2957,36 @@ function renderPartyPanel() {
       hbFill.className = 'health-bar-fill';
       hbFill.style.height = '100%';
       hbFill.style.width = `${(unit.hp / effStats.maxHp.total) * 100}%`;
-      hbFill.style.background = 'var(--color-success)';
+      const ratio = unit.hp / effStats.maxHp.total;
+      if (ratio >= 0.8) {
+        hbFill.style.background = 'var(--color-success)';
+      } else if (ratio >= 0.2) {
+        hbFill.style.background = 'orange';
+      } else {
+        hbFill.style.background = 'var(--color-danger)';
+      }
 
       hbContainer.appendChild(hbFill);
       hpSection.appendChild(hpText);
       hpSection.appendChild(hbContainer);
 
+      const disbandBtn = document.createElement('button');
+      disbandBtn.className = 'btn btn-sm btn-danger btn-no-shortcut';
+      disbandBtn.style.padding = '2px 8px';
+      disbandBtn.style.marginLeft = '1rem';
+      disbandBtn.innerText = 'Disband';
+      disbandBtn.addEventListener('click', () => {
+        const idx = STATE.band.findIndex(u => u.id === unit.id);
+        if (idx !== -1) {
+          STATE.band.splice(idx, 1);
+          notify('RESOURCES_UPDATED');
+          renderPartyPanel();
+        }
+      });
+
       row.appendChild(details);
       row.appendChild(hpSection);
+      row.appendChild(disbandBtn);
       elPartyBandContent.appendChild(row);
     });
   }

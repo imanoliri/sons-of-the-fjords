@@ -56,6 +56,9 @@ export const STATE = {
   // Deity Quest Milestones (5 steps per god)
   godQuests: makeGodQuests(),
 
+  // Order in which gods reached milestone 5
+  milestone5Order: [],
+
   // Counters for alternate favor gains
   odinWolvesKilled: 0,
   odinGiantsKilled: 0,
@@ -84,7 +87,8 @@ export const STATE = {
     entityCoordKey: null,
     waveMonsters: [],
     stance: 'attack',
-    combatIntervalMs: 600
+    combatIntervalMs: 600,
+    formationOrder: ['shieldmaiden', 'berserker', 'huntsman']
   }
 };
 
@@ -173,6 +177,10 @@ export function adjustFavor(godName, amt) {
       emptyIndex = track.indexOf(false);
     }
     if (track.every(x => x === true)) {
+      if (!STATE.milestone5Order) STATE.milestone5Order = [];
+      if (!STATE.milestone5Order.includes(godName)) {
+        STATE.milestone5Order.push(godName);
+      }
       notify('GOD_QUESTS_COMPLETE', godName);
       const allGodsCompleted = Object.values(STATE.godQuests).every(t => t.every(x => x === true));
       if (allGodsCompleted) {
@@ -292,6 +300,7 @@ export function resetGame() {
   STATE.party = { worldX: WC.partyStart.x, worldY: WC.partyStart.y, currentLocationId: null, localX: 0, localY: 0 };
   STATE.godFavor = makeGodFavor();
   STATE.godQuests = makeGodQuests();
+  STATE.milestone5Order = [];
   STATE.odinWolvesKilled = 0;
   STATE.odinGiantsKilled = 0;
   STATE.thorDraugrsKilled = 0;
@@ -304,7 +313,8 @@ export function resetGame() {
   STATE.combat = {
     active: false, grid: [], pool: [], paused: true,
     ticker: null, selectedPoolIndex: null, spawnTimer: 0,
-    locationId: null, entityCoordKey: null, waveMonsters: []
+    locationId: null, entityCoordKey: null, waveMonsters: [],
+    formationOrder: ['shieldmaiden', 'berserker', 'huntsman']
   };
 }
 
@@ -431,6 +441,8 @@ export function getHealCost() {
         totalCost += 4;
       } else if (warrior.hp < effStats.maxHp.total * 0.8) {
         totalCost += 2;
+      } else {
+        totalCost += 0;
       }
     }
   }
