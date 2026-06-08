@@ -285,18 +285,23 @@ function combatTick() {
         // Check if any of the three leap conditions are satisfied:
         // 1. An enemy is in range of the unit's full leap distance
         // 2. An engaged ally in front can be pushed back
-        // 3. The unit can reach the enemy base at the end of the lane
+        // 3. The unit can reach the target base at the end of the lane
         let canLeap = false;
         
-        // Condition 3: Reach enemy base (col sizeC for player, col -1 for enemy / fleeing)
-        if (dir === 1 && unit.col + fullSpeedVal >= sizeC) {
-          canLeap = true;
-        } else if (dir === -1 && unit.col - fullSpeedVal < 0) {
-          canLeap = true;
+        // Fleeing or retreating units do NOT leap
+        const isRetreatingOrFleeing = unit.isFleeing || (unit.alliance === 'player' && STATE.combat.stance === 'retreat');
+        
+        if (!isRetreatingOrFleeing) {
+          // Condition 3: Reach enemy base (col sizeC for player moving right, col -1 for enemy moving left)
+          if (unit.alliance === 'player' && dir === 1 && unit.col + fullSpeedVal >= sizeC) {
+            canLeap = true;
+          } else if (unit.alliance === 'enemy' && dir === -1 && unit.col - fullSpeedVal < 0) {
+            canLeap = true;
+          }
         }
 
         // Condition 1 & 2: Search cells in front up to full speed distance
-        if (!canLeap) {
+        if (!canLeap && !isRetreatingOrFleeing) {
           for (let step = 1; step <= fullSpeedVal; step++) {
             const testCol = unit.col + (dir * step);
             if (testCol >= 0 && testCol < sizeC) {
