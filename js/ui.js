@@ -2,16 +2,24 @@
    UI MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, executePlunderMound, executeSacrificeSheep, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, buyRecruit } from './state.js';
+import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, executePlunderMound, executeSacrificeSheep, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, buyRecruit, getHealCost, healWarriors, getEffectiveStats } from './state.js';
 import { getAdjacentCoords } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
-import { togglePause, deployUnit, undeployUnit, startCombat, getEffectiveStats, fleeCombat } from './combat.js';
+import { togglePause, deployUnit, undeployUnit, startCombat, fleeCombat, adjustCombatSpeed, sortPoolByPoints } from './combat.js';
 import { TOWN_CONFIG } from './config/town.js';
 import { MOVEMENT_CONFIG } from './config/movement.js';
 import { LOCATION_CONFIG } from './config/location.js';
 import { WORLD_CONFIG } from './config/world.js';
 import { GODS_CONFIG } from './config/gods.js';
 import { SOLDIERS_CONFIG } from './config/soldiers.js';
+
+function formatStat(statObj) {
+  if (statObj.bonus === 0) {
+    return `${statObj.base}`;
+  }
+  const sign = statObj.bonus > 0 ? '+' : '';
+  return `${statObj.base} ${sign}${statObj.bonus}`;
+}
 
 // DOM Selectors
 const elHeader = document.getElementById('game-header');
@@ -74,6 +82,7 @@ const elQuestsList = document.getElementById('gods-tracks-list');
 
 // Modals
 const elModalEvent = document.getElementById('modal-event');
+const elModalEventCloseBtn = document.getElementById('modal-event-close-btn');
 const elModalEventTitle = document.getElementById('modal-event-title');
 const elModalEventBody = document.getElementById('modal-event-body');
 const elModalEventChoices = document.getElementById('modal-event-choices');
@@ -82,6 +91,8 @@ const elModalAscension = document.getElementById('modal-ascension');
 const elModalAscensionText = document.getElementById('modal-ascension-text');
 
 const elModalGameOver = document.getElementById('modal-gameover');
+const elConsoleModal = document.getElementById('modal-console');
+const elConsoleTextarea = document.getElementById('console-state-textarea');
 
 const elPatronCard = document.getElementById('town-patron-card');
 const elPatronList = document.getElementById('town-patron-list');
@@ -129,6 +140,85 @@ export function initUIBindings() {
     hideOverlay(elPartyModal);
   });
 
+  bindButton('btn-save-game', () => {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}_${pad(now.getMonth() + 1)}_${pad(now.getDate())}_${pad(now.getHours())}_${pad(now.getMinutes())}_${pad(now.getSeconds())}`;
+
+    // Gods at milestone 5 in order of unlock
+    const milestone5Order = STATE.milestone5Order || [];
+    const activeMilestone5 = Object.keys(STATE.godQuests).filter(god => STATE.godQuests[god]?.[4] === true);
+    const godsMilestone5 = [];
+    for (const god of milestone5Order) {
+      if (activeMilestone5.includes(god)) {
+        godsMilestone5.push(god);
+      }
+    }
+    for (const god of activeMilestone5) {
+      if (!godsMilestone5.includes(god)) {
+        godsMilestone5.push(god);
+      }
+    }
+    const godsStr = godsMilestone5.length > 0 ? godsMilestone5.join('_') : 'atheist';
+
+    // Composition of party
+    const compCounts = {};
+    for (const unit of STATE.band) {
+      compCounts[unit.type] = (compCounts[unit.type] || 0) + 1;
+    }
+    const compStr = Object.entries(compCounts).map(([type, count]) => `${count}${type}`).join('_');
+    const composition = compStr || 'crewless';
+
+    // Filename
+    const filename = `save_${godsStr}_${composition}_${timestamp}.json`;
+
+    // Download state
+    const stateStr = JSON.stringify(STATE, null, 2);
+    const blob = new Blob([stateStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast('Game saved successfully!', '💾');
+    logWorld(`Game saved as ${filename}`, 'gain-message');
+  });
+
+  bindButton('btn-toggle-console', () => {
+    elConsoleTextarea.value = JSON.stringify(STATE, null, 2);
+    showOverlay(elConsoleModal);
+  });
+
+  bindButton('btn-close-console', () => {
+    hideOverlay(elConsoleModal);
+  });
+
+  bindButton('btn-console-refresh', () => {
+    elConsoleTextarea.value = JSON.stringify(STATE, null, 2);
+    showToast('State refreshed!', '🔄');
+  });
+
+  bindButton('btn-console-apply', () => {
+    try {
+      const parsed = JSON.parse(elConsoleTextarea.value);
+      Object.assign(STATE, parsed);
+      notify('STATE_UPDATED');
+      hideOverlay(elConsoleModal);
+      showToast('State updated successfully!', '🛠️');
+      logWorld('Game state updated via Dev Console.', 'gain-message');
+    } catch (e) {
+      showToast('Invalid JSON: ' + e.message, '⚠️');
+    }
+  });
+
+  bindButton('modal-event-close-btn', () => {
+    hideOverlay(elModalEvent);
+  });
+
   bindButton('tab-party-band', () => {
     elTabPartyBand.classList.add('btn-primary');
     elTabPartyInventory.classList.remove('btn-primary');
@@ -168,6 +258,12 @@ export function initUIBindings() {
     const cost = TOWN_CONFIG.recruitCosts.huntsman;
     const res = buyRecruit('huntsman', cost);
     logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+  });
+
+  bindButton('btn-heal-warriors', () => {
+    const res = healWarriors();
+    logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+    renderTownScreen();
   });
 
   // Repair Drakkar
@@ -226,6 +322,16 @@ export function initUIBindings() {
     notify('COMBAT_UPDATE');
   });
 
+  const speedSlider = document.getElementById('slider-combat-speed');
+  const speedLabel = document.getElementById('label-combat-speed');
+  if (speedSlider && speedLabel) {
+    speedSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      speedLabel.innerText = `${val}ms`;
+      adjustCombatSpeed(val);
+    });
+  }
+
   // Game over restart
   bindButton('btn-restart-game', () => {
     hideOverlay(elModalGameOver);
@@ -251,6 +357,16 @@ export function initUIBindings() {
 
   // Keyboard Arrow Movement
   window.addEventListener('keydown', (e) => {
+    if (document.activeElement && (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT')) {
+      if (e.key === 'Escape') {
+        if (!elConsoleModal.classList.contains('hidden')) {
+          e.preventDefault();
+          document.getElementById('btn-close-console')?.click();
+        }
+      }
+      return;
+    }
+
     // Handle B to toggle Band, Q to toggle Quests (only if not in combat screen)
     if (STATE.activeScreen !== 'combat') {
       if (e.key === 'b' || e.key === 'B') {
@@ -280,6 +396,18 @@ export function initUIBindings() {
 
     // 0. Handle Escape key to leave Location (Raid or Town) or close panels
     if (e.key === 'Escape') {
+      if (!elModalEvent.classList.contains('hidden')) {
+        if (elModalEventCloseBtn && elModalEventCloseBtn.style.display !== 'none') {
+          e.preventDefault();
+          elModalEventCloseBtn.click();
+          return;
+        }
+      }
+      if (!elConsoleModal.classList.contains('hidden')) {
+        e.preventDefault();
+        document.getElementById('btn-close-console')?.click();
+        return;
+      }
       if (!elPartyModal.classList.contains('hidden')) {
         e.preventDefault();
         document.getElementById('btn-close-party')?.click();
@@ -305,7 +433,7 @@ export function initUIBindings() {
     const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
     if (visibleOverlay) {
       const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'))
-        .filter(btn => !btn.classList.contains('btn-close-x'));
+        .filter(btn => !btn.classList.contains('btn-close-x') && !btn.classList.contains('modal-close-btn') && !btn.classList.contains('btn-no-shortcut'));
       if (buttons.length > 0) {
         // Number keys (1 to buttons.length)
         const keyNum = parseInt(e.key);
@@ -682,27 +810,42 @@ function initTooltipEvents() {
   document.body.addEventListener('mouseover', (e) => {
     const godTarget = e.target.closest('[data-god-tooltip]');
     if (godTarget) {
-      const gKey = godTarget.dataset.godTooltip;
       const section = godTarget.dataset.tooltipSection;
+      if (section === 'identity') {
+        // Deactivated: popup fulfills this function
+        return;
+      }
+
+      const gKey = godTarget.dataset.godTooltip;
       const lore = GOD_LORE[gKey];
       if (!lore) return;
 
       let header = '';
       let content = '';
 
-      if (section === 'identity') {
-        header = '';
-        const stepsHtml = lore.favorSteps.map(s => `<div style="margin:2px 0">${s}</div>`).join('');
-        content = [
-          `<b style="color:var(--text-accent)">📋 How to gain Favor:</b>`,
-          `<div style="margin:4px 0 0 0">${stepsHtml}</div>`,
-          `<b>Opposes:</b> ${(GODS_CONFIG.pentagramOpposites[gKey] || []).map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(' & ')} — pleasing ${lore.icon} drains their favor`,
-          `<b style="color:var(--color-danger)">⚠️ ${lore.wrath}</b>`
-        ].join('<br>');
-      } else if (section === 'milestone') {
+      if (section === 'milestone') {
         const idx = parseInt(godTarget.dataset.milestoneIdx);
         const achieved = STATE.godQuests[gKey][idx];
-        header = `${lore.icon} Milestone ${['I', 'II', 'III', 'IV', 'V'][idx]}`;
+        
+        // Define runeSets internally or retrieve rune
+        const runeSets = {
+          odin: ['ᚨ', 'ᛗ', 'ᚷ', 'ᚹ', 'ᛃ'],
+          thor: ['ᚦ', 'ᚱ', 'ᛏ', 'ᛋ', 'ᚲ'],
+          freya: ['ᚠ', 'ᛒ', 'ᛚ', 'ᛞ', 'ᚢ'],
+          hel: ['ᚾ', 'ᛁ', 'ᚲ', 'ᛉ', 'ᛦ'],
+          loki: ['ᛇ', 'ᚹ', 'ᚺ', 'ᛈ', 'ᛞ']
+        };
+        const runeNames = {
+          'ᚨ': 'Ansuz', 'ᛗ': 'Mannaz', 'ᚷ': 'Gebo', 'ᚹ': 'Wunjo', 'ᛃ': 'Jera',
+          'ᚦ': 'Thurisaz', 'ᚱ': 'Raido', 'ᛏ': 'Tiwaz', 'ᛋ': 'Sowilo', 'ᚲ': 'Kenaz',
+          'ᚠ': 'Fehu', 'ᛒ': 'Berkana', 'ᛚ': 'Laguz', 'ᛞ': 'Dagaz', 'ᚢ': 'Uruz',
+          'ᚾ': 'Nauthiz', 'ᛁ': 'Isa', 'ᛇ': 'Eihwaz', 'ᛉ': 'Algiz', 'ᛦ': 'Yr',
+          'ᚺ': 'Hagalaz', 'ᛈ': 'Perthro'
+        };
+        const runeChar = runeSets[gKey] ? runeSets[gKey][idx] : '';
+        const runeName = runeNames[runeChar] ? ` <span style="font-style:italic; font-size:0.75rem; color:var(--text-muted); font-weight:normal; margin-left:6px;">(${runeChar} ${runeNames[runeChar]})</span>` : '';
+
+        header = `${lore.icon} Milestone ${['I', 'II', 'III', 'IV', 'V'][idx]}${runeName}`;
         
         let statusHtml = achieved 
           ? `<span style="color:var(--color-success)">✅ Completed</span>` 
@@ -710,7 +853,7 @@ function initTooltipEvents() {
           
         let effectHtml = '';
         if (idx === 4) {
-          effectHtml = `<span style="color:var(--text-muted)">🔒 Unlocks this god's secret Blessing!</span>`;
+          effectHtml = `<b style="color:${lore.color}">Blessing: ${lore.buff}</b>`;
         } else {
           effectHtml = `<b style="color:${lore.color}">${lore.milestoneEffects[idx]}</b>`;
         }
@@ -721,7 +864,7 @@ function initTooltipEvents() {
         content = `<b style="color:${lore.color}">${lore.buff}</b>`;
       } else if (section === 'champion_locked') {
         header = `${lore.icon} Champion Buff`;
-        content = `<span style="color:var(--text-muted)">reach Milestone 5 to unlock the champion buff of this god</span>`;
+        content = `<span style="color:var(--text-muted)">reach Milestone 5 to unlock:</span><br><b style="color:${lore.color}">${lore.buff}</b>`;
       } else if (section === 'curse') {
         header = `${lore.icon} Active Curse (${gKey.toUpperCase()})`;
         content = `<b style="color:var(--color-danger)">${lore.wrath}</b>`;
@@ -800,20 +943,11 @@ function initTooltipEvents() {
           const allianceText = unit.alliance === 'player' ? 'Viking Soldier' : 'Monster';
           headerText = `${unit.name} (${allianceText})`;
           
-          const formatVal = (statObj) => {
-            if (statObj.bonus !== 0) {
-              const sign = statObj.bonus > 0 ? ' + ' : ' - ';
-              const absBonus = Math.abs(statObj.bonus);
-              return `${statObj.base}${sign}${absBonus} (Total: ${statObj.total})`;
-            }
-            return `${statObj.base}`;
-          };
-
-          const contents = [
-            `<b>HP:</b> ${unit.hp} / ${formatVal(stats.maxHp)}`,
-            `<b>Damage:</b> ${formatVal(stats.dmg)}`,
-            `<b>Range:</b> ${formatVal(stats.range)}`,
-            `<b>Speed:</b> ${formatVal(stats.speed)}`
+           const contents = [
+            `<b>HP:</b> ${unit.hp} / ${formatStat(stats.maxHp)}`,
+            `<b>Damage:</b> ${formatStat(stats.dmg)}`,
+            `<b>Range:</b> ${formatStat(stats.range)}`,
+            `<b>Speed:</b> ${formatStat(stats.speed)}`
           ];
           contentsText = contents.join('<br>');
         } else {
@@ -880,12 +1014,30 @@ function autoDiscoverAdjacent(locId) {
   const px = STATE.party.localX;
   const py = STATE.party.localY;
   
-  const neighbors = [
-    { x: px + 1, y: py },
-    { x: px - 1, y: py },
-    { x: px, y: py + 1 },
-    { x: px, y: py - 1 }
-  ];
+  let radius = 1;
+  if (STATE.godQuests.odin?.[1]) {
+    const m1Config = GODS_CONFIG.modifiers.milestones.odin.find(m => m.index === 1);
+    radius = m1Config?.scoutRadius ?? 2; // Odin Milestone 2: Scouts reveal a 2-tile radius instead of 1
+  }
+
+  const neighbors = [];
+  if (radius === 1) {
+    neighbors.push(
+      { x: px + 1, y: py },
+      { x: px - 1, y: py },
+      { x: px, y: py + 1 },
+      { x: px, y: py - 1 }
+    );
+  } else {
+    // If radius 2 (Manhattan distance <= 2)
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dy = -2; dy <= 2; dy++) {
+        if (Math.abs(dx) + Math.abs(dy) <= 2 && (dx !== 0 || dy !== 0)) {
+          neighbors.push({ x: px + dx, y: py + dy });
+        }
+      }
+    }
+  }
 
   neighbors.forEach(n => {
     if (n.x >= 0 && n.x < 10 && n.y >= 0 && n.y < 10) {
@@ -927,7 +1079,13 @@ function findLocalPath(startX, startY, targetX, targetY, locState) {
         const tile = locState.placedTiles[nKey];
         if (tile) {
           const terrainType = locState.preGeneratedGrid[nKey];
-          const isPassable = terrainType !== 'chasm' && terrainType !== 'mountain' && terrainType !== 'deep_water';
+          let isPassable = terrainType !== 'chasm' && terrainType !== 'mountain' && terrainType !== 'deep_water';
+          if (isPassable && (nx !== targetX || ny !== targetY)) {
+            const hasEnemy = tile.entity && tile.entity.type === 'enemy_army' && !tile.entity.isDefeated;
+            if (hasEnemy) {
+              isPassable = false;
+            }
+          }
           if (isPassable) {
             visited.add(nKey);
             queue.push({
@@ -1255,9 +1413,11 @@ function movePartyOnWorld(x, y) {
   let woodCost = 0;
   
   if (targetTerrain === 'water' || targetTerrain === 'river') {
+    const thorWrath = GODS_CONFIG.modifiers.wrath.thor;
+    const extraSeaWood = thorWrath?.extraSeaWoodCost ?? 1;
     let requiredWood = 1;
     if (targetTerrain === 'water' && STATE.godFavor.thor === -5) {
-      requiredWood = 2;
+      requiredWood = 1 + extraSeaWood;
     }
     if (STATE.resources.wood >= requiredWood) {
       cost = 1;
@@ -1275,8 +1435,9 @@ function movePartyOnWorld(x, y) {
 
   // Thor's Wrath: Storms during land travel cost +1 extra Food per step (only at -5 favor)
   if (targetTerrain !== 'water' && targetTerrain !== 'river' && STATE.godFavor.thor === -5) {
-    cost += 1;
-    logWorld("Thor's Wrath: Lightning storms increase land travel food cost (+1).", 'warn-message');
+    const extraLandFood = GODS_CONFIG.modifiers.wrath.thor?.extraLandFoodCost ?? 1;
+    cost += extraLandFood;
+    logWorld(`Thor's Wrath: Lightning storms increase land travel food cost (+${extraLandFood}).`, 'warn-message');
   }
 
   // Deduct food & wood
@@ -1341,13 +1502,16 @@ function movePartyOnWorld(x, y) {
   if (STATE.godFavor.odin === -5) {
     if (STATE.odinWrathSteps === undefined) STATE.odinWrathSteps = 0;
     STATE.odinWrathSteps++;
-    if (STATE.odinWrathSteps >= 3) {
+    const odinWrath = GODS_CONFIG.modifiers.wrath.odin;
+    const stepsTrigger = odinWrath?.stepsTrigger ?? 3;
+    if (STATE.odinWrathSteps >= stepsTrigger) {
       STATE.odinWrathSteps = 0;
       if (STATE.band.length > 0) {
         const idx = Math.floor(Math.random() * STATE.band.length);
         const target = STATE.band[idx];
-        target.hp -= 1;
-        logWorld(`Odin's Wrath: Blizzard claimed 1 HP from ${target.name}.`, 'warn-message');
+        const hpLoss = odinWrath?.hpLoss ?? 1;
+        target.hp -= hpLoss;
+        logWorld(`Odin's Wrath: Blizzard claimed ${hpLoss} HP from ${target.name}.`, 'warn-message');
         if (target.hp <= 0) {
           STATE.band.splice(idx, 1);
           logWorld(`Odin's Wrath: ${target.name} perished in the tundra.`, 'warn-message');
@@ -1364,8 +1528,10 @@ function movePartyOnWorld(x, y) {
   // Loki's Wrath: Random event triggers each world move (only at -5 favor)
   if (STATE.godFavor.loki === -5) {
     const roll = Math.random();
+    const lokiWrath = GODS_CONFIG.modifiers.wrath.loki;
     if (roll < 0.33) {
-      const goldLoss = Math.min(STATE.resources.gold, 3);
+      const maxGold = lokiWrath?.maxGoldLoss ?? 3;
+      const goldLoss = Math.min(STATE.resources.gold, maxGold);
       if (goldLoss > 0) {
         adjustResource('gold', -goldLoss);
         logWorld(`Loki's Wrath: Trickster sprites purloined ${goldLoss} Gold from your chest!`, 'warn-message');
@@ -1374,14 +1540,16 @@ function movePartyOnWorld(x, y) {
       if (STATE.band.length > 0) {
         const idx = Math.floor(Math.random() * STATE.band.length);
         const target = STATE.band[idx];
-        const dmg = Math.min(target.hp - 1, 5);
+        const maxDmg = lokiWrath?.maxInjuryDmg ?? 5;
+        const dmg = Math.min(target.hp - 1, maxDmg);
         if (dmg > 0) {
           target.hp -= dmg;
           logWorld(`Loki's Wrath: Loki tripped ${target.name}, dealing ${dmg} injury damage.`, 'warn-message');
         }
       }
     } else {
-      const foodLoss = Math.min(STATE.resources.food, 3);
+      const maxFood = lokiWrath?.maxFoodLoss ?? 3;
+      const foodLoss = Math.min(STATE.resources.food, maxFood);
       if (foodLoss > 0) {
         adjustResource('food', -foodLoss);
         logWorld(`Loki's Wrath: Ravens ruined ${foodLoss} Food rations!`, 'warn-message');
@@ -1447,8 +1615,20 @@ function tryEnterCurrentLocation() {
 function enterLocation(locData) {
   if (locData.type === 'town') {
     STATE.party.currentLocationId = locData.id;
+    let autoHealed = 0;
+    for (const warrior of STATE.band) {
+      const effStats = getEffectiveStats(warrior);
+      if (warrior.hp < effStats.maxHp.total && warrior.hp >= effStats.maxHp.total * 0.8) {
+        warrior.hp = effStats.maxHp.total;
+        autoHealed++;
+      }
+    }
     setScreen('town');
-    logWorld(`Entered town: ${locData.name}.`);
+    if (autoHealed > 0) {
+      logWorld(`Entered town: ${locData.name}. ${autoHealed} warrior(s) at >=80% HP healed automatically.`, 'gain-message');
+    } else {
+      logWorld(`Entered town: ${locData.name}.`);
+    }
   } else {
     // Generate/Load Location Sub-Grid
     STATE.party.currentLocationId = locData.id;
@@ -1506,9 +1686,18 @@ function renderTownScreen() {
     woodSell: { baseGain: 4, minGain: 1, maxGain: 8, woodSold: 10, scarceBonus: 2 }
   };
 
-  const foodCost = Math.max(dp.food.minCost, Math.min(dp.food.maxCost, dp.food.baseCost + Math.floor((snowCount + mountainCount) / 2) - Math.floor((waterCount + plainsCount) / 2)));
-  const woodCost = Math.max(dp.woodBuy.minCost, Math.min(dp.woodBuy.maxCost, dp.woodBuy.baseCost + (forestCount === 0 ? dp.woodBuy.scarceBonus : 0) - Math.floor(forestCount / 3)));
-  const sheepBuyCost = Math.max(dp.sheepBuy.minCost, Math.min(dp.sheepBuy.maxCost, dp.sheepBuy.baseCost - Math.floor(plainsCount / 2) + Math.floor((snowCount + mountainCount + waterCount) / 3)));
+  let foodCost = Math.max(dp.food.minCost, Math.min(dp.food.maxCost, dp.food.baseCost + Math.floor((snowCount + mountainCount) / 2) - Math.floor((waterCount + plainsCount) / 2)));
+  let woodCost = Math.max(dp.woodBuy.minCost, Math.min(dp.woodBuy.maxCost, dp.woodBuy.baseCost + (forestCount === 0 ? dp.woodBuy.scarceBonus : 0) - Math.floor(forestCount / 3)));
+  let sheepBuyCost = Math.max(dp.sheepBuy.minCost, Math.min(dp.sheepBuy.maxCost, dp.sheepBuy.baseCost - Math.floor(plainsCount / 2) + Math.floor((snowCount + mountainCount + waterCount) / 3)));
+
+  if (STATE.godQuests.loki?.[3]) {
+    const m4Config = GODS_CONFIG.modifiers.milestones.loki.find(m => m.index === 3);
+    const reduction = m4Config?.priceReduction ?? 1;
+    foodCost = Math.max(dp.food.minCost, foodCost - reduction);
+    woodCost = Math.max(dp.woodBuy.minCost, woodCost - reduction);
+    sheepBuyCost = Math.max(dp.sheepBuy.minCost, sheepBuyCost - reduction);
+  }
+
   const sheepSellGain = Math.max(dp.sheepSell.minGain, Math.min(dp.sheepSell.maxGain, dp.sheepSell.baseGain + (plainsCount <= 1 ? dp.sheepSell.scarceBonus : 0) - Math.floor(plainsCount / 3)));
   const woodSellGain = Math.max(dp.woodSell.minGain, Math.min(dp.woodSell.maxGain, dp.woodSell.baseGain + (forestCount <= 1 ? dp.woodSell.scarceBonus : 0) - Math.floor(forestCount / 3)));
 
@@ -1584,9 +1773,14 @@ function renderTownScreen() {
       
       const btn = document.createElement('button');
       btn.classList.add('btn', 'btn-sm', 'btn-primary');
-      btn.innerText = `Appease ${mapName}`;
+      if (STATE.godFavor[god] >= 5) {
+        btn.innerText = `Sacrifice (+5 Gold)`;
+      } else {
+        btn.innerText = `Appease ${mapName}`;
+      }
       btn.addEventListener('click', () => {
         sacrificeRelic(relic, god);
+        renderTownScreen();
       });
 
       row.appendChild(label);
@@ -1667,6 +1861,56 @@ function renderTownScreen() {
   } else {
     elPatronCard.classList.add('hidden');
   }
+
+  // Update Heal Warriors button and label dynamically
+  const elHealLabel = document.getElementById('heal-warriors-label');
+  const elHealBtn = document.getElementById('btn-heal-warriors');
+  if (elHealLabel && elHealBtn) {
+    const cost = getHealCost();
+    const injuredCount = STATE.band.filter(w => w.hp < w.maxHp).length;
+    if (injuredCount === 0) {
+      elHealLabel.innerText = 'All warriors are fully healthy.';
+      elHealBtn.disabled = true;
+      elHealBtn.classList.add('btn-disabled');
+    } else {
+      elHealLabel.innerText = `Heal ${injuredCount} injured warrior${injuredCount > 1 ? 's' : ''} (-${cost} Gold)`;
+      if (STATE.resources.gold < cost) {
+        elHealBtn.disabled = true;
+        elHealBtn.classList.add('btn-disabled');
+      } else {
+        elHealBtn.disabled = false;
+        elHealBtn.classList.remove('btn-disabled');
+      }
+    }
+  }
+
+  // Render recruiting stats with modifiers
+  ['shieldmaiden', 'berserker', 'huntsman'].forEach(t => {
+    const el = document.getElementById(`recruit-stats-${t}`);
+    if (el) {
+      const dummy = { type: t, hp: 0, maxHp: 0, dmg: 0, speed: 0, range: 0 };
+      const eff = getEffectiveStats(dummy);
+      el.innerText = `HP: ${formatStat(eff.maxHp)} | ATK: ${formatStat(eff.dmg)} | SPD: ${formatStat(eff.speed)} | RNG: ${formatStat(eff.range)}`;
+    }
+  });
+
+  // Great Hall recruitment labels
+  const baseCosts = {
+    shieldmaiden: { gold: 5, food: 10 },
+    berserker: { gold: 7, sheep: 1 },
+    huntsman: { gold: 6, wood: 3 }
+  };
+  ['shieldmaiden', 'berserker', 'huntsman'].forEach(t => {
+    const labelEl = document.getElementById(`label-recruit-${t}`);
+    if (labelEl) {
+      let gCost = baseCosts[t].gold;
+      const otherRes = Object.keys(baseCosts[t]).find(k => k !== 'gold');
+      const otherAmt = baseCosts[t][otherRes];
+      const otherLabel = otherRes.charAt(0).toUpperCase() + otherRes.slice(1);
+      const capName = t.charAt(0).toUpperCase() + t.slice(1);
+      labelEl.innerText = `Hire ${capName} (-${gCost} Gold, -${otherAmt} ${otherLabel})`;
+    }
+  });
 }
 
 // Render 10x10 Dungeon Discovery View (Carcassonne)
@@ -2029,9 +2273,16 @@ function triggerEnterCavePortal(coordKey, entity) {
 // Renders choice dialogs for location interactions
 function triggerEncounterEvent(coordKey, entity) {
   if (entity.type === 'treasure') {
-    adjustResource('gold', entity.silver);
+    let goldGained = entity.silver;
+    let bonus = 0;
+    if (STATE.godQuests.loki?.[0]) {
+      const m1Config = GODS_CONFIG.modifiers.milestones.loki.find(m => m.index === 0);
+      bonus = m1Config?.chestGoldBonus ?? 1;
+      goldGained += bonus;
+    }
+    adjustResource('gold', goldGained);
     entity.isLooted = true;
-    showToast(`Uncovered buried chest! Looted +${entity.silver} Gold.`, '🪙');
+    showToast(`Uncovered buried chest! Looted +${goldGained} Gold.${STATE.godQuests.loki?.[0] ? ` (Loki bonus +${bonus})` : ''}`, '🪙');
     notify('STATE_UPDATED');
   } 
   else if (entity.type === 'wood_source') {
@@ -2072,6 +2323,13 @@ function triggerEncounterEvent(coordKey, entity) {
   }
   else {
     // Show overlay modal for entities with real choices
+    if (elModalEventCloseBtn) {
+      elModalEventCloseBtn.style.display = 'none';
+    }
+    const box = elModalEvent.querySelector('.modal-box');
+    if (box) {
+      box.style.maxWidth = '';
+    }
     showOverlay(elModalEvent);
     elModalEventChoices.innerHTML = '';
 
@@ -2122,6 +2380,80 @@ function triggerEncounterEvent(coordKey, entity) {
 function triggerCombatTransition(coordKey, entity) {
   setScreen('combat');
   startCombat(STATE.party.currentLocationId, coordKey, entity);
+}
+
+function renderFormationElement() {
+  const container = document.getElementById('formation-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const order = STATE.combat.formationOrder || ['berserker', 'shieldmaiden', 'huntsman'];
+  const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
+
+  order.forEach((type, idx) => {
+    // Separator arrow between icons
+    if (idx > 0) {
+      const arrow = document.createElement('span');
+      arrow.textContent = '›';
+      arrow.style.opacity = '0.4';
+      arrow.style.fontSize = '1rem';
+      container.appendChild(arrow);
+    }
+
+    const chip = document.createElement('span');
+    chip.draggable = true;
+    chip.title = `${type.charAt(0).toUpperCase() + type.slice(1)} (${3 - idx} pts) — drag to reorder`;
+    chip.style.cssText = `
+      font-size: 1.2rem;
+      cursor: grab;
+      padding: 2px 5px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    `;
+    chip.textContent = icons[type] || '⚔️';
+    chip.dataset.index = idx;
+
+    chip.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', idx);
+      e.dataTransfer.effectAllowed = 'move';
+      chip.style.opacity = '0.4';
+    });
+
+    chip.addEventListener('dragend', () => {
+      chip.style.opacity = '1';
+    });
+
+    chip.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      chip.style.borderColor = 'var(--text-accent)';
+      chip.style.background = 'rgba(0,240,255,0.1)';
+    });
+
+    chip.addEventListener('dragleave', () => {
+      chip.style.borderColor = 'transparent';
+      chip.style.background = 'transparent';
+    });
+
+    chip.addEventListener('drop', (e) => {
+      e.preventDefault();
+      chip.style.borderColor = 'transparent';
+      chip.style.background = 'transparent';
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      const toIdx = idx;
+      if (!isNaN(fromIdx) && fromIdx !== toIdx) {
+        const temp = order[fromIdx];
+        order[fromIdx] = order[toIdx];
+        order[toIdx] = temp;
+        STATE.combat.formationOrder = order;
+        sortPoolByPoints();
+        notify('COMBAT_UPDATE');
+      }
+    });
+
+    container.appendChild(chip);
+  });
 }
 
 // Render 10x8 Combat lanes grid
@@ -2221,6 +2553,14 @@ function renderCombatGrid() {
         hbFill.classList.add('health-bar-fill');
         const hpPct = (unit.hp / stats.maxHp.total) * 100;
         hbFill.style.width = `${Math.max(0, hpPct)}%`;
+        const ratio = unit.hp / stats.maxHp.total;
+        if (ratio >= 0.8) {
+          hbFill.style.background = 'var(--color-success)';
+        } else if (ratio >= 0.2) {
+          hbFill.style.background = 'orange';
+        } else {
+          hbFill.style.background = 'var(--color-danger)';
+        }
 
         hbContainer.appendChild(hbFill);
         elUnit.appendChild(hbContainer);
@@ -2270,13 +2610,20 @@ function renderCombatGrid() {
 
     const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
     const numHint = idx < SOLDIERS_CONFIG.maxBandSize ? `<span class="pool-number-hint">[${idx + 1}]</span> ` : '';
-    const hpPct = (unit.hp / unit.maxHp) * 100;
+    const ratio = unit.hp / unit.maxHp;
+    const hpPct = ratio * 100;
+    let bgColor = 'var(--color-success)';
+    if (ratio < 0.2) {
+      bgColor = 'var(--color-danger)';
+    } else if (ratio < 0.8) {
+      bgColor = 'orange';
+    }
     
     card.innerHTML = `
       <span>${numHint}${icons[unit.type]} ${unit.name}</span>
       <span style="font-size:0.75rem">${unit.type}</span>
       <div class="health-bar-container" style="position: absolute; bottom: 4px; left: 6px; right: 6px; height: 4px;">
-        <div class="health-bar-fill" style="width: ${Math.max(0, hpPct)}%"></div>
+        <div class="health-bar-fill" style="width: ${Math.max(0, hpPct)}%; background: ${bgColor}"></div>
       </div>
     `;
     // Enable Drag and Drop to reorder pool cards
@@ -2323,25 +2670,146 @@ function renderCombatGrid() {
 
     elCombatPoolList.appendChild(card);
   });
+
+  renderFormationElement();
 }
 
+function showGodLorePopup(gKey) {
+  const lore = GOD_LORE[gKey];
+  if (!lore) return;
+
+  elModalEventTitle.innerText = lore.title;
+  elModalEventTitle.style.color = lore.color;
+
+  const track = STATE.godQuests[gKey];
+  const milestoneList = lore.milestoneEffects.map((effect, idx) => {
+    let desc = effect;
+    if (!desc && idx === 4) {
+      desc = `Unlocks Blessing: ${lore.buff}`;
+    }
+    const check = track[idx] ? '✅' : '🔒';
+    const isLockedClass = track[idx] ? '' : ' locked';
+    return `<li class="god-lore-milestone-item${isLockedClass}">${check} Milestone ${idx + 1}: ${desc || ''}</li>`;
+  }).join('');
+
+  const favorActionHtml = lore.favorAction || '';
+  
+  const opps = GODS_CONFIG.pentagramOpposites[gKey] || [];
+  const oppositesHtml = opps.map(oppKey => {
+    const oppLore = GOD_LORE[oppKey];
+    return oppLore ? `<span style="color: ${oppLore.color}; font-weight: bold;">${oppLore.icon} ${oppLore.title.split(' — ')[0]}</span>` : '';
+  }).join(' & ');
+
+  elModalEventBody.innerHTML = `
+    <div class="god-lore-popup-body">
+      <div>
+        <p class="god-lore-section-title" style="color: ${lore.color};">👑 Active Blessing (Champion Buff)</p>
+        <p class="god-lore-section-content">${lore.buff}</p>
+      </div>
+
+      <div>
+        <p class="god-lore-section-title">ᚱ Milestones Progression</p>
+        <ul class="god-lore-milestones-list">
+          ${milestoneList}
+        </ul>
+      </div>
+
+      <div>
+        <p class="god-lore-section-title god-lore-curse-title">⚠️ Active Curse (Wrath)</p>
+        <p class="god-lore-section-content">${lore.wrath}</p>
+      </div>
+
+      <p><b>🏺 Relic:</b> ${lore.relic}</p>
+
+      <div>
+        <p class="god-lore-section-title">📋 How to gain Favor</p>
+        <p class="god-lore-section-content">${favorActionHtml}</p>
+      </div>
+
+      <div>
+        <p class="god-lore-section-title">⚖️ Opposes (Drains Favor)</p>
+        <p class="god-lore-section-content">Pleasing this god drains favor from: ${oppositesHtml}</p>
+      </div>
+    </div>
+  `;
+
+  elModalEventChoices.innerHTML = '';
+  if (elModalEventCloseBtn) {
+    elModalEventCloseBtn.style.display = 'block';
+  }
+
+  const box = elModalEvent.querySelector('.modal-box');
+  if (box) {
+    box.style.maxWidth = '540px';
+  }
+
+  showOverlay(elModalEvent);
+  updateModalKeyboardNavigation();
+}
+
+// Render Gods Progress screens
 // Render Gods Progress screens
 function renderQuestsScreen() {
   elQuestsList.innerHTML = '';
 
+  // To map opposites exactly across the star, the gods must be arranged in the polar coordinate order:
+  // odin, thor, freya, hel, loki. (Top starts at -90 degrees, increments by 72 deg).
   const gods = ['odin', 'thor', 'freya', 'hel', 'loki'];
+  
+  // Calculate polar coordinates dynamically
+  // Center is (50, 50), Radius is 40
+  const cx = 50;
+  const cy = 50;
+  const radius = 40;
+
+  const points = gods.map((_, i) => {
+    // Odin starts at top (-90 degrees / -PI/2 radians), incrementing by 72 degrees (2 * PI / 5)
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+    const x = cx + radius * Math.cos(angle);
+    const y = cy + radius * Math.sin(angle);
+    return { x: parseFloat(x.toFixed(2)), y: parseFloat(y.toFixed(2)) };
+  });
+
+  const coordinates = {};
+  gods.forEach((gKey, idx) => {
+    coordinates[gKey] = {
+      top: `${points[idx].y}%`,
+      left: `${points[idx].x}%`
+    };
+  });
+
+  // Star ordering traces vertices by skipping index by 2: 0 -> 2 -> 4 -> 1 -> 3
+  const starIndices = [0, 2, 4, 1, 3];
+  const starPointsStr = starIndices.map(idx => `${points[idx].x},${points[idx].y}`).join(' ');
+  const pentagonPointsStr = points.map(p => `${p.x},${p.y}`).join(' ');
+
+  // Re-append the SVG to make sure it is behind the elements
+  const pentagramSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  pentagramSvg.setAttribute('class', 'pentagram-svg');
+  pentagramSvg.setAttribute('viewBox', '0 0 100 100');
+  pentagramSvg.innerHTML = `
+    <circle cx="${cx}" cy="${cy}" r="${radius}" class="pentagram-outer-circle" />
+    <polygon points="${pentagonPointsStr}" class="pentagram-pentagon" />
+    <polygon points="${starPointsStr}" class="pentagram-star" />
+  `;
+  elQuestsList.appendChild(pentagramSvg);
   
   gods.forEach(gKey => {
     const lore = GOD_LORE[gKey];
-    const row = document.createElement('div');
-    row.classList.add('god-row');
+    const node = document.createElement('div');
+    node.classList.add('god-pentagram-node', `deity-${gKey}`);
+    node.style.top = coordinates[gKey].top;
+    node.style.left = coordinates[gKey].left;
     
-    // ── God Identity column (hover = full god info tooltip) ──
+    // ── God Identity (hover = full god info tooltip) ──
     const idCol = document.createElement('div');
     idCol.classList.add('god-identity');
     idCol.dataset.godTooltip = gKey;
     idCol.dataset.tooltipSection = 'identity';
-    idCol.style.cursor = 'help';
+    idCol.style.cursor = 'pointer';
+    idCol.addEventListener('click', () => {
+      showGodLorePopup(gKey);
+    });
     
     const favor = STATE.godFavor[gKey];
     const favorColor = favor > 0 ? 'var(--color-success)' : favor < 0 ? 'var(--color-danger)' : 'var(--text-muted)';
@@ -2355,23 +2823,25 @@ function renderQuestsScreen() {
     const favorEl = document.createElement('span');
     favorEl.classList.add('god-favor-score');
     favorEl.innerHTML = `Favor: <b style="color:${favorColor}">${favorSign}${favor}</b> / 5`;
-
-    // Relic hint under the name
-    const relicHint = document.createElement('span');
-    relicHint.style.cssText = 'font-size:0.7rem;color:var(--text-muted);margin-top:2px;';
-    relicHint.innerHTML = `🏺 ${lore.relic}`;
     
     idCol.appendChild(name);
     idCol.appendChild(favorEl);
-    idCol.appendChild(relicHint);
-    row.appendChild(idCol);
+    node.appendChild(idCol);
 
-    // ── Milestones track column (each rune = tooltip for that milestone) ──
+    // ── Milestones track ──
     const trackCol = document.createElement('div');
-    trackCol.classList.add('god-progress-bar', `deity-${gKey}`);
+    trackCol.classList.add('god-progress-bar');
     
     const track = STATE.godQuests[gKey];
-    const runes = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ'];
+    const runeSets = {
+      odin: ['ᚨ', 'ᛗ', 'ᚷ', 'ᚹ', 'ᛃ'],
+      thor: ['ᚦ', 'ᚱ', 'ᛏ', 'ᛋ', 'ᚲ'],
+      freya: ['ᚠ', 'ᛒ', 'ᛚ', 'ᛞ', 'ᚢ'],
+      hel: ['ᚾ', 'ᛁ', 'ᚲ', 'ᛉ', 'ᛦ'],
+      loki: ['ᛇ', 'ᚹ', 'ᚺ', 'ᛈ', 'ᛞ']
+    };
+    const runes = runeSets[gKey] || ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ'];
+
     for (let i = 0; i < 5; i++) {
       const step = document.createElement('div');
       step.classList.add('milestone-step');
@@ -2385,9 +2855,9 @@ function renderQuestsScreen() {
       }
       trackCol.appendChild(step);
     }
-    row.appendChild(trackCol);
+    node.appendChild(trackCol);
 
-    // ── Champion toggle column (hover = buff tooltip) ──
+    // ── Champion toggle button/label ──
     const toggleCol = document.createElement('div');
     toggleCol.classList.add('champion-selector-cell');
     
@@ -2416,17 +2886,16 @@ function renderQuestsScreen() {
       }
       toggleCol.appendChild(btn);
     } else {
-      // Show a locked hint — hovering shows locked info
       const locked = document.createElement('span');
-      locked.style.cssText = 'font-size:0.8rem;color:var(--text-muted);cursor:help;';
+      locked.style.cssText = 'font-size:0.75rem;color:var(--text-muted);cursor:help;';
       locked.innerText = '🔒 Locked';
       locked.dataset.godTooltip = gKey;
       locked.dataset.tooltipSection = 'champion_locked';
       toggleCol.appendChild(locked);
     }
     
-    row.appendChild(toggleCol);
-    elQuestsList.appendChild(row);
+    node.appendChild(toggleCol);
+    elQuestsList.appendChild(node);
   });
 }
 
@@ -2450,6 +2919,8 @@ function renderPartyPanel() {
       details.style.flexDirection = 'column';
       details.style.gap = '2px';
       
+      const effStats = getEffectiveStats(unit);
+
       const name = document.createElement('span');
       const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
       name.innerHTML = `<b>${icons[unit.type] || '⚔️'} ${unit.name}</b> (${unit.type.toUpperCase()})`;
@@ -2457,7 +2928,7 @@ function renderPartyPanel() {
       const stats = document.createElement('span');
       stats.style.fontSize = '0.75rem';
       stats.style.color = 'var(--text-muted)';
-      stats.innerText = `ATK: ${unit.dmg} | SPD: ${unit.speed} | RNG: ${unit.range}`;
+      stats.innerText = `ATK: ${formatStat(effStats.dmg)} | SPD: ${formatStat(effStats.speed)} | RNG: ${formatStat(effStats.range)}`;
       
       details.appendChild(name);
       details.appendChild(stats);
@@ -2471,7 +2942,7 @@ function renderPartyPanel() {
 
       const hpText = document.createElement('span');
       hpText.style.fontSize = '0.8rem';
-      hpText.innerHTML = `HP: <b>${unit.hp}</b> / ${unit.maxHp}`;
+      hpText.innerHTML = `HP: <b>${unit.hp}</b> / ${formatStat(effStats.maxHp)}`;
 
       const hbContainer = document.createElement('div');
       hbContainer.className = 'health-bar-container';
@@ -2485,15 +2956,37 @@ function renderPartyPanel() {
       const hbFill = document.createElement('div');
       hbFill.className = 'health-bar-fill';
       hbFill.style.height = '100%';
-      hbFill.style.width = `${(unit.hp / unit.maxHp) * 100}%`;
-      hbFill.style.background = 'var(--color-success)';
+      hbFill.style.width = `${(unit.hp / effStats.maxHp.total) * 100}%`;
+      const ratio = unit.hp / effStats.maxHp.total;
+      if (ratio >= 0.8) {
+        hbFill.style.background = 'var(--color-success)';
+      } else if (ratio >= 0.2) {
+        hbFill.style.background = 'orange';
+      } else {
+        hbFill.style.background = 'var(--color-danger)';
+      }
 
       hbContainer.appendChild(hbFill);
       hpSection.appendChild(hpText);
       hpSection.appendChild(hbContainer);
 
+      const disbandBtn = document.createElement('button');
+      disbandBtn.className = 'btn btn-sm btn-danger btn-no-shortcut';
+      disbandBtn.style.padding = '2px 8px';
+      disbandBtn.style.marginLeft = '1rem';
+      disbandBtn.innerText = 'Disband';
+      disbandBtn.addEventListener('click', () => {
+        const idx = STATE.band.findIndex(u => u.id === unit.id);
+        if (idx !== -1) {
+          STATE.band.splice(idx, 1);
+          notify('RESOURCES_UPDATED');
+          renderPartyPanel();
+        }
+      });
+
       row.appendChild(details);
       row.appendChild(hpSection);
+      row.appendChild(disbandBtn);
       elPartyBandContent.appendChild(row);
     });
   }
@@ -2531,19 +3024,58 @@ function renderPartyPanel() {
 
 /* --- Logging & Overlays helpers --- */
 
+let currentActiveScreen = '';
+let lastWorldMsg = '';
+let lastWorldCount = 1;
+let lastWorldElement = null;
+
+let lastLocMsg = '';
+let lastLocCount = 1;
+let lastLocElement = null;
+
+function checkScreenReset() {
+  if (STATE.activeScreen !== currentActiveScreen) {
+    currentActiveScreen = STATE.activeScreen;
+    lastWorldMsg = '';
+    lastWorldCount = 1;
+    lastWorldElement = null;
+    lastLocMsg = '';
+    lastLocCount = 1;
+    lastLocElement = null;
+  }
+}
+
 export function logWorld(msg, typeClass = 'system-message') {
-  const p = document.createElement('p');
-  p.classList.add(typeClass);
-  p.innerText = msg;
-  elWorldLog.appendChild(p);
+  checkScreenReset();
+  if (msg === lastWorldMsg && lastWorldElement) {
+    lastWorldCount++;
+    lastWorldElement.innerText = `${msg} (x${lastWorldCount})`;
+  } else {
+    lastWorldMsg = msg;
+    lastWorldCount = 1;
+    const p = document.createElement('p');
+    p.classList.add(typeClass);
+    p.innerText = msg;
+    elWorldLog.appendChild(p);
+    lastWorldElement = p;
+  }
   elWorldLog.scrollTop = elWorldLog.scrollHeight;
 }
 
 export function logLocation(msg, typeClass = 'system-message') {
-  const p = document.createElement('p');
-  p.classList.add(typeClass);
-  p.innerText = msg;
-  elLocLog.appendChild(p);
+  checkScreenReset();
+  if (msg === lastLocMsg && lastLocElement) {
+    lastLocCount++;
+    lastLocElement.innerText = `${msg} (x${lastLocCount})`;
+  } else {
+    lastLocMsg = msg;
+    lastLocCount = 1;
+    const p = document.createElement('p');
+    p.classList.add(typeClass);
+    p.innerText = msg;
+    elLocLog.appendChild(p);
+    lastLocElement = p;
+  }
   elLocLog.scrollTop = elLocLog.scrollHeight;
 }
 
@@ -2593,7 +3125,7 @@ function updateModalKeyboardNavigation() {
   }
 
   const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'))
-    .filter(btn => !btn.classList.contains('btn-close-x'));
+    .filter(btn => !btn.classList.contains('btn-close-x') && !btn.classList.contains('modal-close-btn'));
   if (buttons.length === 0) return;
 
   if (activeModalFocusIndex >= buttons.length) {
@@ -2650,6 +3182,30 @@ export function handleStateNotification(event, data) {
   }
   else if (event === 'COMBAT_DEATH') {
     logWorld(`Dead: Unit '${data.name}' was slain on the lanes.`, 'combat-message');
+  }
+  else if (event === 'COMBAT_EFFECT_TRIGGER') {
+    if (data.effect === 'loki_miss') {
+      logWorld(`🎭 Loki's Trick: Enemy missed their attack!`, 'warn-message');
+      showToast(`Enemy missed (Loki)`, '🎭');
+    } else if (data.effect === 'hel_miss') {
+      logWorld(`💀 Hel's Chill: Enemy missed their attack!`, 'warn-message');
+      showToast(`Enemy missed (Hel)`, '💀');
+    } else if (data.effect === 'thor_double') {
+      logWorld(`⚡ Thor's Wrath: Allied unit '${data.unit.name}' strikes twice!`, 'gain-message');
+      showToast(`Double Strike!`, '⚡');
+    } else if (data.effect === 'loki_charm') {
+      logWorld(`🌀 Loki's Mirror: Spawning enemy '${data.unit.name}' is Charmed to fight for you!`, 'gain-message');
+      showToast(`Charm: ${data.unit.name}!`, '🌀');
+    } else if (data.effect === 'loki_confuse') {
+      logWorld(`😵 Loki's Chaos: Spawning enemy '${data.unit.name}' is Confused!`, 'warn-message');
+      showToast(`Confused: ${data.unit.name}`, '😵');
+    } else if (data.effect === 'loki_charm_wearoff') {
+      logWorld(`🎭 Loki's Charm faded: Charmed unit '${data.unit.name}' broke free!`, 'warn-message');
+      showToast(`Charm wore off`, '🎭');
+    } else if (data.effect === 'hel_undead') {
+      logWorld(`💀 Hel's Necromancy: Hurt enemy '${data.unit.name}' converted into an allied Undead Draugr!`, 'gain-message');
+      showToast(`Draugr Rises!`, '💀');
+    }
   }
   else if (event === 'COMBAT_BREACH') {
     logWorld(`Line breached! Monster '${data.unit.name}' reached base and stole 2 ${data.stolen}!`, 'warn-message');
@@ -2723,6 +3279,10 @@ export function handleStateNotification(event, data) {
   }
   else if (event === 'RELIC_SACRIFICED') {
     logWorld(`You sacrificed a ${data.relicId} relic to appease ${data.godName.toUpperCase()}.`, 'gain-message');
+  }
+  else if (event === 'RELIC_SACRICES_GOLD' || event === 'RELIC_SACRIFICED_GOLD') {
+    logWorld(`Sacrificed a ${data.relicId} relic to maxed god ${data.godName.toUpperCase()}. Gained +5 Gold!`, 'gain-message');
+    showToast(`Gained +5 Gold from sacrifice!`, '🪙');
   }
   else if (event === 'FAVOR_GAIN_ACTION') {
     logWorld(`Action Pleased the Gods: Gained 1 Favor with ${data.god.toUpperCase()} by ${data.reason}!`, 'gain-message');

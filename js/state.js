@@ -5,6 +5,7 @@
 import { SOLDIERS_CONFIG as SC } from './config/soldiers.js';
 import { GODS_CONFIG as GC } from './config/gods.js';
 import { WORLD_CONFIG as WC } from './config/world.js';
+import { COMBAT_CONFIG as CC } from './config/combat.js';
 
 // Event emitter subscription list
 const listeners = [];
@@ -55,6 +56,9 @@ export const STATE = {
   // Deity Quest Milestones (5 steps per god)
   godQuests: makeGodQuests(),
 
+  // Order in which gods reached milestone 5
+  milestone5Order: [],
+
   // Counters for alternate favor gains
   odinWolvesKilled: 0,
   odinGiantsKilled: 0,
@@ -82,7 +86,9 @@ export const STATE = {
     locationId: null,
     entityCoordKey: null,
     waveMonsters: [],
-    stance: 'attack'
+    stance: 'attack',
+    combatIntervalMs: 600,
+    formationOrder: ['shieldmaiden', 'berserker', 'huntsman']
   }
 };
 
@@ -139,37 +145,51 @@ export function sacrificeRelic(relicId, godName) {
   const idx = STATE.inventory.indexOf(relicId);
   if (idx !== -1) {
     STATE.inventory.splice(idx, 1);
-    adjustFavor(godName, 1);
-    notify('RELIC_SACRIFICED', { relicId, godName });
+    if (STATE.godFavor[godName] >= 5) {
+      adjustResource('gold', 5);
+      notify('RELIC_SACRIFICED_GOLD', { relicId, godName, goldGained: 5 });
+    } else {
+      adjustFavor(godName, 1);
+      notify('RELIC_SACRIFICED', { relicId, godName });
+    }
   }
 }
 
 // Pentagram dynamic shifting favor logic
 export function adjustFavor(godName, amt) {
+  // If this god's quest line is fully complete, we don't gain more favor or trigger opponents' drain
+  if (amt > 0 && STATE.godQuests[godName] && STATE.godQuests[godName].every(x => x === true)) {
+    return;
+  }
+
   const opposites = GC.pentagramOpposites;
   const current = STATE.godFavor[godName];
-  if (current >= GC.favorMax && amt > 0) return;
 
   const nextFavor = Math.min(GC.favorMax, Math.max(GC.favorMin, current + amt));
   STATE.godFavor[godName] = nextFavor;
 
   if (amt > 0) {
     const track = STATE.godQuests[godName];
-    const emptyIndex = track.indexOf(false);
-    if (emptyIndex !== -1 && emptyIndex < nextFavor) {
+    let emptyIndex = track.indexOf(false);
+    while (emptyIndex !== -1 && emptyIndex < nextFavor) {
       track[emptyIndex] = true;
       notify('QUEST_MILESTONE', { god: godName, index: emptyIndex });
-      if (track.every(x => x === true)) {
-        notify('GOD_QUESTS_COMPLETE', godName);
-        const allGodsCompleted = Object.values(STATE.godQuests).every(t => t.every(x => x === true));
-        if (allGodsCompleted) {
-          notify('ASCENSION_TRIGGERED', godName);
-        }
+      emptyIndex = track.indexOf(false);
+    }
+    if (track.every(x => x === true)) {
+      if (!STATE.milestone5Order) STATE.milestone5Order = [];
+      if (!STATE.milestone5Order.includes(godName)) {
+        STATE.milestone5Order.push(godName);
+      }
+      notify('GOD_QUESTS_COMPLETE', godName);
+      const allGodsCompleted = Object.values(STATE.godQuests).every(t => t.every(x => x === true));
+      if (allGodsCompleted) {
+        notify('ASCENSION_TRIGGERED', godName);
       }
     }
   }
 
-  if (amt > 0) {
+  if (amt > 0 && nextFavor > current) {
     const oppList = opposites[godName] || [];
     for (const opp of oppList) {
       const oppTrack = STATE.godQuests[opp];
@@ -194,7 +214,7 @@ export function recordMonsterKill(monsterType) {
       adjustFavor('odin', 1);
       notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: `slaying ${targets.odin.wolvesTarget} wolves` });
     }
-  } else if (nameLower.includes('giant')) {
+  } else if (nameLower.includes('frost giant') || nameLower.includes('jotunn')) {
     STATE.odinGiantsKilled = (STATE.odinGiantsKilled || 0) + 1;
     if (STATE.odinGiantsKilled >= targets.odin.giantsTarget) {
       STATE.odinGiantsKilled = 0;
@@ -280,6 +300,7 @@ export function resetGame() {
   STATE.party = { worldX: WC.partyStart.x, worldY: WC.partyStart.y, currentLocationId: null, localX: 0, localY: 0 };
   STATE.godFavor = makeGodFavor();
   STATE.godQuests = makeGodQuests();
+  STATE.milestone5Order = [];
   STATE.odinWolvesKilled = 0;
   STATE.odinGiantsKilled = 0;
   STATE.thorDraugrsKilled = 0;
@@ -292,7 +313,8 @@ export function resetGame() {
   STATE.combat = {
     active: false, grid: [], pool: [], paused: true,
     ticker: null, selectedPoolIndex: null, spawnTimer: 0,
-    locationId: null, entityCoordKey: null, waveMonsters: []
+    locationId: null, entityCoordKey: null, waveMonsters: [],
+    formationOrder: ['shieldmaiden', 'berserker', 'huntsman']
   };
 }
 
@@ -382,14 +404,18 @@ export function buySheepDynamic(cost, amount = 1) {
 
 export function buyRecruit(type, cost) {
   if (STATE.godFavor.hel === -5) {
-    return { success: false, message: "Hel's Wrath: Dead band members cannot be replaced!" };
+    if (GC.modifiers.wrath.hel?.blockRecruitment ?? true) {
+      return { success: false, message: "Hel's Wrath: Dead band members cannot be replaced!" };
+    }
   }
   if (STATE.band.length >= SC.maxBandSize) {
     return { success: false, message: `Your Drakkar deck is full (max ${SC.maxBandSize} soldiers)!` };
   }
   
+  let finalCost = { ...cost };
+  
   // Check all resource requirements
-  for (const [res, amt] of Object.entries(cost)) {
+  for (const [res, amt] of Object.entries(finalCost)) {
     if ((STATE.resources[res] || 0) < amt) {
       const resLabel = res.charAt(0).toUpperCase() + res.slice(1);
       return { success: false, message: `Not enough ${resLabel} to hire recruit!` };
@@ -397,7 +423,7 @@ export function buyRecruit(type, cost) {
   }
 
   // Deduct resources
-  for (const [res, amt] of Object.entries(cost)) {
+  for (const [res, amt] of Object.entries(finalCost)) {
     adjustResource(res, -amt);
   }
 
@@ -405,3 +431,130 @@ export function buyRecruit(type, cost) {
   const label = type.charAt(0).toUpperCase() + type.slice(1);
   return { success: true, message: `Enrolled a ${label} to your band!` };
 }
+
+export function getHealCost() {
+  let totalCost = 0;
+  for (const warrior of STATE.band) {
+    const effStats = getEffectiveStats(warrior);
+    if (warrior.hp < effStats.maxHp.total) {
+      if (warrior.hp < effStats.maxHp.total * 0.2) {
+        totalCost += 4;
+      } else if (warrior.hp < effStats.maxHp.total * 0.8) {
+        totalCost += 2;
+      } else {
+        totalCost += 0;
+      }
+    }
+  }
+  return totalCost;
+}
+
+export function healWarriors() {
+  const cost = getHealCost();
+  if (STATE.resources.gold >= cost) {
+    let healedCount = 0;
+    for (const warrior of STATE.band) {
+      const effStats = getEffectiveStats(warrior);
+      if (warrior.hp < effStats.maxHp.total) {
+        warrior.hp = effStats.maxHp.total;
+        healedCount++;
+      }
+    }
+    adjustResource('gold', -cost);
+    notify('STATE_UPDATED');
+    return { success: true, message: `Healed ${healedCount} warriors for ${cost} gold.` };
+  }
+  return { success: false, message: `Not enough gold! Need ${cost} gold.` };
+}
+
+export function getEffectiveStats(unit) {
+  const isPlayer = unit.alliance === 'player' || ['shieldmaiden', 'berserker', 'huntsman'].includes(unit.type);
+  let baseMaxHp = unit.maxHp;
+  let baseDmg = unit.dmg;
+  let baseSpeed = unit.speed;
+  let baseRange = unit.range;
+
+  if (isPlayer) {
+    const base = SC.recruitStats[unit.type];
+    if (base) {
+      baseMaxHp = base.maxHp;
+      baseDmg = base.dmg;
+      baseSpeed = base.speed;
+      baseRange = base.range;
+    }
+  } else {
+    const base = CC.monsters[unit.type] || CC.monsterFallback;
+    if (base) {
+      baseMaxHp = base.hp;
+      baseDmg = base.dmg;
+      baseSpeed = base.speed;
+      baseRange = base.range;
+    }
+  }
+
+  let bonusMaxHp = 0;
+  let bonusDmg = 0;
+  let bonusSpeed = 0;
+  let bonusRange = 0;
+  let bonusLeap = 0;
+
+  if (isPlayer) {
+    // Apply Active and Permanently Activated Blessing modifiers
+    const activeBlessings = new Set();
+    if (STATE.activeBlessing) {
+      activeBlessings.add(STATE.activeBlessing);
+    }
+    if (STATE.permanentlyActivatedBlessings) {
+      STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
+    }
+
+    for (const blessing of activeBlessings) {
+      if (GC.modifiers.blessings[blessing]) {
+        const bMod = GC.modifiers.blessings[blessing];
+        if (bMod.targetType === 'all' || bMod.targetType === unit.type) {
+          if (bMod.maxHp) bonusMaxHp += bMod.maxHp;
+          if (bMod.dmg) bonusDmg += bMod.dmg;
+          if (bMod.speed) bonusSpeed += bMod.speed;
+          if (bMod.range) bonusRange += bMod.range;
+          if (bMod.leap) bonusLeap += bMod.leap;
+        }
+      }
+    }
+
+    // Apply Quest Milestone modifiers
+    for (const godName of Object.keys(STATE.godQuests)) {
+      const track = STATE.godQuests[godName];
+      const godMiles = GC.modifiers.milestones[godName];
+      if (godMiles) {
+        for (const mMod of godMiles) {
+          if (track[mMod.index]) {
+            if (mMod.targetType === 'all' || mMod.targetType === unit.type) {
+              if (mMod.maxHp) bonusMaxHp += mMod.maxHp;
+              if (mMod.dmg) bonusDmg += mMod.dmg;
+              if (mMod.speed) bonusSpeed += mMod.speed;
+              if (mMod.range) bonusRange += mMod.range;
+              if (mMod.leap) bonusLeap += mMod.leap;
+            }
+          }
+        }
+      }
+    }
+  } else {
+    // Enemy units
+    // Hel milestone 1: Enemies deal -1 DMG
+    if (STATE.godQuests.hel?.[0]) {
+      const m1Config = GC.modifiers.milestones.hel.find(m => m.index === 0);
+      bonusDmg += m1Config?.enemyDmgModifier ?? -1;
+    }
+  }
+
+  return {
+    hp: unit.hp,
+    maxHp: { base: baseMaxHp, bonus: bonusMaxHp, total: Math.max(1, baseMaxHp + bonusMaxHp) },
+    dmg: { base: baseDmg, bonus: bonusDmg, total: Math.max(0, baseDmg + bonusDmg) },
+    speed: { base: baseSpeed, bonus: bonusSpeed, total: Math.max(0, baseSpeed + bonusSpeed) },
+    range: { base: baseRange, bonus: bonusRange, total: Math.max(1, baseRange + bonusRange) },
+    leap: { base: 0, bonus: bonusLeap, total: Math.max(0, 0 + bonusLeap) }
+  };
+}
+

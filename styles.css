@@ -128,6 +128,16 @@ body {
   border-color: var(--text-accent);
 }
 
+.btn:disabled, .btn.btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+  box-shadow: none !important;
+}
+
 .btn-primary {
   background: rgba(0, 240, 255, 0.15);
   border-color: var(--text-accent);
@@ -216,7 +226,7 @@ body {
 
 .menu-box {
   width: 100%;
-  max-width: 600px;
+  max-width: 650px;
   padding: 3rem;
   text-align: center;
 }
@@ -867,90 +877,157 @@ body {
 }
 
 /* Quest / Gods Alignment Screen Panel */
+/* Pentagram Quests Redesign Styles */
 .quests-box {
   width: 100%;
-  max-width: 800px;
+  max-width: 720px;
   margin: 0 auto;
   padding: 2.5rem;
   height: 100%;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .gods-tracks-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  flex-grow: 1;
-  overflow-y: auto;
-  margin-top: 1.5rem;
-  padding-right: 0.5rem;
-}
-
-.god-row {
-  display: grid;
-  grid-template-columns: 140px 1fr 120px;
-  align-items: center;
-  gap: 1.5rem;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 0.75rem 1.25rem;
-  border-radius: 6px;
-}
-
-.god-identity {
-  display: flex;
-  flex-direction: column;
-}
-
-.god-name {
-  font-family: var(--font-logo);
-  font-size: 1.15rem;
-  font-weight: 700;
-}
-
-.god-favor-score {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.god-progress-bar {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.milestone-step {
-  flex-grow: 1;
-  height: 24px;
-  border: 1px solid var(--border-color);
-  background: rgba(0,0,0,0.3);
-  border-radius: 3px;
   position: relative;
+  width: 520px;
+  height: 520px;
+  margin: 1.5rem auto 0 auto;
+  display: block;
+  flex-grow: 0;
+  overflow: visible;
+}
+
+.pentagram-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.pentagram-outer-circle {
+  fill: none;
+  stroke: rgba(0, 240, 255, 0.15);
+  stroke-width: 0.75;
+  stroke-dasharray: 2 1;
+}
+
+.pentagram-pentagon {
+  fill: none;
+  stroke: rgba(0, 240, 255, 0.1);
+  stroke-width: 0.5;
+}
+
+.pentagram-star {
+  fill: none;
+  stroke: var(--text-accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.6));
+}
+
+.god-pentagram-node {
+  position: absolute;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  width: 165px;
+  background: rgba(11, 14, 17, 0.95);
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.65rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: all 0.3s ease;
+}
+
+.god-pentagram-node:hover {
+  border-color: var(--node-color);
+  box-shadow: 0 0 15px var(--node-color);
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.god-pentagram-node .god-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.god-pentagram-node .god-name {
+  font-family: var(--font-logo);
+  font-size: 1.05rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.god-pentagram-node .god-favor-score {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.god-pentagram-node .god-progress-bar {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: center;
+  align-items: center;
+  margin: 0.1rem 0;
+}
+
+.god-pentagram-node .milestone-step {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border-color);
+  background: rgba(0,0,0,0.4);
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-runes);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: rgba(255,255,255,0.2);
+  user-select: none;
 }
 
-.milestone-step.achieved {
-  background: rgba(0, 240, 255, 0.2);
+.god-pentagram-node .milestone-step.achieved {
+  background: rgba(0, 240, 255, 0.15);
   border-color: var(--text-accent);
   color: var(--text-accent);
-  text-shadow: 0 0 4px var(--text-accent);
+  text-shadow: 0 0 3px var(--text-accent);
 }
 
-/* Milestone styles colored by deity */
-.deity-odin .milestone-step.achieved { background: rgba(0, 240, 255, 0.2); border-color: var(--color-odin); color: var(--color-odin); text-shadow: 0 0 4px var(--color-odin); }
-.deity-thor .milestone-step.achieved { background: rgba(255, 215, 0, 0.2); border-color: var(--color-thor); color: var(--color-thor); text-shadow: 0 0 4px var(--color-thor); }
-.deity-freya .milestone-step.achieved { background: rgba(46, 204, 113, 0.2); border-color: var(--color-freya); color: var(--color-freya); text-shadow: 0 0 4px var(--color-freya); }
-.deity-hel .milestone-step.achieved { background: rgba(155, 89, 182, 0.2); border-color: var(--color-hel); color: var(--color-hel); text-shadow: 0 0 4px var(--color-hel); }
-.deity-loki .milestone-step.achieved { background: rgba(230, 126, 34, 0.2); border-color: var(--color-loki); color: var(--color-loki); text-shadow: 0 0 4px var(--color-loki); }
+/* Deity Specific milestone color mapping in pentagram nodes */
+.god-pentagram-node.deity-odin { --node-color: var(--color-odin); }
+.god-pentagram-node.deity-thor { --node-color: var(--color-thor); }
+.god-pentagram-node.deity-freya { --node-color: var(--color-freya); }
+.god-pentagram-node.deity-hel { --node-color: var(--color-hel); }
+.god-pentagram-node.deity-loki { --node-color: var(--color-loki); }
 
-.champion-selector-cell .btn-sm {
+.god-pentagram-node.deity-odin .milestone-step.achieved { background: rgba(0, 240, 255, 0.2); border-color: var(--color-odin); color: var(--color-odin); text-shadow: 0 0 3px var(--color-odin); }
+.god-pentagram-node.deity-thor .milestone-step.achieved { background: rgba(255, 215, 0, 0.2); border-color: var(--color-thor); color: var(--color-thor); text-shadow: 0 0 3px var(--color-thor); }
+.god-pentagram-node.deity-freya .milestone-step.achieved { background: rgba(46, 204, 113, 0.2); border-color: var(--color-freya); color: var(--color-freya); text-shadow: 0 0 3px var(--color-freya); }
+.god-pentagram-node.deity-hel .milestone-step.achieved { background: rgba(155, 89, 182, 0.2); border-color: var(--color-hel); color: var(--color-hel); text-shadow: 0 0 3px var(--color-hel); }
+.god-pentagram-node.deity-loki .milestone-step.achieved { background: rgba(230, 126, 34, 0.2); border-color: var(--color-loki); color: var(--color-loki); text-shadow: 0 0 3px var(--color-loki); }
+
+.god-pentagram-node .champion-selector-cell {
   width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.god-pentagram-node .champion-selector-cell .btn-sm {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
 }
 
 
@@ -971,6 +1048,7 @@ body {
 }
 
 .modal-box {
+  position: relative;
   width: 100%;
   max-width: 500px;
   padding: 2rem;
@@ -1029,16 +1107,16 @@ body {
   position: fixed;
   z-index: 10000;
   pointer-events: none;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(11, 14, 17, 0.95);
+  border: 1px solid var(--border-color);
   border-left: 3px solid var(--text-accent);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
   padding: 0.6rem 0.9rem;
   border-radius: 4px;
   max-width: 280px;
   font-family: var(--font-body);
   font-size: 0.85rem;
-  color: #111;
+  color: var(--text-primary);
   display: none;
   flex-direction: column;
   gap: 0.25rem;
@@ -1057,17 +1135,17 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  color: #111;
+  color: var(--text-primary);
 }
 
 .game-tooltip-coords {
   font-family: var(--font-runes);
-  color: #555;
+  color: var(--text-muted);
   font-size: 0.7rem;
 }
 
 .game-tooltip-contents {
-  color: #333;
+  color: var(--text-primary);
   font-size: 0.8rem;
   line-height: 1.35;
 }
@@ -1213,4 +1291,97 @@ body {
   font-size: 0.75rem !important;
   padding: 0.4rem 0.6rem !important;
   max-width: 200px !important;
+}
+
+/* Refactored inline styles */
+.heal-warriors-row {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 0.75rem;
+}
+
+.recruit-stats-subtext {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.god-lore-popup-body {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 540px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.god-lore-section-title {
+  font-weight: bold;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 4px;
+}
+
+.god-lore-section-content {
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.god-lore-list {
+  margin-top: 4px;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.god-lore-milestones-list {
+  margin-top: 4px;
+  padding-left: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.god-lore-milestone-item {
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.god-lore-milestone-item.locked {
+  color: var(--text-muted);
+}
+
+.recruit-info-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.god-lore-curse-title {
+  color: var(--color-danger);
+}
+
+.god-lore-list li {
+  margin-bottom: 4px;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  background: transparent;
+  border: none;
+  color: var(--color-danger);
+  font-size: 1.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  outline: none;
+  line-height: 1;
+  padding: 0;
+  transition: transform 0.2s, opacity 0.2s;
+  z-index: 100;
+}
+
+.modal-close-btn:hover {
+  transform: scale(1.15);
+  opacity: 0.9;
 }

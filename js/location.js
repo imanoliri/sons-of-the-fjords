@@ -552,7 +552,9 @@ function buildEntityOfType(locationId, type, terrain, x, y, locationType, diffic
     const maxLimit = ds.maxCountLimit || 6;
     countMin = Math.min(maxLimit, Math.max(1, countMin));
     countMax = Math.min(maxLimit, Math.max(countMin, countMax));
-    const count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
+    let count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
+    // Return enemy army entity config
+
     return {
       type: 'enemy_army',
       monsters: [{ monsterClass: selectedMonster, count }],
