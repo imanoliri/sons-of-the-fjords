@@ -1453,7 +1453,13 @@ function renderWorldMap() {
             const isStaticRaid = loc.id.startsWith('raid_');
             if (isStaticRaid) {
               const marker = document.createElement('span');
-              marker.innerText = '⚔️';
+              const emojiMap = {
+                forest: '🌲',
+                mountain: '⛰️',
+                burial_mound: '🪦',
+                default: '⚔️'
+              };
+              marker.innerText = emojiMap[loc.locationType] || '⚔️';
               marker.classList.add('raid-marker');
               elCell.appendChild(marker);
             } else {
