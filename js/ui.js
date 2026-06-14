@@ -2601,7 +2601,7 @@ function renderFormationElement() {
   if (!container) return;
   container.innerHTML = '';
 
-  let order = STATE.combat.formationOrder || ['berserker', 'shieldmaiden', 'huntsman', 'huskarl', 'runecaster'];
+  let order = STATE.combat.formationOrder || ['shieldmaiden', 'huntsman', 'berserker', 'huskarl', 'runecaster'];
   // Ensure all 5 soldier types are present in case order is loaded from an old save file
   const requiredTypes = ['berserker', 'shieldmaiden', 'huntsman', 'huskarl', 'runecaster'];
   requiredTypes.forEach(t => {

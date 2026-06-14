@@ -10,7 +10,7 @@ import { GODS_CONFIG as GC } from './config/gods.js';
 let combatTimer = null;
 
 export function sortPoolByPoints() {
-  let order = STATE.combat.formationOrder || ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'];
+  let order = STATE.combat.formationOrder || ['shieldmaiden', 'huntsman', 'berserker', 'huskarl', 'runecaster'];
   const requiredTypes = ['berserker', 'shieldmaiden', 'huntsman', 'huskarl', 'runecaster'];
   let modified = false;
   requiredTypes.forEach(t => {
