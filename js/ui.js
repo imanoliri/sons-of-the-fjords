@@ -2717,6 +2717,27 @@ function renderCombatGrid() {
         const elUnit = document.createElement('div');
         elUnit.classList.add('combat-unit', `alliance-${unit.alliance}`);
 
+        // Emoji display based on soldier/monster class type or fleeing state
+        if (unit.isFleeing) {
+          elUnit.classList.add('fleeing');
+          elUnit.innerText = '🏃‍♂️';
+        } else {
+          const avatars = {
+            shieldmaiden: '🛡️',
+            berserker: '🪓',
+            huntsman: '🏹',
+            huskarl: '⚔️',
+            runecaster: '🔮',
+            'Giant Brood-Spider': '🕷️',
+            'Fenrir Pack Wolf': '🐺',
+            'Draugr Warrior': '🧟',
+            'Cave Troll': '👹',
+            'Frost Giant (Jotunn)': '❄️',
+            'Lindwurm': '🐉'
+          };
+          elUnit.innerText = avatars[unit.type] || '👾';
+        }
+
         // Undead, Charmed, or Confused states visual style hooks
         if (unit.isUndead) {
           elUnit.classList.add('undead-risen');
@@ -2805,26 +2826,6 @@ function renderCombatGrid() {
           }
         }
 
-        // Emoji display based on soldier/monster class type or fleeing state
-        if (unit.isFleeing) {
-          elUnit.classList.add('fleeing');
-          elUnit.innerText = '🏃‍♂️';
-        } else {
-          const avatars = {
-            shieldmaiden: '🛡️',
-            berserker: '🪓',
-            huntsman: '🏹',
-            huskarl: '⚔️',
-            runecaster: '🔮',
-            'Giant Brood-Spider': '🕷️',
-            'Fenrir Pack Wolf': '🐺',
-            'Draugr Warrior': '🧟',
-            'Cave Troll': '👹',
-            'Frost Giant (Jotunn)': '❄️',
-            'Lindwurm': '🐉'
-          };
-          elUnit.innerText = avatars[unit.type] || '👾';
-        }
         const stats = getEffectiveStats(unit);
         elUnit.title = `${unit.name} (${unit.hp}/${stats.maxHp.total} HP)`;
 
