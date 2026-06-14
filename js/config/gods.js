@@ -141,7 +141,7 @@ export const GODS_CONFIG = {
         'All units gain +5 max HP.',
         null
       ],
-      buff: 'Berserkers gain +3 DMG and Leap of 1.'
+      buff: 'Berserkers gain +3 DMG and Leap of +1.'
     },
     freya: {
       title: 'Freya — Goddess of Love & Life',
