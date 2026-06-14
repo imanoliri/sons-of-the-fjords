@@ -338,29 +338,7 @@ export function initUIBindings() {
     togglePause();
   });
 
-  const elRunesGuide = document.getElementById('modal-runes-guide');
-  bindButton('btn-combat-runes', () => {
-    // Update unlocked statuses dynamically before showing
-    const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
-    godNames.forEach(g => {
-      const statusEl = document.getElementById(`status-rune-${g}`);
-      if (statusEl) {
-        const unlocked = STATE.godQuests[g]?.[4] === true;
-        if (unlocked) {
-          statusEl.innerText = 'Unlocked';
-          statusEl.style.color = 'var(--color-success)';
-        } else {
-          statusEl.innerText = 'Locked (Milestone 5)';
-          statusEl.style.color = 'var(--color-danger)';
-        }
-      }
-    });
-    showOverlay(elRunesGuide);
-  });
 
-  bindButton('btn-close-runes', () => {
-    hideOverlay(elRunesGuide);
-  });
 
   bindButton('btn-combat-flee', () => {
     fleeCombat();

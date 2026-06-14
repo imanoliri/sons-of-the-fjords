@@ -123,7 +123,7 @@ export const GODS_CONFIG = {
         'Scouts reveal a 2-tile radius instead of 1.',
         'All Huntsmen gain +1 Attack Range.',
         'Berserkers gain +1 DMG.',
-        null
+        'Rune of Odin: 25 damage to all enemies in radius 1 + 5 damage/turn for 3 turns.'
       ],
       buff: 'Huntsmen gain +2 Attack Range & +1 DMG.'
     },
@@ -139,7 +139,7 @@ export const GODS_CONFIG = {
         'Berserkers gain Leap of 1.',
         'All soldiers gain 10% chance for a Double Attack.',
         'All units gain +5 max HP.',
-        null
+        'Rune of Thor: 50 damage to target, 10 damage in radius 1 + stun affected for 2 turns.'
       ],
       buff: 'Berserkers gain +3 DMG and Leap of +1.'
     },
@@ -155,7 +155,7 @@ export const GODS_CONFIG = {
         'Any unit below 50% HP heals 1 HP/tick.',
         'Shieldmaidens gain +2 DMG.',
         'Shieldmaidens block 1 DMG per hit.',
-        null
+        'Rune of Freya: Heals all allies in radius 1 to full HP (adaptive threshold).'
       ],
       buff: 'Shieldmaidens heal 2 HP per combat tick when not in melee.'
     },
@@ -171,7 +171,7 @@ export const GODS_CONFIG = {
         'Player units survive lethal hits once with 1 HP (once per battle).',
         'Slain enemies drop 1 Gold.',
         'Enemies 20% chance to miss a step and 20% chance to miss attacks.',
-        null
+        "Rune of Hel: Reduces target's current HP by 50%."
       ],
       buff: 'Necromancy: Hurt enemies (under 50% HP) have a once-in-a-battle 50% chance to rise as allied undead for 3 ticks.'
     },
@@ -187,7 +187,7 @@ export const GODS_CONFIG = {
         'Enemies have 20% chance to miss attacks.',
         '25% chance for one enemy per wave to spawn confused (fights allies for 2 ticks).',
         'Town prices reduced by 1 Gold each.',
-        null
+        'Rune of Loki: Teleports target back to the beginning of its lane.'
       ],
       buff: 'Chaos Mirror: 25% chance for spawning monsters to be Charmed, spawning in front of enemies and fighting for you for 2 ticks.'
     }
