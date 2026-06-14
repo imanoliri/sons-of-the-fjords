@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,12 +9,15 @@
   <!-- Google Fonts for Runic and Premium Styling -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..700&family=MedievalSharp&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..700&family=MedievalSharp&family=Outfit:wght@300;400;600&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
   <div class="app-container">
-    
+
     <!-- HEADER / RESOURCE BAR -->
     <header class="game-header hidden" id="game-header">
       <div class="resource-bar">
@@ -32,11 +36,14 @@
         <div class="resource" id="res-band" title="Viking Band - Active army roster">
           <span class="icon">🛡️</span> <span class="val">3</span>
         </div>
-        <div class="resource" id="res-day" title="Day - Expedition time elapsed" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.1rem; line-height: 1;">
+        <div class="resource" id="res-day" title="Day - Expedition time elapsed"
+          style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.1rem; line-height: 1;">
           <div style="display: flex; align-items: center; gap: 0.5rem;">
             <span class="icon">📅</span> Day <span class="val">1</span>
           </div>
-          <div id="world-difficulty-status" style="font-size: 0.72rem; opacity: 0.8; color: var(--color-thor); font-family: var(--font-body); white-space: nowrap;">+0.00x Risk</div>
+          <div id="world-difficulty-status"
+            style="font-size: 0.72rem; opacity: 0.8; color: var(--color-thor); font-family: var(--font-body); white-space: nowrap;">
+            +0.00x Risk</div>
         </div>
       </div>
       <div class="active-blessing" id="active-blessing-display" title="Active Champion Buff">
@@ -51,7 +58,7 @@
 
     <!-- MAIN GAME PANEL -->
     <main class="game-content">
-      
+
       <!-- SCREEN: MAIN MENU -->
       <section class="screen screen-menu active" id="screen-menu">
         <div class="menu-box glass-panel animate-glow">
@@ -63,11 +70,19 @@
           <div class="instructions-panel">
             <h3>How to Play</h3>
             <ul>
-              <li><strong>World Map (15x15)</strong>: Sail your drakkar across sea tiles (safe and fast) or walk on land (slow, consumes more food, triggers monster attacks).</li>
-              <li><strong>Starvation</strong>: If food hits 0, each step on the World Map kills one random band member!</li>
-              <li><strong>Raid Sites (10x10)</strong>: Pre-generated layout with Fog of War. Move cardinally to explore and push back the fog. Defeat monsters, open chests, check burial mounds, or visit dolmen shrines to obtain <strong>Magic Objects</strong>.</li>
-              <li><strong>Lane Combat (10x8)</strong>: Automated lane battle. Deploy soldiers from your pool (pauses the game) into lanes. Soldiers reaching the end give <strong>+1 Gold</strong> and return to your pool. If monsters breach the left edge, they steal random resources. Units are lost permanently on death.</li>
-              <li><strong>The 5 Gods</strong>: Trade Magic Objects to advance god favor tracks. Reaching 5/5 unlocks permanent favor, immunizes you from their wrath, and yields ultimate buffs (only one god's positive buffs can be active at a time).</li>
+              <li><strong>World Map (15x15)</strong>: Sail your drakkar across sea tiles (safe and fast) or walk on land
+                (slow, consumes more food, triggers monster attacks).</li>
+              <li><strong>Starvation</strong>: If food hits 0, each step on the World Map kills one random band member!
+              </li>
+              <li><strong>Raid Sites (10x10)</strong>: Pre-generated layout with Fog of War. Move cardinally to explore
+                and push back the fog. Defeat monsters, open chests, check burial mounds, or visit dolmen shrines to
+                obtain <strong>Magic Objects</strong>.</li>
+              <li><strong>Lane Combat (10x8)</strong>: Automated lane battle. Deploy soldiers from your pool (pauses the
+                game) into lanes. Soldiers reaching the end give <strong>+1 Gold</strong> and return to your pool. If
+                monsters breach the left edge, they steal random resources. Units are lost permanently on death.</li>
+              <li><strong>The 5 Gods</strong>: Trade Magic Objects to advance god favor tracks. Reaching 5/5 unlocks
+                permanent favor, immunizes you from their wrath, and yields ultimate buffs (only one god's positive
+                buffs can be active at a time).</li>
             </ul>
           </div>
         </div>
@@ -98,7 +113,7 @@
         <div class="town-box glass-panel" style="position:relative">
           <button class="btn-close-x" id="btn-leave-town" title="Board the Drakkar">✕</button>
           <h2 class="logo-text" id="town-name">Kaufang Town</h2>
-          
+
           <div class="town-grid">
             <!-- BUY/SELL OUTPOST -->
             <div class="town-card">
@@ -150,7 +165,7 @@
                 <span>No Magic Objects in inventory.</span>
               </div>
             </div>
-            
+
             <!-- SHIPYARD -->
             <div class="town-card">
               <h3>Shipyard</h3>
@@ -187,15 +202,18 @@
           </div>
           <div class="sidebar-panel glass-panel">
             <h2 class="section-title" id="location-title">Raid Site</h2>
-            <div id="location-threat-display" style="font-size: 0.95rem; font-weight: bold; margin: -0.25rem 0 0.5rem 0; opacity: 0.9;"></div>
+            <div id="location-threat-display"
+              style="font-size: 0.95rem; font-weight: bold; margin: -0.25rem 0 0.5rem 0; opacity: 0.9;"></div>
             <div class="tile-deck-box">
               <span class="icon">🎴</span>
               <span class="deck-desc">Unexplored Tiles:</span>
               <span class="deck-count" id="location-deck-count">0</span>
             </div>
-            <div id="location-difficulty-status" class="difficulty-display" style="font-size: 0.85rem; opacity: 0.85; margin: 0.5rem 0;">Danger: 💀 (0.80x)</div>
+            <div id="location-difficulty-status" class="difficulty-display"
+              style="font-size: 0.85rem; opacity: 0.85; margin: 0.5rem 0;">Danger: 💀 (0.80x)</div>
             <div id="location-event-log" class="event-log">
-              <p class="system-message">Move cardinally to explore the location and push back the fog. Look for treasures, burial mounds, dolmens, and monster nests.</p>
+              <p class="system-message">Move cardinally to explore the location and push back the fog. Look for
+                treasures, burial mounds, dolmens, and monster nests.</p>
             </div>
             <div class="sidebar-controls">
               <button class="btn btn-danger" id="btn-leave-location">Flee to World Map</button>
@@ -215,9 +233,9 @@
                 <button class="btn btn-sm" id="btn-stance-defend">Defend [X]</button>
                 <button class="btn btn-sm" id="btn-stance-hold">Hold [C]</button>
                 <button class="btn btn-sm btn-success active-stance" id="btn-stance-attack">Attack [V]</button>
-                
+
                 <div style="width: 2px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 0.25rem;"></div>
-                
+
                 <button class="btn btn-sm btn-warning" id="btn-combat-pause">Pause / Deploy</button>
                 <button class="btn btn-sm btn-danger" id="btn-combat-flee">Flee Combat</button>
 
@@ -227,14 +245,15 @@
                   <span style="font-size: 0.8rem; opacity: 0.8; white-space: nowrap;">Formation:</span>
                   <div id="formation-container" style="display: flex; gap: 0.3rem; align-items: center;"></div>
                 </div>
-                <input type="range" id="slider-combat-speed" min="200" max="1500" value="600" step="50" style="display: none;">
+                <input type="range" id="slider-combat-speed" min="200" max="1500" value="600" step="50"
+                  style="display: none;">
                 <span id="label-combat-speed" style="display: none;">600ms</span>
               </div>
             </div>
-            
+
             <!-- 10x8 COMBAT ARENA -->
             <div class="combat-grid" id="combat-grid"></div>
-            
+
             <!-- DEPLOYMENT HAND -->
             <div class="deployment-panel">
               <div class="deploy-pool" id="deploy-pool-list"></div>
@@ -242,12 +261,12 @@
           </div>
         </div>
       </section>
-      
+
       <!-- SCREEN: QUEST / GOD ALIGNMENT -->
       <section class="screen screen-quests hidden" id="screen-quests">
         <div class="quests-box glass-panel" style="position:relative">
           <button class="btn-close-x" id="btn-close-quests" title="Return to Expedition">✕</button>
-          
+
           <div class="gods-tracks-container" id="gods-tracks-list">
             <!-- Generated dynamically for Odin, Thor, Freya, Hel, Loki -->
           </div>
@@ -270,7 +289,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- OVERLAY MODAL: ASCENSION (VICTORY) -->
     <div class="modal-overlay hidden" id="modal-ascension">
       <div class="modal-box glass-panel animate-glow deity-odin">
@@ -290,8 +309,9 @@
       <div class="modal-box glass-panel animate-glow" style="max-width: 600px; width: 90%; position: relative;">
         <button class="btn-close-x" id="btn-close-party" title="Close Panel">✕</button>
         <h2 class="logo-text">Viking Band & Cargo</h2>
-        
-        <div class="party-panel-tabs" style="display: flex; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem; justify-content: center;">
+
+        <div class="party-panel-tabs"
+          style="display: flex; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem; justify-content: center;">
           <button class="btn btn-sm btn-primary tab-btn" id="tab-party-band">Warriors</button>
           <button class="btn btn-sm tab-btn" id="tab-party-inventory">Inventory</button>
         </div>
@@ -319,7 +339,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- OVERLAY MODAL: DEV CONSOLE -->
     <div class="modal-overlay hidden" id="modal-console">
       <div class="modal-box glass-panel animate-glow" style="max-width: 600px; width: 90%; position: relative;">
@@ -328,7 +348,8 @@
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
           Modify the JSON state below and click "Apply" to update the live game state.
         </p>
-        <textarea id="console-state-textarea" style="width: 100%; height: 250px; font-family: monospace; font-size: 0.8rem; background: #111; color: #0f0; border: 1px solid var(--border-color); padding: 0.5rem; resize: vertical; box-sizing: border-box;"></textarea>
+        <textarea id="console-state-textarea"
+          style="width: 100%; height: 250px; font-family: monospace; font-size: 0.8rem; background: #111; color: #0f0; border: 1px solid var(--border-color); padding: 0.5rem; resize: vertical; box-sizing: border-box;"></textarea>
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
           <button class="btn" id="btn-console-refresh">Refresh State</button>
           <button class="btn btn-primary" id="btn-console-apply">Apply Changes</button>
@@ -338,7 +359,7 @@
 
     <!-- Floating Custom Tooltip -->
     <div id="game-tooltip" class="game-tooltip"></div>
-    
+
     <!-- Custom Toast Containers -->
     <div id="toast-container" class="toast-container"></div>
     <div id="toast-container-important" class="toast-container-important"></div>
@@ -348,4 +369,5 @@
   <!-- Javascript Modules -->
   <script type="module" src="js/app.js"></script>
 </body>
+
 </html>
