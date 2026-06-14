@@ -1786,4 +1786,31 @@ body {
   50%  { transform: translateX(-48%) translateY(-5px) scale(1.1); opacity: 1; }
   100% { transform: translateX(-50%) translateY(0) scale(1);    opacity: 0.9; }
 }
+
+/* Runes Info Button Styling: Option 1 - Ethereal Runestone */
+#btn-combat-runes {
+  background: rgba(13, 27, 42, 0.7);
+  border: 1px solid var(--color-odin);
+  box-shadow: 0 0 8px rgba(0, 180, 216, 0.3);
+  color: var(--color-odin);
+  text-shadow: 0 0 4px rgba(0, 180, 216, 0.5);
+  font-family: inherit;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  backdrop-filter: blur(4px);
+}
+
+#btn-combat-runes:hover {
+  background: var(--color-odin);
+  color: #0d1b2a;
+  box-shadow: 0 0 16px var(--color-odin), 0 0 24px rgba(0, 180, 216, 0.4);
+  text-shadow: none;
+  transform: translateY(-1px) scale(1.03);
+}
+
+#btn-combat-runes:active {
+  transform: translateY(1px) scale(0.98);
+}
+
 
