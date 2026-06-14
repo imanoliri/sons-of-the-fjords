@@ -440,12 +440,12 @@ function combatTick() {
           }
 
           if (rune === 'freya') {
-            // Include ALL player units (including the runecaster itself) for healing targets
+            // Include ALL player units (including the runecaster itself, excluding charmed/confused/undead) for healing targets
             const allPlayerUnits = [];
             for (let r = 0; r < sizeR; r++) {
               for (let c = 0; c < sizeC; c++) {
                 const cell = grid[r][c];
-                if (cell && cell.alliance === 'player' && cell.hp > 0) {
+                if (cell && cell.alliance === 'player' && cell.hp > 0 && !cell.isCharmed && !cell.isConfused && !cell.isUndead) {
                   allPlayerUnits.push(cell);
                 }
               }
@@ -456,7 +456,7 @@ function combatTick() {
               const neighbors = getRadius1Cells(ally.row, ally.col);
               const healSum = neighbors.reduce((sum, n) => {
                 const cell = grid[n.r]?.[n.c];
-                if (cell && cell.alliance === 'player') {
+                if (cell && cell.alliance === 'player' && !cell.isCharmed && !cell.isConfused && !cell.isUndead) {
                   const m = getEffectiveStats(cell).maxHp.total - cell.hp;
                   return sum + Math.max(0, m);
                 }
@@ -464,7 +464,7 @@ function combatTick() {
               }, 0);
               
               // If number of enemies is bigger than our soldiers, use 50% HP danger threshold; otherwise, 80%.
-              const enemyCount = allEnemies.length;
+              const enemyCount = allEnemies.filter(e => !e.isCharmed && !e.isConfused && !e.isUndead).length;
               // include the runecaster in player soldiers count:
               const allyCount = allPlayerUnits.length;
               const ratioThreshold = enemyCount > allyCount ? 0.5 : 0.8;
@@ -472,7 +472,7 @@ function combatTick() {
               // Only trigger if at least one ally in this cluster is in danger (below the adaptive threshold)
               const hasCriticalAlly = neighbors.some(n => {
                 const cell = grid[n.r]?.[n.c];
-                return cell && cell.alliance === 'player' && cell.hp < getEffectiveStats(cell).maxHp.total * ratioThreshold;
+                return cell && cell.alliance === 'player' && !cell.isCharmed && !cell.isConfused && !cell.isUndead && cell.hp < getEffectiveStats(cell).maxHp.total * ratioThreshold;
               });
 
               if (healSum > bestHealScore && hasCriticalAlly) {
@@ -569,10 +569,10 @@ function combatTick() {
           }
           notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_rune_teleport', unit: rt });
         } else if (rnName === 'freya') {
-          // Heal all allies in radius 1 to full HP
+          // Heal all allies in radius 1 to full HP (excluding charmed, confused, or undead)
           getRadius1Cells(rt.row, rt.col).forEach(n => {
             const cell = grid[n.r]?.[n.c];
-            if (cell && cell.alliance === 'player' && cell.hp > 0) {
+            if (cell && cell.alliance === 'player' && cell.hp > 0 && !cell.isCharmed && !cell.isConfused && !cell.isUndead) {
               const effMax = getEffectiveStats(cell).maxHp.total;
               cell.hp = effMax;
             }
