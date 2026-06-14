@@ -763,6 +763,59 @@ function initTooltipEvents() {
     elTooltip.style.top = (clientY + 15) + 'px';
   }
 
+  function getTownPrices(tx, ty) {
+    tx = Number(tx);
+    ty = Number(ty);
+    
+    let forestCount = 0;
+    let waterCount = 0;
+    let plainsCount = 0;
+    let snowCount = 0;
+    let mountainCount = 0;
+
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        if (Math.abs(dx) + Math.abs(dy) <= 3) {
+          const nx = tx + dx;
+          const ny = ty + dy;
+          if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15) {
+            const terrain = STATE.worldMap.tiles[ny][nx];
+            if (terrain === 'forest') forestCount++;
+            else if (terrain === 'water' || terrain === 'river') waterCount++;
+            else if (terrain === 'plains') plainsCount++;
+            else if (terrain === 'snow') snowCount++;
+            else if (terrain === 'mountain') mountainCount++;
+          }
+        }
+      }
+    }
+
+    const dp = TOWN_CONFIG.dynamicPricing || {
+      food: { baseCost: 2, minCost: 1, maxCost: 5, foodGained: 5 },
+      woodBuy: { baseCost: 2, minCost: 1, maxCost: 5, woodGained: 2, scarceBonus: 2 },
+      sheepBuy: { baseCost: 6, minCost: 3, maxCost: 10, sheepGained: 1 },
+      sheepSell: { baseGain: 4, minGain: 1, maxGain: 8, sheepSold: 1, scarceBonus: 2 },
+      woodSell: { baseGain: 4, minGain: 1, maxGain: 8, woodSold: 10, scarceBonus: 2 }
+    };
+
+    let foodCost = Math.max(dp.food.minCost, Math.min(dp.food.maxCost, dp.food.baseCost + Math.floor((snowCount + mountainCount) / 2) - Math.floor((waterCount + plainsCount) / 2)));
+    let woodCost = Math.max(dp.woodBuy.minCost, Math.min(dp.woodBuy.maxCost, dp.woodBuy.baseCost + (forestCount === 0 ? dp.woodBuy.scarceBonus : 0) - Math.floor(forestCount / 3)));
+    let sheepBuyCost = Math.max(dp.sheepBuy.minCost, Math.min(dp.sheepBuy.maxCost, dp.sheepBuy.baseCost - Math.floor(plainsCount / 2) + Math.floor((snowCount + mountainCount + waterCount) / 3)));
+
+    if (STATE.godQuests.loki?.[3]) {
+      const m4Config = GODS_CONFIG.modifiers.milestones.loki.find(m => m.index === 3);
+      const reduction = m4Config?.priceReduction ?? 1;
+      foodCost = Math.max(dp.food.minCost, foodCost - reduction);
+      woodCost = Math.max(dp.woodBuy.minCost, woodCost - reduction);
+      sheepBuyCost = Math.max(dp.sheepBuy.minCost, sheepBuyCost - reduction);
+    }
+
+    const sheepSellGain = Math.max(dp.sheepSell.minGain, Math.min(dp.sheepSell.maxGain, dp.sheepSell.baseGain + (plainsCount <= 1 ? dp.sheepSell.scarceBonus : 0) - Math.floor(plainsCount / 3)));
+    const woodSellGain = Math.max(dp.woodSell.minGain, Math.min(dp.woodSell.maxGain, dp.woodSell.baseGain + (forestCount <= 1 ? dp.woodSell.scarceBonus : 0) - Math.floor(forestCount / 3)));
+
+    return { foodCost, woodCost, sheepBuyCost, sheepSellGain, woodSellGain, dp };
+  }
+
   function showWorldTileTooltip(tile, clientX, clientY) {
     const x = tile.dataset.x;
     const y = tile.dataset.y;
@@ -791,6 +844,29 @@ function initTooltipEvents() {
     if (locationName) {
       const typeLabel = locationType === 'town' ? 'Town' : 'Raid Site';
       contents.push(`🏘️ ${locationName} (${typeLabel})`);
+      if (locationType === 'town') {
+        const prices = getTownPrices(x, y);
+        const foodMod = prices.foodCost - prices.dp.food.baseCost;
+        const woodMod = prices.woodCost - prices.dp.woodBuy.baseCost;
+        const sheepBuyMod = prices.sheepBuyCost - prices.dp.sheepBuy.baseCost;
+        const sheepSellMod = prices.sheepSellGain - prices.dp.sheepSell.baseGain;
+        const woodSellMod = prices.woodSellGain - prices.dp.woodSell.baseGain;
+
+        const foodModText = foodMod !== 0 ? ` <span style="color:${foodMod > 0 ? 'var(--color-danger)' : 'var(--color-success)'}; font-size: 0.72rem; font-weight: bold;">(${foodMod > 0 ? '+' : ''}${foodMod})</span>` : '';
+        const woodModText = woodMod !== 0 ? ` <span style="color:${woodMod > 0 ? 'var(--color-danger)' : 'var(--color-success)'}; font-size: 0.72rem; font-weight: bold;">(${woodMod > 0 ? '+' : ''}${woodMod})</span>` : '';
+        const sheepBuyModText = sheepBuyMod !== 0 ? ` <span style="color:${sheepBuyMod > 0 ? 'var(--color-danger)' : 'var(--color-success)'}; font-size: 0.72rem; font-weight: bold;">(${sheepBuyMod > 0 ? '+' : ''}${sheepBuyMod})</span>` : '';
+        const sheepSellModText = sheepSellMod !== 0 ? ` <span style="color:${sheepSellMod > 0 ? 'var(--color-success)' : 'var(--color-danger)'}; font-size: 0.72rem; font-weight: bold;">(${sheepSellMod > 0 ? '+' : ''}${sheepSellMod})</span>` : '';
+        const woodSellModText = woodSellMod !== 0 ? ` <span style="color:${woodSellMod > 0 ? 'var(--color-success)' : 'var(--color-danger)'}; font-size: 0.72rem; font-weight: bold;">(${woodSellMod > 0 ? '+' : ''}${woodSellMod})</span>` : '';
+
+        let priceLines = [];
+        priceLines.push(`<span>🍖 Buy Food: buy ${prices.dp.food.foodGained} for <b>${prices.foodCost}g</b>${foodModText}</span>`);
+        priceLines.push(`<span>🪵 Buy Wood: buy ${prices.dp.woodBuy.woodGained} for <b>${prices.woodCost}g</b>${woodModText}</span>`);
+        priceLines.push(`<span>🐑 Buy Sheep: buy ${prices.dp.sheepBuy.sheepGained} for <b>${prices.sheepBuyCost}g</b>${sheepBuyModText}</span>`);
+        priceLines.push(`<span>🐑 Sell Sheep: sell ${prices.dp.sheepSell.sheepSold} for <b>${prices.sheepSellGain}g</b>${sheepSellModText}</span>`);
+        priceLines.push(`<span>🪵 Sell Wood: sell ${prices.dp.woodSell.woodSold} for <b>${prices.woodSellGain}g</b>${woodSellModText}</span>`);
+
+        contents.push('<div style="margin-top: 5px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 5px; font-size: 0.78rem; display: flex; flex-direction: column; gap: 2px;">' + priceLines.join('') + '</div>');
+      }
       const danger = tile.dataset.dangerLevel;
       if (danger && locationType === 'raid') {
         contents.push(`💀 Danger Level: ${'💀'.repeat(danger)} (Level ${danger})`);
@@ -809,8 +885,8 @@ function initTooltipEvents() {
       }
     }
 
-    // Add concrete enemy description for any land/raid tiles on world map
-    if (locationType === 'raid' || (terrain !== 'water' && terrain !== 'deep_water' && terrain !== 'river')) {
+    // Add concrete enemy description for any land/raid tiles on world map (excluding towns)
+    if (locationType !== 'town' && (locationType === 'raid' || (terrain !== 'water' && terrain !== 'deep_water' && terrain !== 'river'))) {
       const biome = locationType === 'raid' ? (locationBiome || 'default') : terrain;
       const poolMap = {
         forest: 'spiders and wolves',
