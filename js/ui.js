@@ -2686,6 +2686,26 @@ function renderCombatGrid() {
           elUnit.classList.add('attacking');
         }
 
+        // Runecaster casting glow (set externally)
+        if (unit.isCastingRune) {
+          elUnit.classList.add('casting-rune');
+        }
+
+        // Stunned visual badge
+        if (unit.stunnedTicksLeft > 0) {
+          elUnit.classList.add('stunned');
+          const stunBadge = document.createElement('span');
+          stunBadge.className = 'stun-badge';
+          stunBadge.title = `Stunned (${unit.stunnedTicksLeft} ticks left)`;
+          stunBadge.innerText = '★';
+          elUnit.appendChild(stunBadge);
+        }
+
+        // DoT shimmer — burning from Odin rune
+        if (STATE.combat.activeDoTs?.some(d => d.unit?.id === unit.id && d.ticksLeft > 0)) {
+          elUnit.classList.add('burning');
+        }
+
         // Allow removing unit from deployment grid if paused, OR fleeing if fleeMode is active
         if (unit.alliance === 'player') {
           if (STATE.combat.fleeMode) {
@@ -3268,6 +3288,50 @@ export function logLocation(msg, typeClass = 'system-message') {
 }
 
 // Display a discrete Norse-themed toast notification
+
+/* --- Rune visual helpers --- */
+
+/**
+ * Flash a rune burst on the combat grid cell at (row, col).
+ * If aoe=true, also flash the 8 surrounding cells at reduced opacity.
+ */
+function flashRuneOnCells(row, col, runeName, aoe = false) {
+  const grid = document.getElementById('combat-grid');
+  if (!grid) return;
+
+  const flashCell = (r, c, isCenter) => {
+    const cell = grid.querySelector(`.combat-cell[data-row="${r}"][data-col="${c}"]`);
+    if (!cell) return;
+    const flash = document.createElement('div');
+    flash.className = `rune-flash rune-${runeName}`;
+    if (!isCenter) flash.style.opacity = '0.5';
+    cell.style.position = 'relative'; // ensure stacking context
+    cell.appendChild(flash);
+    flash.addEventListener('animationend', () => flash.remove());
+  };
+
+  flashCell(row, col, true);
+
+  if (aoe) {
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        flashCell(row + dr, col + dc, false);
+      }
+    }
+  }
+}
+
+/**
+ * Briefly mark a runecaster unit as casting (adds CSS class, clears after animation).
+ * Works by setting a flag read during the next renderCombatGrid call.
+ */
+function markRunecasterCasting(unit) {
+  if (!unit) return;
+  unit.isCastingRune = true;
+  setTimeout(() => { unit.isCastingRune = false; }, 600);
+}
+
 export function showToast(msg, icon = '✨', isImportant = false) {
   const containerId = isImportant ? 'toast-container-important' : 'toast-container';
   const container = document.getElementById(containerId);
@@ -3393,6 +3457,41 @@ export function handleStateNotification(event, data) {
     } else if (data.effect === 'hel_undead') {
       logWorld(`💀 Hel's Necromancy: Hurt enemy '${data.unit.name}' converted into an allied Undead Draugr!`, 'gain-message');
       showToast(`Draugr Rises!`, '💀');
+    } else if (data.effect === 'rune_odin') {
+      const t = data.target;
+      logWorld(`⚡ ${data.unit.name} carved the Odin Rune — lightning AoE burst at [${t.row},${t.col}]! 25 dmg + 5/tick DoT for 3 ticks. (-1 Gold)`, 'gain-message');
+      showToast(`Odin Rune: Lightning Cluster!`, '⚡', true);
+      flashRuneOnCells(t.row, t.col, 'odin', true);
+      markRunecasterCasting(data.unit);
+    } else if (data.effect === 'rune_thor') {
+      const t = data.target;
+      logWorld(`🔨 ${data.unit.name} carved the Thor Rune — smashed ${t.name} for 50 dmg + 10 AoE + 2-tick stun! (-1 Gold)`, 'gain-message');
+      showToast(`Thor Rune: Thunderstrike!`, '🔨', true);
+      flashRuneOnCells(t.row, t.col, 'thor', true);
+      markRunecasterCasting(data.unit);
+    } else if (data.effect === 'rune_hel') {
+      const t = data.target;
+      logWorld(`💀 ${data.unit.name} carved the Hel Rune — halved ${t.name}'s HP (now ${t.hp})! (-1 Gold)`, 'gain-message');
+      showToast(`Hel Rune: Death's Grip!`, '💀', true);
+      flashRuneOnCells(t.row, t.col, 'hel', false);
+      markRunecasterCasting(data.unit);
+    } else if (data.effect === 'loki_rune_teleport') {
+      logWorld(`🌀 Loki Rune teleported ${data.unit.name} back to the start of its lane! (-1 Gold)`, 'gain-message');
+      showToast(`Loki Rune: Banished!`, '🌀', true);
+      flashRuneOnCells(data.unit.row, data.unit.col, 'loki', false);
+      // Also flash on runecaster cell — find the runecaster
+    } else if (data.effect === 'rune_loki') {
+      const t = data.target;
+      logWorld(`🌀 ${data.unit.name} carved the Loki Rune — banished ${t.name} to the start of lane ${t.row}! (-1 Gold)`, 'gain-message');
+      showToast(`Loki Rune: Banished!`, '🌀', true);
+      flashRuneOnCells(t.row, t.col, 'loki', false);
+      markRunecasterCasting(data.unit);
+    } else if (data.effect === 'rune_freya') {
+      const t = data.target;
+      logWorld(`🌸 ${data.unit.name} carved the Freya Rune — healed allies around [${t.row},${t.col}] to full HP! (-1 Gold)`, 'gain-message');
+      showToast(`Freya Rune: Blessed Healing!`, '🌸', true);
+      flashRuneOnCells(t.row, t.col, 'freya', true);
+      markRunecasterCasting(data.unit);
     }
   }
   else if (event === 'COMBAT_BREACH') {
