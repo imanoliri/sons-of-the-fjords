@@ -2717,6 +2717,23 @@ function renderCombatGrid() {
         const elUnit = document.createElement('div');
         elUnit.classList.add('combat-unit', `alliance-${unit.alliance}`);
 
+        // Undead, Charmed, or Confused states visual style hooks
+        if (unit.isUndead) {
+          elUnit.classList.add('undead-risen');
+        }
+        if (unit.isCharmed) {
+          elUnit.classList.add('charmed-state');
+        }
+        if (unit.isConfused) {
+          elUnit.classList.add('confused-state');
+        }
+
+        // Apply active player stances visual style classes to player units
+        if (unit.alliance === 'player') {
+          const stance = STATE.combat.stance || 'attack';
+          elUnit.classList.add(`stance-${stance}`);
+        }
+
         // Attack dynamic animations
         if (unit.isAttacking) {
           elUnit.classList.add('attacking');
@@ -3405,6 +3422,34 @@ export function logLocation(msg, typeClass = 'system-message') {
 
 // Display a discrete Norse-themed toast notification
 
+/* --- Visual Effects Helpers --- */
+
+/**
+ * Spawn a floating text label rising from a specific cell.
+ */
+function spawnFloatyText(row, col, text, color = '#fff') {
+  const cell = getCellEl(row, col);
+  if (!cell) return;
+  const floaty = document.createElement('div');
+  floaty.className = 'floaty-text-fx';
+  floaty.style.color = color;
+  floaty.innerText = text;
+  cell.appendChild(floaty);
+  setTimeout(() => floaty.remove(), 1000);
+}
+
+/**
+ * Spawn a brief full-cell visual particle burst (like block shield, leap wind, or critical green glow).
+ */
+function spawnCombatParticle(row, col, className) {
+  const cell = getCellEl(row, col);
+  if (!cell) return;
+  const overlay = document.createElement('div');
+  overlay.className = `combat-particle-overlay ${className}`;
+  cell.appendChild(overlay);
+  setTimeout(() => overlay.remove(), 800);
+}
+
 /* --- Rune visual helpers --- */
 
 /** Per-rune strike icons shown on hit cells */
@@ -3596,12 +3641,19 @@ export function handleStateNotification(event, data) {
     if (data.effect === 'loki_miss') {
       logWorld(`🎭 Loki's Trick: Enemy missed their attack!`, 'warn-message');
       showToast(`Enemy missed (Loki)`, '🎭');
+      if (data.unit) {
+        spawnFloatyText(data.unit.row, data.unit.col, '💨 DODGED!', 'var(--color-loki)');
+      }
     } else if (data.effect === 'hel_miss') {
       logWorld(`💀 Hel's Chill: Enemy missed their attack!`, 'warn-message');
       showToast(`Enemy missed (Hel)`, '💀');
+      if (data.unit) {
+        spawnFloatyText(data.unit.row, data.unit.col, '💨 MISSED!', 'var(--color-hel)');
+      }
     } else if (data.effect === 'thor_double') {
       logWorld(`⚡ Thor's Wrath: Allied unit '${data.unit.name}' strikes twice!`, 'gain-message');
       showToast(`Double Strike!`, '⚡');
+      spawnFloatyText(data.unit.row, data.unit.col, '⚡ DOUBLE STRIKE!', 'var(--color-thor)');
     } else if (data.effect === 'loki_charm') {
       logWorld(`🌀 Loki's Mirror: Spawning enemy '${data.unit.name}' is Charmed to fight for you!`, 'gain-message');
       showToast(`Charm: ${data.unit.name}!`, '🌀');
@@ -3614,6 +3666,20 @@ export function handleStateNotification(event, data) {
     } else if (data.effect === 'hel_undead') {
       logWorld(`💀 Hel's Necromancy: Hurt enemy '${data.unit.name}' converted into an allied Undead Draugr!`, 'gain-message');
       showToast(`Draugr Rises!`, '💀');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-raise-undead');
+      spawnFloatyText(data.unit.row, data.unit.col, '🧟 RISEN!', 'var(--color-hel)');
+    } else if (data.effect === 'huskarl_armor') {
+      spawnFloatyText(data.unit.row, data.unit.col, '🛡️ -1 Armor', '#ccc');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-armor-hit');
+    } else if (data.effect === 'shieldmaiden_block') {
+      spawnFloatyText(data.unit.row, data.unit.col, '🛡️ BLOCKED!', 'var(--color-freya)');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-shield-block');
+    } else if (data.effect === 'hel_survive') {
+      spawnFloatyText(data.unit.row, data.unit.col, '💚 SURVIVED!', 'var(--color-hel)');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-survive-lethal');
+    } else if (data.effect === 'unit_leap') {
+      spawnFloatyText(data.unit.row, data.unit.col, '💨 LEAP!', 'var(--color-thor)');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-leap-wind');
     } else if (data.effect === 'rune_odin') {
       const t = data.target;
       logWorld(`⚡ ${data.unit.name} carved the Odin Rune — lightning AoE burst at [${t.row},${t.col}]! 25 dmg + 5/tick DoT for 3 ticks. (-1 Gold)`, 'gain-message');

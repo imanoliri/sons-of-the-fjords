@@ -1787,6 +1787,231 @@ body {
   100% { transform: translateX(-50%) translateY(0) scale(1);    opacity: 0.9; }
 }
 
+/* ==========================================================================
+   COMBAT VISUAL EFFECTS - Floaty Text & Particles
+   ========================================================================== */
+
+/* Floaty Text */
+.floaty-text-fx {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-runes);
+  font-weight: bold;
+  font-size: 0.85rem;
+  text-shadow: 0 0 4px #000, 0 0 8px currentColor;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 50;
+  animation: floatyRise 1s ease-out forwards;
+}
+
+@keyframes floatyRise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -10px) scale(1.1);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -25px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -35px) scale(0.9);
+  }
+}
+
+/* Combat Particle Overlay Base */
+.combat-particle-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  border-radius: 4px;
+}
+
+/* 1. Undead Risen: Draugr Rising dark-green smoke overlay */
+.particle-raise-undead {
+  background: radial-gradient(circle, rgba(46, 204, 113, 0.4) 0%, rgba(0, 0, 0, 0) 70%);
+  box-shadow: inset 0 0 15px rgba(46, 204, 113, 0.6);
+  animation: undeadRiseFX 0.8s ease-out forwards;
+}
+
+@keyframes undeadRiseFX {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: inset 0 0 25px rgba(46, 204, 113, 0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+}
+
+/* 2. Armor Hit: steel metallic border flash */
+.particle-armor-hit {
+  border: 2px solid #fff;
+  box-shadow: 0 0 15px #fff, inset 0 0 10px #ccc;
+  animation: armorHitFX 0.6s ease-out forwards;
+}
+
+@keyframes armorHitFX {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* 3. Shield Block: green wooden outline burst */
+.particle-shield-block {
+  border: 3px solid var(--color-freya);
+  box-shadow: 0 0 20px var(--color-freya), inset 0 0 12px rgba(46, 204, 113, 0.5);
+  animation: shieldBlockFX 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes shieldBlockFX {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* 4. Survive Lethal: emerald green aura pulse */
+.particle-survive-lethal {
+  background: radial-gradient(circle, rgba(46, 204, 113, 0.5) 0%, rgba(0, 0, 0, 0) 80%);
+  box-shadow: 0 0 25px var(--color-freya);
+  animation: surviveLethalFX 0.8s ease-in-out forwards;
+}
+
+@keyframes surviveLethalFX {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* 5. Leap Wind: white gust lines sweeping */
+.particle-leap-wind {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+  filter: blur(2px);
+  animation: leapWindFX 0.6s ease-out forwards;
+}
+
+@keyframes leapWindFX {
+  0% {
+    opacity: 0;
+    transform: translateX(-50px) skewX(-20deg);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(50px) skewX(-20deg);
+  }
+}
+
+/* Visual States applied to units */
+
+/* Undead risen unit tint */
+.combat-unit.undead-risen {
+  filter: sepia(0.5) hue-rotate(80deg) brightness(0.85) saturate(1.2);
+  border: 1px solid var(--color-freya) !important;
+}
+
+/* Charmed state: pink heart aura */
+.combat-unit.charmed-state {
+  box-shadow: 0 0 10px #ff69b4, inset 0 0 6px #ff69b4;
+  border-color: #ff69b4 !important;
+  animation: charmedPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes charmedPulse {
+  0% {
+    box-shadow: 0 0 8px #ff69b4;
+  }
+  50% {
+    box-shadow: 0 0 18px #ff69b4, inset 0 0 10px rgba(255, 105, 180, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 8px #ff69b4;
+  }
+}
+
+/* Confused state: golden yellow/orange dizzy glow */
+.combat-unit.confused-state {
+  box-shadow: 0 0 10px var(--color-loki), inset 0 0 6px var(--color-loki);
+  border-color: var(--color-loki) !important;
+  animation: confusedPulse 1s infinite linear;
+}
+
+@keyframes confusedPulse {
+  0% {
+    transform: rotate(0deg);
+    box-shadow: 0 0 8px var(--color-loki);
+  }
+  33% {
+    transform: rotate(1deg) scale(1.02);
+  }
+  66% {
+    transform: rotate(-1deg) scale(0.98);
+  }
+  100% {
+    transform: rotate(0deg);
+    box-shadow: 0 0 14px var(--color-loki);
+  }
+}
+
+/* Stance visual modifiers for player units */
+.combat-unit.stance-defend {
+  border: 2px solid var(--text-accent) !important;
+  box-shadow: inset 0 0 8px rgba(0, 240, 255, 0.4);
+}
+
+.combat-unit.stance-hold {
+  border: 2px solid var(--color-thor) !important;
+  box-shadow: inset 0 0 8px rgba(255, 215, 0, 0.4);
+}
+
+.combat-unit.stance-retreat {
+  border: 2px dashed var(--color-danger) !important;
+  opacity: 0.9;
+}
+
+
 
 
 

@@ -636,6 +636,7 @@ function combatTick() {
         // Heavy armor: reduces incoming damage by 1
         if (currentTarget.type === 'huskarl') {
           dmgTaken = Math.max(0, dmgTaken - 1);
+          notify('COMBAT_EFFECT_TRIGGER', { effect: 'huskarl_armor', unit: currentTarget });
         }
 
         // Freya Milestone 4: Shieldmaidens block 1 DMG per hit
@@ -643,6 +644,7 @@ function combatTick() {
           const m4Config = GC.modifiers.milestones.freya.find(m => m.index === 3);
           const blockAmount = m4Config?.blockAmount ?? 1;
           dmgTaken = Math.max(0, dmgTaken - blockAmount);
+          notify('COMBAT_EFFECT_TRIGGER', { effect: 'shieldmaiden_block', unit: currentTarget });
         }
 
         let nextHp = currentTarget.hp - dmgTaken;
@@ -653,6 +655,7 @@ function combatTick() {
           if (helM2?.surviveLethal ?? true) {
             currentTarget.hasSurvivedLethal = true;
             nextHp = 1;
+            notify('COMBAT_EFFECT_TRIGGER', { effect: 'hel_survive', unit: currentTarget });
           }
         }
 
@@ -923,8 +926,14 @@ function combatTick() {
           if (grid[unit.row][unit.col] === unit) {
             grid[unit.row][unit.col] = null;
           }
+          const isLeaping = leapVal > 1;
+          const oldCol = unit.col;
           unit.col = lastValidCol;
           grid[unit.row][lastValidCol] = unit;
+
+          if (isLeaping) {
+            notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_leap', unit: unit, oldCol: oldCol });
+          }
         }
 
         if (reachedBoundary) {
