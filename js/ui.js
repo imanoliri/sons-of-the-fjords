@@ -3191,10 +3191,15 @@ function renderQuestsScreen() {
       if (isPermanent) {
         btn.innerText = 'Always Active ✨';
         btn.classList.add('btn-primary', 'btn-always-active');
-        btn.disabled = true;
+        btn.style.cursor = 'help';
+        btn.disabled = false; // Enable hover interaction even if permanently active
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+        });
       } else if (STATE.activeBlessing === gKey) {
         btn.innerText = 'Active ✨';
         btn.classList.add('btn-primary');
+        btn.style.cursor = 'help';
       } else {
         btn.innerText = 'Activate Buff';
         btn.addEventListener('click', () => {
