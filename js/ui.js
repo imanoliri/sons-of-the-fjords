@@ -2627,9 +2627,9 @@ function renderFormationElement() {
     chip.draggable = true;
     chip.title = `${type.charAt(0).toUpperCase() + type.slice(1)} (${3 - idx} pts) — drag to reorder`;
     chip.style.cssText = `
-      font-size: 1.2rem;
+      font-size: 1.15rem;
       cursor: grab;
-      padding: 2px 5px;
+      padding: 1px 3px;
       border-radius: 4px;
       border: 1px solid transparent;
       transition: border-color 0.15s, background 0.15s;
