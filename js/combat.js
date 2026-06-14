@@ -35,6 +35,7 @@ export function startCombat(locationId, coordKey, enemyData) {
   STATE.combat.entityCoordKey = coordKey;
   STATE.combat.fleeMode = false;
   STATE.combat.stance = 'attack';
+  STATE.combat.deployHistory = [];
 
   // 1. Initialize grid
   const grid = [];
@@ -782,6 +783,8 @@ export function deployUnit(poolIndex, row, col) {
   unit.row = row;
   unit.col = col;
   STATE.combat.grid[row][col] = unit;
+  if (!STATE.combat.deployHistory) STATE.combat.deployHistory = [];
+  STATE.combat.deployHistory.push(unit.id);
   STATE.combat.pool.splice(poolIndex, 1);
   STATE.combat.selectedPoolIndex = null;
   notify('COMBAT_UPDATE');
@@ -791,11 +794,14 @@ export function undeployUnit(row, col) {
   row = Number(row);
   col = Number(col);
   const unit = STATE.combat.grid[row][col];
-  if (!unit || unit.alliance !== 'player') return;
+  if (!unit || unit.alliance !== 'player' || unit.isCharmed || unit.isConfused || unit.isUndead) return;
   STATE.combat.grid[row][col] = null;
   unit.row = undefined;
   unit.col = undefined;
   STATE.combat.pool.push(unit);
+  if (STATE.combat.deployHistory) {
+    STATE.combat.deployHistory = STATE.combat.deployHistory.filter(id => id !== unit.id);
+  }
   sortPoolByPoints();
   notify('COMBAT_UPDATE');
 }

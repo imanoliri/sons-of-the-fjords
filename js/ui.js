@@ -593,6 +593,34 @@ export function initUIBindings() {
         togglePause();
         return;
       }
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        if (STATE.combat.deployHistory && STATE.combat.deployHistory.length > 0) {
+          const grid = STATE.combat.grid;
+          for (let i = STATE.combat.deployHistory.length - 1; i >= 0; i--) {
+            const unitId = STATE.combat.deployHistory[i];
+            let unitFound = null;
+            let unitR = -1;
+            let unitC = -1;
+            for (let r = 0; r < grid.length; r++) {
+              for (let c = 0; c < grid[r].length; c++) {
+                if (grid[r][c] && grid[r][c].id === unitId) {
+                  unitFound = grid[r][c];
+                  unitR = r;
+                  unitC = c;
+                  break;
+                }
+              }
+              if (unitFound) break;
+            }
+            if (unitFound && unitFound.alliance === 'player' && !unitFound.isCharmed && !unitFound.isConfused && !unitFound.isUndead) {
+              undeployUnit(unitR, unitC);
+              break;
+            }
+          }
+        }
+        return;
+      }
 
       const key = e.key.toLowerCase();
 
@@ -660,14 +688,19 @@ export function initUIBindings() {
           togglePause(); // Ensure paused for deploying
         }
         
-        let poolIdx = STATE.combat.selectedPoolIndex;
-        if (poolIdx === null && STATE.combat.pool.length > 0) {
-          poolIdx = 0; // Default to first soldier in queue
-        }
+        const target = keyMap[key];
+        const existingUnit = STATE.combat.grid[target.r][target.c];
+        if (existingUnit && existingUnit.alliance === 'player' && !existingUnit.isCharmed && !existingUnit.isConfused && !existingUnit.isUndead) {
+          undeployUnit(target.r, target.c);
+        } else {
+          let poolIdx = STATE.combat.selectedPoolIndex;
+          if (poolIdx === null && STATE.combat.pool.length > 0) {
+            poolIdx = 0; // Default to first soldier in queue
+          }
 
-        if (poolIdx !== null && poolIdx < STATE.combat.pool.length) {
-          const target = keyMap[key];
-          deployUnit(poolIdx, target.r, target.c);
+          if (poolIdx !== null && poolIdx < STATE.combat.pool.length) {
+            deployUnit(poolIdx, target.r, target.c);
+          }
         }
       }
     }
