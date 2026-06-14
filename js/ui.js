@@ -3782,12 +3782,12 @@ export function handleStateNotification(event, data) {
       spawnCombatParticle(data.unit.row, data.unit.col, 'particle-raise-undead');
       spawnFloatyText(data.unit.row, data.unit.col, '🧟 RISEN!', 'var(--color-hel)');
     } else if (data.effect === 'huskarl_armor') {
-      spawnFloatyText(data.unit.row, data.unit.col, '🛡️ -1 Armor', '#ccc');
+      spawnFloatyText(data.unit.row, data.unit.col, '🛡️ Blocked 1', '#ccc');
       spawnCombatParticle(data.unit.row, data.unit.col, 'particle-armor-hit');
     } else if (data.effect === 'shieldmaiden_block') {
       const amt = data.amount || 1;
       spawnFloatyText(data.unit.row, data.unit.col, `🛡️ Blocked ${amt}`, 'var(--color-freya)');
-      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-shield-block');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-armor-hit');
     } else if (data.effect === 'hel_survive') {
       spawnFloatyText(data.unit.row, data.unit.col, '💚 SURVIVED!', 'var(--color-hel)');
       spawnCombatParticle(data.unit.row, data.unit.col, 'particle-survive-lethal');
