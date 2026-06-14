@@ -4,7 +4,7 @@
 
 import { STATE } from './state.js';
 import { LOCATION_CONFIG as CFG } from './config/location.js';
-import { WORLD_CONFIG, getActiveMap } from './config/world.js';
+import { WORLD_CONFIG } from './config/world.js';
 import { GODS_CONFIG } from './config/gods.js';
 import { getActiveMap as getActiveWorldMap } from './world.js';
 
