@@ -88,7 +88,7 @@ export const STATE = {
     waveMonsters: [],
     stance: 'attack',
     combatIntervalMs: 600,
-    formationOrder: ['shieldmaiden', 'berserker', 'huntsman', 'huskarl']
+    formationOrder: ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster']
   }
 };
 
@@ -314,7 +314,7 @@ export function resetGame() {
     active: false, grid: [], pool: [], paused: true,
     ticker: null, selectedPoolIndex: null, spawnTimer: 0,
     locationId: null, entityCoordKey: null, waveMonsters: [],
-    formationOrder: ['shieldmaiden', 'berserker', 'huntsman', 'huskarl']
+    formationOrder: ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster']
   };
 }
 
@@ -468,7 +468,7 @@ export function healWarriors() {
 }
 
 export function getEffectiveStats(unit) {
-  const isPlayer = unit.alliance === 'player' || ['shieldmaiden', 'berserker', 'huntsman', 'huskarl'].includes(unit.type);
+  const isPlayer = unit.alliance === 'player' || ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'].includes(unit.type);
   let baseMaxHp = unit.maxHp;
   let baseDmg = unit.dmg;
   let baseSpeed = unit.speed;

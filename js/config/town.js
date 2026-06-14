@@ -20,7 +20,8 @@ export const TOWN_CONFIG = {
     shieldmaiden: { gold: 5, food: 10 },
     berserker:    { gold: 7, sheep: 1 },
     huntsman:     { gold: 6, wood: 3 },
-    huskarl:      { gold: 12, food: 15, wood: 5 }
+    huskarl:      { gold: 12, food: 15, wood: 5 },
+    runecaster:   { gold: 8, food: 10, wood: 4 }
   },
 
   // Dynamic pricing coefficients and limits based on surrounding geography

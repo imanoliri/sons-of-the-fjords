@@ -294,6 +294,12 @@ export function initUIBindings() {
     logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
   });
 
+  bindButton('btn-recruit-runecaster', () => {
+    const cost = TOWN_CONFIG.recruitCosts.runecaster;
+    const res = buyRecruit('runecaster', cost);
+    logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+  });
+
   bindButton('btn-heal-warriors', () => {
     const res = healWarriors();
     logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
@@ -615,6 +621,10 @@ export function initUIBindings() {
       else if (key === '4') {
         e.preventDefault();
         document.getElementById('btn-recruit-huskarl')?.click();
+      }
+      else if (key === '5') {
+        e.preventDefault();
+        document.getElementById('btn-recruit-runecaster')?.click();
       }
     }
     // Check if player is on Combat screen
@@ -2059,7 +2069,7 @@ function renderTownScreen() {
   }
 
   // Render recruiting stats with modifiers
-  ['shieldmaiden', 'berserker', 'huntsman', 'huskarl'].forEach(t => {
+  ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'].forEach(t => {
     const el = document.getElementById(`recruit-stats-${t}`);
     if (el) {
       const dummy = { type: t, hp: 0, maxHp: 0, dmg: 0, speed: 0, range: 0 };
@@ -2069,7 +2079,7 @@ function renderTownScreen() {
   });
 
   // Great Hall recruitment labels
-  ['shieldmaiden', 'berserker', 'huntsman', 'huskarl'].forEach(t => {
+  ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'].forEach(t => {
     const labelEl = document.getElementById(`label-recruit-${t}`);
     if (labelEl) {
       const costs = TOWN_CONFIG.recruitCosts[t];
@@ -2558,8 +2568,8 @@ function renderFormationElement() {
   if (!container) return;
   container.innerHTML = '';
 
-  const order = STATE.combat.formationOrder || ['berserker', 'shieldmaiden', 'huntsman', 'huskarl'];
-  const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️' };
+  const order = STATE.combat.formationOrder || ['berserker', 'shieldmaiden', 'huntsman', 'huskarl', 'runecaster'];
+  const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
 
   order.forEach((type, idx) => {
     // Separator arrow between icons
@@ -2704,6 +2714,7 @@ function renderCombatGrid() {
             berserker: '🪓',
             huntsman: '🏹',
             huskarl: '⚔️',
+            runecaster: '🔮',
             'Giant Brood-Spider': '🕷️',
             'Fenrir Pack Wolf': '🐺',
             'Draugr Warrior': '🧟',
@@ -2780,7 +2791,7 @@ function renderCombatGrid() {
       card.classList.add('selected');
     }
 
-    const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️' };
+    const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
     const numHint = idx < SOLDIERS_CONFIG.maxBandSize ? `<span class="pool-number-hint">[${idx + 1}]</span> ` : '';
     const ratio = unit.hp / unit.maxHp;
     const hpPct = ratio * 100;
@@ -3099,7 +3110,7 @@ function renderPartyPanel() {
       const effStats = getEffectiveStats(unit);
 
       const name = document.createElement('span');
-      const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️' };
+      const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
       name.innerHTML = `<b>${icons[unit.type] || '⚔️'} ${unit.name}</b> (${unit.type.toUpperCase()})`;
 
       const stats = document.createElement('span');

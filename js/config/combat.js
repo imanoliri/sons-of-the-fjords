@@ -21,7 +21,8 @@ export const COMBAT_CONFIG = {
     huskarl:     4,
     berserker:   3,
     shieldmaiden: 2,
-    huntsman:    1
+    huntsman:    1,
+    runecaster:  1
   },
 
   // Monster stat table
