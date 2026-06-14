@@ -3519,7 +3519,7 @@ function spawnHuntsmanProjectile(attackerRow, attackerCol, defenderRow, defender
 
   const arrow = document.createElement('div');
   arrow.className = 'huntsman-arrow-projectile';
-  arrow.innerText = '➔';
+  arrow.innerText = '→';
   arrow.style.position = 'absolute';
   
   const startX = attackerPos.left + attackerPos.width / 2;

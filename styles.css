@@ -2111,9 +2111,9 @@ body {
 
 .huntsman-arrow-projectile {
   font-size: 0.85rem;
-  color: #ffd700;
+  color: #8b5a2b;
   pointer-events: none;
-  filter: drop-shadow(0 0 3px #ffd700);
+  filter: drop-shadow(0 0 2px rgba(139, 90, 43, 0.6));
   width: auto;
   height: auto;
   z-index: 100;
