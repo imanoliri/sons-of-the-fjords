@@ -1369,6 +1369,14 @@ function renderResourceBar() {
   elBand.innerText = STATE.band.length;
   elDay.innerText = STATE.day || 1;
 
+  const timeFactor = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.timeFactor) || 0.02;
+  const maxCap = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.maxTimeFactorCap) !== undefined ? LOCATION_CONFIG.difficultyScaling.maxTimeFactorCap : 2.5;
+  const dayValue = STATE.day || 1;
+  const dayMulti = Math.min(maxCap, dayValue * timeFactor).toFixed(2);
+  if (elWorldDifficultyStatus) {
+    elWorldDifficultyStatus.innerText = `+${dayMulti}x Risk`;
+  }
+
   const activeWraths = Object.keys(STATE.godFavor).filter(g => STATE.godFavor[g] <= -4);
   let blessingHtml = '';
   const tempBlessings = [];
@@ -1407,11 +1415,7 @@ function renderWorldMap() {
   elWorldMap.innerHTML = '';
   elWorldCoords.innerText = `Longship Pos - X: ${STATE.party.worldX}, Y: ${STATE.party.worldY}`;
 
-  const timeFactor = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.timeFactor) || 0.02;
-  const maxCap = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.maxTimeFactorCap) !== undefined ? LOCATION_CONFIG.difficultyScaling.maxTimeFactorCap : 2.5;
-  const dayValue = STATE.day || 1;
-  const dayMulti = Math.min(maxCap, dayValue * timeFactor).toFixed(2);
-  elWorldDifficultyStatus.innerText = `Day Multiplier: +${dayMulti}x (Day ${dayValue})`;
+
 
   const tiles = STATE.worldMap.tiles;
   const revealed = STATE.worldMap.revealed;

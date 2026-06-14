@@ -32,8 +32,11 @@
         <div class="resource" id="res-band" title="Viking Band - Active army roster">
           <span class="icon">🛡️</span> <span class="val">3</span>
         </div>
-        <div class="resource" id="res-day" title="Day - Expedition time elapsed">
-          <span class="icon">📅</span> Day <span class="val">1</span>
+        <div class="resource" id="res-day" title="Day - Expedition time elapsed" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.1rem; line-height: 1;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="icon">📅</span> Day <span class="val">1</span>
+          </div>
+          <div id="world-difficulty-status" style="font-size: 0.72rem; opacity: 0.8; color: var(--color-thor); font-family: var(--font-body); white-space: nowrap;">+0.00x Risk</div>
         </div>
       </div>
       <div class="active-blessing" id="active-blessing-display" title="Active Champion Buff">
@@ -78,7 +81,7 @@
           <div class="sidebar-panel glass-panel">
             <h2 class="section-title">Fjord Expedition</h2>
             <div id="world-coordinates" class="coordinates-display">X: 0, Y: 0</div>
-            <div id="world-difficulty-status" class="difficulty-display" style="font-size: 0.85rem; opacity: 0.85; margin: 0.25rem 0 0.5rem 0;">Day Multiplier: +0.00x</div>
+
             <div id="world-event-log" class="event-log">
               <p class="system-message">Select adjacent tiles to move your longship or walk inland.</p>
             </div>
