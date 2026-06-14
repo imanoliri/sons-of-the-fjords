@@ -3678,7 +3678,8 @@ export function handleStateNotification(event, data) {
       spawnFloatyText(data.unit.row, data.unit.col, '🛡️ -1 Armor', '#ccc');
       spawnCombatParticle(data.unit.row, data.unit.col, 'particle-armor-hit');
     } else if (data.effect === 'shieldmaiden_block') {
-      spawnFloatyText(data.unit.row, data.unit.col, '🛡️ BLOCKED!', 'var(--color-freya)');
+      const amt = data.amount || 1;
+      spawnFloatyText(data.unit.row, data.unit.col, `🛡️ Blocked ${amt}`, 'var(--color-freya)');
       spawnCombatParticle(data.unit.row, data.unit.col, 'particle-shield-block');
     } else if (data.effect === 'hel_survive') {
       spawnFloatyText(data.unit.row, data.unit.col, '💚 SURVIVED!', 'var(--color-hel)');

@@ -644,7 +644,7 @@ function combatTick() {
           const m4Config = GC.modifiers.milestones.freya.find(m => m.index === 3);
           const blockAmount = m4Config?.blockAmount ?? 1;
           dmgTaken = Math.max(0, dmgTaken - blockAmount);
-          notify('COMBAT_EFFECT_TRIGGER', { effect: 'shieldmaiden_block', unit: currentTarget });
+          notify('COMBAT_EFFECT_TRIGGER', { effect: 'shieldmaiden_block', unit: currentTarget, amount: blockAmount });
         }
 
         let nextHp = currentTarget.hp - dmgTaken;
