@@ -463,10 +463,10 @@ function combatTick() {
                 return sum;
               }, 0);
               
-              // Only trigger if at least one ally in this cluster is in danger (below 50% HP)
+              // Only trigger if at least one ally in this cluster is in danger (below 80% HP)
               const hasCriticalAlly = neighbors.some(n => {
                 const cell = grid[n.r]?.[n.c];
-                return cell && cell.alliance === 'player' && cell.hp < getEffectiveStats(cell).maxHp.total * 0.5;
+                return cell && cell.alliance === 'player' && cell.hp < getEffectiveStats(cell).maxHp.total * 0.8;
               });
 
               if (healSum > bestHealScore && hasCriticalAlly) {
