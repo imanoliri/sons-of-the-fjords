@@ -1010,13 +1010,7 @@ function initTooltipEvents() {
           ? `<span style="color:var(--color-success)">✅ Completed</span>`
           : `<span style="color:var(--text-muted)">🔒 Unlocked at Favor +${idx + 1}</span>`;
 
-        let effectHtml = '';
-        if (idx === 4) {
-          effectHtml = `<b style="color:${lore.color}">Blessing: ${lore.buff}</b>`;
-        } else {
-          effectHtml = `<b style="color:${lore.color}">${lore.milestoneEffects[idx]}</b>`;
-        }
-
+        let effectHtml = `<b style="color:${lore.color}">${lore.milestoneEffects[idx]}</b>`;
         content = `${statusHtml}<br><div style="margin-top:4px;">${effectHtml}</div>`;
       } else if (section === 'champion') {
         header = `${lore.icon} Champion Buff`;
