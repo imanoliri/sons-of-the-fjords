@@ -3749,6 +3749,10 @@ export function handleStateNotification(event, data) {
   }
   else if (event === 'COMBAT_DEATH') {
     logWorld(`Dead: Unit '${data.name}' was slain on the lanes.`, 'combat-message');
+    if (STATE.activeScreen === 'combat' && data.row !== undefined && data.col !== undefined) {
+      spawnCombatParticle(data.row, data.col, 'particle-death-fade');
+      spawnFloatyText(data.row, data.col, '💀 SLAIN', 'var(--color-danger)');
+    }
   }
   else if (event === 'COMBAT_EFFECT_TRIGGER') {
     if (data.effect === 'loki_miss') {
@@ -3794,6 +3798,12 @@ export function handleStateNotification(event, data) {
     } else if (data.effect === 'unit_leap') {
       spawnFloatyText(data.unit.row, data.unit.col, '💨 LEAP!', 'var(--color-thor)');
       spawnCombatParticle(data.unit.row, data.unit.col, 'particle-leap-wind');
+    } else if (data.effect === 'unit_crit') {
+      spawnFloatyText(data.unit.row, data.unit.col, `💥 CRIT! ${data.amount}`, 'var(--color-danger)');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-crit-hit');
+    } else if (data.effect === 'unit_heal') {
+      spawnFloatyText(data.unit.row, data.unit.col, `💚 +${data.amount} HP`, 'var(--color-success)');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-heal-pulse');
     } else if (data.effect === 'rune_odin') {
       const t = data.target;
       logWorld(`⚡ ${data.unit.name} carved the Odin Rune — lightning AoE burst at [${t.row},${t.col}]! 25 dmg + 5/tick DoT for 3 ticks. (-1 Gold)`, 'gain-message');

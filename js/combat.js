@@ -286,6 +286,7 @@ function combatTick() {
       const healAmount = m2Config?.healAmount ?? 1;
       if (unit.hp < effStats.maxHp.total * healThreshold) {
         unit.hp = Math.min(effStats.maxHp.total, unit.hp + healAmount);
+        notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_heal', unit: unit, amount: healAmount });
       }
     }
 
@@ -300,6 +301,7 @@ function combatTick() {
           const effStats = getEffectiveStats(unit);
           const healAmount = GC.modifiers.blessings.freya?.healAmount ?? 2;
           unit.hp = Math.min(effStats.maxHp.total, unit.hp + healAmount);
+          notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_heal', unit: unit, amount: healAmount });
         }
       }
     }
@@ -585,7 +587,11 @@ function combatTick() {
             const cell = grid[n.r]?.[n.c];
             if (cell && cell.alliance === 'player' && cell.hp > 0 && !cell.isCharmed && !cell.isConfused && !cell.isUndead) {
               const effMax = getEffectiveStats(cell).maxHp.total;
-              cell.hp = effMax;
+              const healedAmt = effMax - cell.hp;
+              if (healedAmt > 0) {
+                cell.hp = effMax;
+                notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_heal', unit: cell, amount: healedAmt });
+              }
             }
           });
         }
@@ -632,6 +638,14 @@ function combatTick() {
         if (!currentTarget || currentTarget.hp <= 0) break;
 
         let dmgTaken = getEffectiveStats(unit).dmg.total;
+
+        // 15% Critical hit chance for Berserkers, Jotunns, and Lindwurms (1.5x damage)
+        let isCrit = false;
+        if ((unit.type === 'berserker' || unit.type === 'Frost Giant (Jotunn)' || unit.type === 'Lindwurm') && Math.random() < 0.15) {
+          isCrit = true;
+          dmgTaken = Math.floor(dmgTaken * 1.5);
+          notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_crit', unit: unit, amount: dmgTaken });
+        }
 
         // Heavy armor: reduces incoming damage by 1
         if (currentTarget.type === 'huskarl') {
