@@ -211,15 +211,21 @@ export function recordMonsterKill(monsterType) {
     STATE.odinWolvesKilled = (STATE.odinWolvesKilled || 0) + 1;
     if (STATE.odinWolvesKilled >= targets.odin.wolvesTarget) {
       STATE.odinWolvesKilled = 0;
+      const isMaxed = STATE.godQuests['odin'] && STATE.godQuests['odin'].every(x => x === true);
       adjustFavor('odin', 1);
-      notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: `slaying ${targets.odin.wolvesTarget} wolves` });
+      if (!isMaxed) {
+        notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: `slaying ${targets.odin.wolvesTarget} wolves` });
+      }
     }
   } else if (nameLower.includes('frost giant') || nameLower.includes('jotunn')) {
     STATE.odinGiantsKilled = (STATE.odinGiantsKilled || 0) + 1;
     if (STATE.odinGiantsKilled >= targets.odin.giantsTarget) {
       STATE.odinGiantsKilled = 0;
+      const isMaxed = STATE.godQuests['odin'] && STATE.godQuests['odin'].every(x => x === true);
       adjustFavor('odin', 1);
-      notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: 'slaying a giant' });
+      if (!isMaxed) {
+        notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: 'slaying a giant' });
+      }
     }
   }
 
@@ -227,15 +233,21 @@ export function recordMonsterKill(monsterType) {
     STATE.thorDraugrsKilled = (STATE.thorDraugrsKilled || 0) + 1;
     if (STATE.thorDraugrsKilled >= targets.thor.draugrsTarget) {
       STATE.thorDraugrsKilled = 0;
+      const isMaxed = STATE.godQuests['thor'] && STATE.godQuests['thor'].every(x => x === true);
       adjustFavor('thor', 1);
-      notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: `slaying ${targets.thor.draugrsTarget} draugrs` });
+      if (!isMaxed) {
+        notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: `slaying ${targets.thor.draugrsTarget} draugrs` });
+      }
     }
   } else if (nameLower.includes('lindwurm')) {
     STATE.thorLindwurmsKilled = (STATE.thorLindwurmsKilled || 0) + 1;
     if (STATE.thorLindwurmsKilled >= targets.thor.lindwurmsTarget) {
       STATE.thorLindwurmsKilled = 0;
+      const isMaxed = STATE.godQuests['thor'] && STATE.godQuests['thor'].every(x => x === true);
       adjustFavor('thor', 1);
-      notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: 'slaying a Lindwurm' });
+      if (!isMaxed) {
+        notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: 'slaying a Lindwurm' });
+      }
     }
   }
 }
@@ -250,8 +262,11 @@ export function sellSheep() {
     STATE.freyaSheepSold = (STATE.freyaSheepSold || 0) + 1;
     if (STATE.freyaSheepSold >= targets.sheepTarget) {
       STATE.freyaSheepSold = 0;
+      const isMaxed = STATE.godQuests['freya'] && STATE.godQuests['freya'].every(x => x === true);
       adjustFavor('freya', 1);
-      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.sheepTarget} sheep` });
+      if (!isMaxed) {
+        notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.sheepTarget} sheep` });
+      }
     }
     return true;
   }
@@ -269,8 +284,11 @@ export function sellWood() {
     if (STATE.freyaWoodSold >= targets.woodTarget) {
       const favorGained = Math.floor(STATE.freyaWoodSold / targets.woodTarget);
       STATE.freyaWoodSold = STATE.freyaWoodSold % targets.woodTarget;
+      const isMaxed = STATE.godQuests['freya'] && STATE.godQuests['freya'].every(x => x === true);
       adjustFavor('freya', favorGained);
-      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.woodTarget} wood` });
+      if (!isMaxed) {
+        notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.woodTarget} wood` });
+      }
     }
     return true;
   }
@@ -368,8 +386,11 @@ export function sellSheepDynamic(gain, amount = 1) {
     STATE.freyaSheepSold = (STATE.freyaSheepSold || 0) + amount;
     if (STATE.freyaSheepSold >= targets.sheepTarget) {
       STATE.freyaSheepSold = 0;
+      const isMaxed = STATE.godQuests['freya'] && STATE.godQuests['freya'].every(x => x === true);
       adjustFavor('freya', 1);
-      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.sheepTarget} sheep` });
+      if (!isMaxed) {
+        notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.sheepTarget} sheep` });
+      }
     }
     return { success: true, message: `Sold ${amount} livestock sheep for ${gain} gold.` };
   }
@@ -385,8 +406,11 @@ export function sellWoodDynamic(gain, amount = 10) {
     if (STATE.freyaWoodSold >= targets.woodTarget) {
       const favorGained = Math.floor(STATE.freyaWoodSold / targets.woodTarget);
       STATE.freyaWoodSold = STATE.freyaWoodSold % targets.woodTarget;
+      const isMaxed = STATE.godQuests['freya'] && STATE.godQuests['freya'].every(x => x === true);
       adjustFavor('freya', favorGained);
-      notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.woodTarget} wood` });
+      if (!isMaxed) {
+        notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.woodTarget} wood` });
+      }
     }
     return { success: true, message: `Sold ${amount} wood planks for ${gain} gold.` };
   }
