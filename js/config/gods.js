@@ -104,7 +104,7 @@ export const GODS_CONFIG = {
       odin: { targetType: 'huntsman', range: 2, dmg: 1 },
       thor: { targetType: 'berserker', dmg: 3, leap: 1 },
       freya: { targetType: 'shieldmaiden', healAmount: 2 },
-      hel: { targetType: 'enemy_hurt', threshold: 0.8, raiseChance: 0.75, raiseDurationTicks: 5 },
+      hel: { targetType: 'enemy_hurt', threshold: 0.75, raiseChance: 0.5, raiseDurationTicks: 5 },
       loki: { targetType: 'enemy_spawn', charmChance: 0.25, charmDurationTicks: 5 }
     }
   },
