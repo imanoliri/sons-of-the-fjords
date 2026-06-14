@@ -3399,7 +3399,7 @@ export function handleStateNotification(event, data) {
       delete STATE.party.pendingLocalY;
     }
 
-    {
+    setTimeout(() => {
       const locId = STATE.party.currentLocationId;
       if (!locId) {
         setScreen('world');
@@ -3407,7 +3407,7 @@ export function handleStateNotification(event, data) {
         const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
         setScreen((locData && locData.type === 'town') ? 'world' : 'location');
       }
-    }
+    }, 1000);
   }
   else if (event === 'COMBAT_FLEE') {
     const stolenParts = Object.entries(data.stolen)
