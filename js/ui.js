@@ -2623,7 +2623,16 @@ function renderFormationElement() {
   if (!container) return;
   container.innerHTML = '';
 
-  const order = STATE.combat.formationOrder || ['berserker', 'shieldmaiden', 'huntsman', 'huskarl', 'runecaster'];
+  let order = STATE.combat.formationOrder || ['berserker', 'shieldmaiden', 'huntsman', 'huskarl', 'runecaster'];
+  // Ensure all 5 soldier types are present in case order is loaded from an old save file
+  const requiredTypes = ['berserker', 'shieldmaiden', 'huntsman', 'huskarl', 'runecaster'];
+  requiredTypes.forEach(t => {
+    if (!order.includes(t)) {
+      order.push(t);
+    }
+  });
+  STATE.combat.formationOrder = order;
+
   const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
 
   order.forEach((type, idx) => {
