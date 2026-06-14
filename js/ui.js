@@ -338,6 +338,30 @@ export function initUIBindings() {
     togglePause();
   });
 
+  const elRunesGuide = document.getElementById('modal-runes-guide');
+  bindButton('btn-combat-runes', () => {
+    // Update unlocked statuses dynamically before showing
+    const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
+    godNames.forEach(g => {
+      const statusEl = document.getElementById(`status-rune-${g}`);
+      if (statusEl) {
+        const unlocked = STATE.godQuests[g]?.[4] === true;
+        if (unlocked) {
+          statusEl.innerText = 'Unlocked';
+          statusEl.style.color = 'var(--color-success)';
+        } else {
+          statusEl.innerText = 'Locked (Milestone 5)';
+          statusEl.style.color = 'var(--color-danger)';
+        }
+      }
+    });
+    showOverlay(elRunesGuide);
+  });
+
+  bindButton('btn-close-runes', () => {
+    hideOverlay(elRunesGuide);
+  });
+
   bindButton('btn-combat-flee', () => {
     fleeCombat();
   });
@@ -1106,6 +1130,20 @@ function initTooltipEvents() {
             `<b>Range:</b> ${formatStat(stats.range)}`,
             `<b>Speed:</b> ${formatStat(stats.speed)}`
           ];
+          
+          if (unit.type === 'runecaster') {
+            contents.push(`<hr style="margin: 4px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.15);">`);
+            contents.push(`<b>🔮 Runecaster Divine Runes:</b>`);
+            const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
+            godNames.forEach(g => {
+              const unlocked = STATE.godQuests[g]?.[4] === true;
+              const statusSymbol = unlocked ? '✅' : '🔒';
+              const nameCapitalized = g.charAt(0).toUpperCase() + g.slice(1);
+              contents.push(`<span style="font-size: 0.75rem; color: ${unlocked ? 'var(--color-' + g + ')' : 'var(--text-muted)'}">${statusSymbol} Rune of ${nameCapitalized}</span>`);
+            });
+            borderAccent = 'var(--color-thor)';
+          }
+
           contentsText = contents.join('<br>');
         } else {
           contentsText = unitEl.title || 'Combat unit/monster.';
@@ -2879,6 +2917,54 @@ function renderCombatGrid() {
       }
       STATE.combat.selectedPoolIndex = idx;
       notify('STATE_UPDATED');
+    });
+
+    // Custom hover tooltip for pool cards
+    card.addEventListener('mouseover', (e) => {
+      const stats = getEffectiveStats(unit);
+      let borderAccent = 'var(--text-accent)';
+      let headerText = `${unit.name} (Viking Soldier)`;
+      const contents = [
+        `<b>HP:</b> ${unit.hp} / ${formatStat(stats.maxHp)}`,
+        `<b>Damage:</b> ${formatStat(stats.dmg)}`,
+        `<b>Range:</b> ${formatStat(stats.range)}`,
+        `<b>Speed:</b> ${formatStat(stats.speed)}`
+      ];
+
+      if (unit.type === 'runecaster') {
+        contents.push(`<hr style="margin: 4px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.15);">`);
+        contents.push(`<b>🔮 Runecaster Divine Runes:</b>`);
+        const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
+        godNames.forEach(g => {
+          const unlocked = STATE.godQuests[g]?.[4] === true;
+          const statusSymbol = unlocked ? '✅' : '🔒';
+          const nameCapitalized = g.charAt(0).toUpperCase() + g.slice(1);
+          contents.push(`<span style="font-size: 0.75rem; color: ${unlocked ? 'var(--color-' + g + ')' : 'var(--text-muted)'}">${statusSymbol} Rune of ${nameCapitalized}</span>`);
+        });
+        borderAccent = 'var(--color-thor)';
+      }
+
+      elTooltip.innerHTML = `
+        <div class="game-tooltip-header">
+          <span>${headerText}</span>
+        </div>
+        <div class="game-tooltip-contents">${contents.join('<br>')}</div>
+      `;
+      elTooltip.style.borderLeftColor = borderAccent;
+      elTooltip.style.display = 'flex';
+      elTooltip.style.left = (e.clientX + 15) + 'px';
+      elTooltip.style.top = (e.clientY + 15) + 'px';
+    });
+
+    card.addEventListener('mousemove', (e) => {
+      if (elTooltip.style.display === 'flex') {
+        elTooltip.style.left = (e.clientX + 15) + 'px';
+        elTooltip.style.top = (e.clientY + 15) + 'px';
+      }
+    });
+
+    card.addEventListener('mouseleave', () => {
+      elTooltip.style.display = 'none';
     });
 
     elCombatPoolList.appendChild(card);

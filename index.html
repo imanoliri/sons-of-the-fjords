@@ -251,6 +251,7 @@
                 <div style="width: 2px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 0.25rem;"></div>
 
                 <button class="btn btn-sm btn-warning" id="btn-combat-pause">Pause / Deploy</button>
+                <button class="btn btn-sm" id="btn-combat-runes" style="background: linear-gradient(135deg, var(--color-odin), var(--color-thor)); color: #fff;">Runes Info</button>
                 <button class="btn btn-sm btn-danger" id="btn-combat-flee">Flee Combat</button>
 
                 <div style="width: 2px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 0.25rem;"></div>
@@ -300,6 +301,79 @@
         </div>
         <div class="modal-choices" id="modal-event-choices">
           <button class="btn btn-primary">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY MODAL: RUNES GUIDE -->
+    <div class="modal-overlay hidden" id="modal-runes-guide">
+      <div class="modal-box glass-panel animate-glow" style="max-width: 650px; width: 95%; position: relative; border-color: var(--color-thor);">
+        <button class="btn-close-x" id="btn-close-runes" title="Close Panel">✕</button>
+        <h2 class="logo-text" style="color: var(--color-thor); margin-bottom: 0.25rem;">Divine Rune Codex</h2>
+        <p style="font-size: 0.85rem; opacity: 0.85; text-align: center; margin-bottom: 1rem;">
+          Runecasters cast runes in battle based on unlocked god milestones. Casting costs <b>1 Gold</b> per rune.
+        </p>
+
+        <div class="modal-body" style="text-align: left; max-height: 420px; overflow-y: auto; overflow-x: hidden; padding-right: 0.5rem;">
+          <!-- Odin -->
+          <div style="border-left: 4px solid var(--color-odin); padding-left: 0.75rem; margin-bottom: 1rem; background: rgba(0,0,0,0.2); padding: 0.5rem 0.75rem; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: bold; color: var(--color-odin); font-size: 1.05rem;">⚡ Rune of Odin (Milestone 5)</span>
+              <span id="status-rune-odin" style="font-size: 0.75rem; font-weight: bold;">Locked</span>
+            </div>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">
+              <b>Target:</b> Densest enemy cluster (radius 1 area).<br>
+              <b>Effect:</b> Deals <b>25 damage</b> to all enemies in radius 1, plus an additional <b>5 damage per turn</b> for 3 turns.
+            </p>
+          </div>
+
+          <!-- Thor -->
+          <div style="border-left: 4px solid var(--color-thor); padding-left: 0.75rem; margin-bottom: 1rem; background: rgba(0,0,0,0.2); padding: 0.5rem 0.75rem; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: bold; color: var(--color-thor); font-size: 1.05rem;">🔨 Rune of Thor (Milestone 5)</span>
+              <span id="status-rune-thor" style="font-size: 0.75rem; font-weight: bold;">Locked</span>
+            </div>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">
+              <b>Target:</b> Enemy with the most HP.<br>
+              <b>Effect:</b> Deals <b>50 damage</b> to the target, <b>10 damage</b> in a radius 1 area, and <b>stuns</b> all affected enemies for 2 turns.
+            </p>
+          </div>
+
+          <!-- Hel -->
+          <div style="border-left: 4px solid var(--color-hel); padding-left: 0.75rem; margin-bottom: 1rem; background: rgba(0,0,0,0.2); padding: 0.5rem 0.75rem; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: bold; color: var(--color-hel); font-size: 1.05rem;">💀 Rune of Hel (Milestone 5)</span>
+              <span id="status-rune-hel" style="font-size: 0.75rem; font-weight: bold;">Locked</span>
+            </div>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">
+              <b>Target:</b> Most dangerous advancing enemy.<br>
+              <b>Effect:</b> Instantly reduces the target's current HP by <b>50%</b>.
+            </p>
+          </div>
+
+          <!-- Loki -->
+          <div style="border-left: 4px solid var(--color-loki); padding-left: 0.75rem; margin-bottom: 1rem; background: rgba(0,0,0,0.2); padding: 0.5rem 0.75rem; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: bold; color: var(--color-loki); font-size: 1.05rem;">🟢 Rune of Loki (Milestone 5)</span>
+              <span id="status-rune-loki" style="font-size: 0.75rem; font-weight: bold;">Locked</span>
+            </div>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">
+              <b>Target:</b> Most dangerous advancing enemy.<br>
+              <b>Effect:</b> Teleports the target back to the beginning of its combat lane.
+            </p>
+          </div>
+
+          <!-- Freya -->
+          <div style="border-left: 4px solid var(--color-freya); padding-left: 0.75rem; margin-bottom: 1rem; background: rgba(0,0,0,0.2); padding: 0.5rem 0.75rem; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: bold; color: var(--color-freya); font-size: 1.05rem;">🌿 Rune of Freya (Milestone 5)</span>
+              <span id="status-rune-freya" style="font-size: 0.75rem; font-weight: bold;">Locked</span>
+            </div>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">
+              <b>Target:</b> Triggered when allies are in danger.<br>
+              <b>Effect:</b> Fully heals all allies in a radius 1 area to full HP.
+            </p>
+          </div>
         </div>
       </div>
     </div>
