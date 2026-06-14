@@ -3,7 +3,7 @@
    ========================================================================== */
 
 import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, executePlunderMound, executeSacrificeSheep, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, buyRecruit, getHealCost, healWarriors, getEffectiveStats } from './state.js';
-import { getAdjacentCoords, setActiveMap, getAvailableMaps, initializeWorld, getActiveMap } from './world.js';
+import { getAdjacentCoords, setActiveMap, getAvailableMaps, initializeWorld, getActiveMap, tickHazards } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
 import { togglePause, deployUnit, undeployUnit, startCombat, fleeCombat, adjustCombatSpeed, sortPoolByPoints } from './combat.js';
 import { TOWN_CONFIG } from './config/town.js';
@@ -1662,6 +1662,17 @@ function renderWorldMap() {
         drakkar.innerText = '🚢';
         elCell.dataset.hasPlayer = 'true';
         elCell.appendChild(drakkar);
+      }
+
+      // Draw active map hazards (Blizzards and Maelstroms)
+      if (STATE.worldMap.hazards && STATE.worldMap.hazards.length > 0) {
+        const activeHazards = STATE.worldMap.hazards.filter(h => h.x === x && h.y === y);
+        for (const hazard of activeHazards) {
+          const hazardEl = document.createElement('div');
+          hazardEl.className = `hazard-marker hazard-${hazard.type}`;
+          hazardEl.innerText = hazard.type === 'blizzard' ? '❄️' : '🌀';
+          elCell.appendChild(hazardEl);
+        }
       }
 
       // Navigation handler for adjacent cells
@@ -3832,9 +3843,44 @@ function hideOverlay(el) {
   updateModalKeyboardNavigation();
 }
 
+// Real-time world map hazard ticker reference
+let worldHazardTicker = null;
+
+function startWorldHazardTicker() {
+  if (worldHazardTicker) clearInterval(worldHazardTicker);
+  worldHazardTicker = setInterval(() => {
+    if (STATE.activeScreen !== 'world' || STATE.combat.active) return;
+    const hazardCollisions = tickHazards();
+    if (hazardCollisions.length > 0) {
+      for (const collision of hazardCollisions) {
+        logWorld(collision.text, 'warn-message');
+        if (collision.dead.length > 0) {
+          logWorld(`Sagas remember the fallen: ${collision.dead.join(', ')} perished in the disaster.`, 'warn-message');
+        }
+      }
+      if (STATE.band.length === 0 && STATE.resources.gold === 0) {
+        notify('GAME_OVER');
+      }
+    }
+    renderWorldMap();
+  }, 3000); // Ticks every 3 seconds in real time
+}
+
+function stopWorldHazardTicker() {
+  if (worldHazardTicker) {
+    clearInterval(worldHazardTicker);
+    worldHazardTicker = null;
+  }
+}
+
 // Listen to key actions triggered by state
 export function handleStateNotification(event, data) {
   if (event === 'SCREEN_CHANGE') {
+    if (data === 'world') {
+      startWorldHazardTicker();
+    } else {
+      stopWorldHazardTicker();
+    }
     render();
   }
   else if (event === 'FAVOR_UPDATED' || event === 'RESOURCES_UPDATED') {

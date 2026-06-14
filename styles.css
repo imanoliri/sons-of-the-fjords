@@ -479,6 +479,40 @@ body {
   }
 }
 
+/* Hazard Markers styling & animations */
+.hazard-marker {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.hazard-blizzard {
+  animation: blizzardPulse 2.5s infinite ease-in-out;
+  text-shadow: 0 0 8px #fff, 0 0 15px var(--tile-snow);
+}
+
+.hazard-maelstrom {
+  animation: maelstromSpin 4s infinite linear;
+  text-shadow: 0 0 8px #00f0ff, 0 0 15px var(--tile-water);
+}
+
+@keyframes blizzardPulse {
+  0% { transform: scale(0.9) rotate(-5deg); opacity: 0.8; }
+  50% { transform: scale(1.15) rotate(5deg); opacity: 1; }
+  100% { transform: scale(0.9) rotate(-5deg); opacity: 0.8; }
+}
+
+@keyframes maelstromSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .town-marker {
   font-size: 1.5rem;
   filter: drop-shadow(0 0 5px #ffd700);
