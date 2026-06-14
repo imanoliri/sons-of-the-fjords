@@ -35,6 +35,7 @@ export function startCombat(locationId, coordKey, enemyData) {
   STATE.combat.entityCoordKey = coordKey;
   STATE.combat.fleeMode = false;
   STATE.combat.stance = 'attack';
+  STATE.combat.deployHistory = [];
 
   // 1. Initialize grid
   const grid = [];
@@ -358,7 +359,6 @@ function combatTick() {
 
         // Hel Champion Blessing: Once-per-battle 50% chance to turn into an undead when hurt under 50% max HP
         if (currentTarget.alliance === 'enemy' && currentTarget.hp > 0 && !currentTarget.helUndeadChecked) {
-          currentTarget.helUndeadChecked = true;
           const activeBlessings = new Set();
           if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
           if (STATE.permanentlyActivatedBlessings) {
@@ -368,6 +368,7 @@ function combatTick() {
             const helBlessing = GC.modifiers.blessings.hel;
             const threshold = helBlessing?.threshold ?? 0.5;
             if (currentTarget.hp < currentTarget.maxHp * threshold) {
+              currentTarget.helUndeadChecked = true;
               const raiseChance = helBlessing?.raiseChance ?? 0.5;
               if (Math.random() < raiseChance) {
                 const duration = helBlessing?.raiseDurationTicks ?? 3;
@@ -782,6 +783,8 @@ export function deployUnit(poolIndex, row, col) {
   unit.row = row;
   unit.col = col;
   STATE.combat.grid[row][col] = unit;
+  if (!STATE.combat.deployHistory) STATE.combat.deployHistory = [];
+  STATE.combat.deployHistory.push(unit.id);
   STATE.combat.pool.splice(poolIndex, 1);
   STATE.combat.selectedPoolIndex = null;
   notify('COMBAT_UPDATE');
@@ -791,11 +794,14 @@ export function undeployUnit(row, col) {
   row = Number(row);
   col = Number(col);
   const unit = STATE.combat.grid[row][col];
-  if (!unit || unit.alliance !== 'player') return;
+  if (!unit || unit.alliance !== 'player' || unit.isCharmed || unit.isConfused || unit.isUndead) return;
   STATE.combat.grid[row][col] = null;
   unit.row = undefined;
   unit.col = undefined;
   STATE.combat.pool.push(unit);
+  if (STATE.combat.deployHistory) {
+    STATE.combat.deployHistory = STATE.combat.deployHistory.filter(id => id !== unit.id);
+  }
   sortPoolByPoints();
   notify('COMBAT_UPDATE');
 }

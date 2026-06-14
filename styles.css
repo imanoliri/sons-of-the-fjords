@@ -14,10 +14,11 @@
   --bg-panel-solid: #151922;
   --border-color: rgba(255, 255, 255, 0.1);
   --border-glow: rgba(0, 240, 255, 0.3);
-  
+
   --text-primary: #f5f6f7;
   --text-muted: #8a96a3;
-  --text-accent: #00f0ff; /* Odin Runic Blue */
+  --text-accent: #00f0ff;
+  /* Odin Runic Blue */
 
   /* Deity Specific Accents */
   --color-odin: #00f0ff;
@@ -25,11 +26,11 @@
   --color-freya: #2ecc71;
   --color-hel: #9b59b6;
   --color-loki: #e67e22;
-  
+
   /* Status Colors */
   --color-danger: #e74c3c;
   --color-success: #2ecc71;
-  
+
   /* Terrain Backgrounds */
   --tile-water: #1a3c50;
   --tile-deep-water: #071324;
@@ -93,10 +94,12 @@ body {
     box-shadow: 0 0 8px rgba(0, 240, 255, 0.2), inset 0 0 8px rgba(0, 240, 255, 0.1);
     border-color: rgba(0, 240, 255, 0.2);
   }
+
   50% {
     box-shadow: 0 0 18px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.3);
     border-color: rgba(0, 240, 255, 0.6);
   }
+
   100% {
     box-shadow: 0 0 8px rgba(0, 240, 255, 0.2), inset 0 0 8px rgba(0, 240, 255, 0.1);
     border-color: rgba(0, 240, 255, 0.2);
@@ -128,7 +131,8 @@ body {
   border-color: var(--text-accent);
 }
 
-.btn:disabled, .btn.btn-disabled {
+.btn:disabled,
+.btn.btn-disabled {
   opacity: 0.5;
   cursor: not-allowed !important;
   pointer-events: none;
@@ -176,6 +180,23 @@ body {
 .btn-sm {
   padding: 0.35rem 0.75rem;
   font-size: 0.85rem;
+}
+
+.btn-discrete {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+  line-height: 1;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+  opacity: 0.5;
+}
+
+.btn-discrete:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: none;
+  color: var(--text-primary);
 }
 
 /* Header & Resources */
@@ -290,7 +311,8 @@ body {
 .game-content {
   flex-grow: 1;
   position: relative;
-  min-height: 0; /* Allows flex container to shrink correctly */
+  min-height: 0;
+  /* Allows flex container to shrink correctly */
   overflow: hidden;
 }
 
@@ -342,7 +364,8 @@ body {
   border-radius: 4px;
 }
 
-.world-tile, .location-tile {
+.world-tile,
+.location-tile {
   width: 100%;
   height: 100%;
   display: flex;
@@ -355,12 +378,14 @@ body {
   background-color: var(--tile-fog);
 }
 
-.world-tile:hover:not(.fog), .location-tile:hover:not(.fog) {
+.world-tile:hover:not(.fog),
+.location-tile:hover:not(.fog) {
   filter: brightness(1.2) contrast(1.1);
   box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.4);
 }
 
-.world-tile.fog, .location-tile.fog {
+.world-tile.fog,
+.location-tile.fog {
   background-color: var(--tile-fog) !important;
   color: transparent !important;
   cursor: default;
@@ -370,7 +395,8 @@ body {
   cursor: pointer;
 }
 
-.world-tile.fog::after, .location-tile.fog::after {
+.world-tile.fog::after,
+.location-tile.fog::after {
   content: '᚛';
   font-family: var(--font-runes);
   color: rgba(255, 255, 255, 0.05);
@@ -379,18 +405,49 @@ body {
 }
 
 /* Tile Terrain Classes */
-.terrain-water { background-color: var(--tile-water); }
-.terrain-deep_water { background-color: var(--tile-deep-water); }
-.terrain-plains { background-color: var(--tile-plains); }
-.terrain-river { background-color: var(--tile-river); }
-.terrain-forest { background-color: var(--tile-forest); }
-.terrain-snow { background-color: var(--tile-snow); }
-.terrain-mountain { background-color: var(--tile-mountain); }
+.terrain-water {
+  background-color: var(--tile-water);
+}
 
-.terrain-grass { background-color: #3b6343; }
-.terrain-rock { background-color: var(--tile-rock); }
-.terrain-cave { background-color: var(--tile-cave); }
-.terrain-chasm { background-color: var(--tile-chasm); }
+.terrain-deep_water {
+  background-color: var(--tile-deep-water);
+}
+
+.terrain-plains {
+  background-color: var(--tile-plains);
+}
+
+.terrain-river {
+  background-color: var(--tile-river);
+}
+
+.terrain-forest {
+  background-color: var(--tile-forest);
+}
+
+.terrain-snow {
+  background-color: var(--tile-snow);
+}
+
+.terrain-mountain {
+  background-color: var(--tile-mountain);
+}
+
+.terrain-grass {
+  background-color: #3b6343;
+}
+
+.terrain-rock {
+  background-color: var(--tile-rock);
+}
+
+.terrain-cave {
+  background-color: var(--tile-cave);
+}
+
+.terrain-chasm {
+  background-color: var(--tile-chasm);
+}
 
 /* Drakkar Ship and Player Marker */
 .player-marker {
@@ -409,9 +466,17 @@ body {
 }
 
 @keyframes markerFloat {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-  100% { transform: translateY(0); }
+  0% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
 }
 
 .town-marker {
@@ -425,12 +490,13 @@ body {
 }
 
 .world-tile.visited-wilderness {
-  box-shadow: inset 0 0 0 2px rgba(0, 240, 255, 0.35); /* Subtle runic blue inner border */
+  box-shadow: inset 0 0 0 2px rgba(0, 240, 255, 0.35);
+  /* Subtle runic blue inner border */
 }
 
 .location-entity {
   font-size: 1.4rem;
-  filter: drop-shadow(0 0 4px rgba(255,255,255,0.7));
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.7));
   z-index: 2;
   transition: filter 0.3s ease, transform 0.3s ease;
 }
@@ -446,15 +512,37 @@ body {
 }
 
 @keyframes portalPulseExit {
-  0% { transform: scale(1); filter: drop-shadow(0 0 4px var(--color-thor)); }
-  50% { transform: scale(1.15); filter: drop-shadow(0 0 10px var(--color-thor)); }
-  100% { transform: scale(1); filter: drop-shadow(0 0 4px var(--color-thor)); }
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px var(--color-thor));
+  }
+
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 10px var(--color-thor));
+  }
+
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px var(--color-thor));
+  }
 }
 
 @keyframes portalPulseVisited {
-  0% { transform: scale(1); filter: drop-shadow(0 0 4px var(--text-accent)); }
-  50% { transform: scale(1.15); filter: drop-shadow(0 0 10px var(--text-accent)); }
-  100% { transform: scale(1); filter: drop-shadow(0 0 4px var(--text-accent)); }
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px var(--text-accent));
+  }
+
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 10px var(--text-accent));
+  }
+
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px var(--text-accent));
+  }
 }
 
 .tile-border-highlight {
@@ -517,7 +605,7 @@ body {
   flex-grow: 1;
   overflow-y: auto;
   border: 1px solid var(--border-color);
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
   padding: 0.75rem;
   font-size: 0.85rem;
@@ -529,7 +617,7 @@ body {
 
 .event-log p {
   line-height: 1.4;
-  border-bottom: 1px solid rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
   padding-bottom: 0.25rem;
 }
 
@@ -580,7 +668,7 @@ body {
 }
 
 .town-card {
-  background: rgba(0,0,0,0.25);
+  background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 1.25rem;
@@ -606,7 +694,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 0;
-  border-bottom: 1px dashed rgba(255,255,255,0.05);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
 }
 
 .trade-row span {
@@ -633,6 +721,7 @@ body {
   transition: background 0.15s, transform 0.1s;
   z-index: 10;
 }
+
 .btn-close-x:hover {
   background: rgba(220, 50, 50, 1);
   transform: scale(1.12);
@@ -641,7 +730,8 @@ body {
 /* Combat Screen Layout */
 .combat-layout {
   display: flex;
-  align-items: flex-start; /* Align to top to prevent scrolling boundary clip */
+  align-items: flex-start;
+  /* Align to top to prevent scrolling boundary clip */
   justify-content: center;
   height: 100%;
   overflow-y: auto;
@@ -692,7 +782,10 @@ body {
 }
 
 /* Highlight lanes alternatively for visibility */
-.combat-cell[data-row="0"], .combat-cell[data-row="2"], .combat-cell[data-row="4"], .combat-cell[data-row="6"] {
+.combat-cell[data-row="0"],
+.combat-cell[data-row="2"],
+.combat-cell[data-row="4"],
+.combat-cell[data-row="6"] {
   background-color: #151b24;
 }
 
@@ -718,7 +811,7 @@ body {
   justify-content: center;
   font-size: 1.3rem;
   position: relative;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
   transition: transform 0.1s;
   z-index: 3;
 }
@@ -773,11 +866,11 @@ body {
 /* Deployment Pool list */
 .deployment-panel {
   width: 100%;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 1rem;
-  margin-top: 1.5rem;
+  margin-top: 0.5rem;
 }
 
 .deployment-panel h4 {
@@ -855,14 +948,14 @@ body {
 
 .pool-card:hover {
   border-color: var(--text-accent);
-  box-shadow: 0 0 8px rgba(0,240,255,0.3);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
   transform: translateY(-2px);
 }
 
 .pool-card.selected {
   border-color: var(--text-accent);
   background: rgba(0, 240, 255, 0.1);
-  box-shadow: 0 0 12px rgba(0,240,255,0.5);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
 }
 
 .pool-card.dragging {
@@ -942,7 +1035,7 @@ body {
   border: 1.5px solid var(--border-color);
   border-radius: 8px;
   padding: 0.65rem;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -953,6 +1046,46 @@ body {
   border-color: var(--node-color);
   box-shadow: 0 0 15px var(--node-color);
   transform: translate(-50%, -50%) scale(1.05);
+}
+
+.god-pentagram-node.permanently-active {
+  /* Fallback */
+  border-color: var(--node-color) !important;
+  box-shadow: 0 0 15px var(--node-color) !important;
+}
+
+.god-pentagram-node.deity-odin.permanently-active {
+  border-color: var(--color-odin) !important;
+  box-shadow: 0 0 18px var(--color-odin) !important;
+}
+
+.god-pentagram-node.deity-thor.permanently-active {
+  border-color: var(--color-thor) !important;
+  box-shadow: 0 0 18px var(--color-thor) !important;
+}
+
+.god-pentagram-node.deity-freya.permanently-active {
+  border-color: var(--color-freya) !important;
+  box-shadow: 0 0 18px var(--color-freya) !important;
+}
+
+.god-pentagram-node.deity-hel.permanently-active {
+  border-color: var(--color-hel) !important;
+  box-shadow: 0 0 18px var(--color-hel) !important;
+}
+
+.god-pentagram-node.deity-loki.permanently-active {
+  border-color: var(--color-loki) !important;
+  box-shadow: 0 0 18px var(--color-loki) !important;
+}
+
+.btn-always-active:disabled {
+  opacity: 1 !important;
+  pointer-events: none;
+  cursor: default;
+  color: var(--text-accent) !important;
+  border-color: var(--text-accent) !important;
+  background: rgba(0, 240, 255, 0.15) !important;
 }
 
 .god-pentagram-node .god-identity {
@@ -987,14 +1120,14 @@ body {
   width: 20px;
   height: 20px;
   border: 1px solid var(--border-color);
-  background: rgba(0,0,0,0.4);
+  background: rgba(0, 0, 0, 0.4);
   border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-runes);
   font-size: 0.7rem;
-  color: rgba(255,255,255,0.2);
+  color: rgba(255, 255, 255, 0.2);
   user-select: none;
 }
 
@@ -1006,17 +1139,60 @@ body {
 }
 
 /* Deity Specific milestone color mapping in pentagram nodes */
-.god-pentagram-node.deity-odin { --node-color: var(--color-odin); }
-.god-pentagram-node.deity-thor { --node-color: var(--color-thor); }
-.god-pentagram-node.deity-freya { --node-color: var(--color-freya); }
-.god-pentagram-node.deity-hel { --node-color: var(--color-hel); }
-.god-pentagram-node.deity-loki { --node-color: var(--color-loki); }
+.god-pentagram-node.deity-odin {
+  --node-color: var(--color-odin);
+}
 
-.god-pentagram-node.deity-odin .milestone-step.achieved { background: rgba(0, 240, 255, 0.2); border-color: var(--color-odin); color: var(--color-odin); text-shadow: 0 0 3px var(--color-odin); }
-.god-pentagram-node.deity-thor .milestone-step.achieved { background: rgba(255, 215, 0, 0.2); border-color: var(--color-thor); color: var(--color-thor); text-shadow: 0 0 3px var(--color-thor); }
-.god-pentagram-node.deity-freya .milestone-step.achieved { background: rgba(46, 204, 113, 0.2); border-color: var(--color-freya); color: var(--color-freya); text-shadow: 0 0 3px var(--color-freya); }
-.god-pentagram-node.deity-hel .milestone-step.achieved { background: rgba(155, 89, 182, 0.2); border-color: var(--color-hel); color: var(--color-hel); text-shadow: 0 0 3px var(--color-hel); }
-.god-pentagram-node.deity-loki .milestone-step.achieved { background: rgba(230, 126, 34, 0.2); border-color: var(--color-loki); color: var(--color-loki); text-shadow: 0 0 3px var(--color-loki); }
+.god-pentagram-node.deity-thor {
+  --node-color: var(--color-thor);
+}
+
+.god-pentagram-node.deity-freya {
+  --node-color: var(--color-freya);
+}
+
+.god-pentagram-node.deity-hel {
+  --node-color: var(--color-hel);
+}
+
+.god-pentagram-node.deity-loki {
+  --node-color: var(--color-loki);
+}
+
+.god-pentagram-node.deity-odin .milestone-step.achieved {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: var(--color-odin);
+  color: var(--color-odin);
+  text-shadow: 0 0 3px var(--color-odin);
+}
+
+.god-pentagram-node.deity-thor .milestone-step.achieved {
+  background: rgba(255, 215, 0, 0.2);
+  border-color: var(--color-thor);
+  color: var(--color-thor);
+  text-shadow: 0 0 3px var(--color-thor);
+}
+
+.god-pentagram-node.deity-freya .milestone-step.achieved {
+  background: rgba(46, 204, 113, 0.2);
+  border-color: var(--color-freya);
+  color: var(--color-freya);
+  text-shadow: 0 0 3px var(--color-freya);
+}
+
+.god-pentagram-node.deity-hel .milestone-step.achieved {
+  background: rgba(155, 89, 182, 0.2);
+  border-color: var(--color-hel);
+  color: var(--color-hel);
+  text-shadow: 0 0 3px var(--color-hel);
+}
+
+.god-pentagram-node.deity-loki .milestone-step.achieved {
+  background: rgba(230, 126, 34, 0.2);
+  border-color: var(--color-loki);
+  color: var(--color-loki);
+  text-shadow: 0 0 3px var(--color-loki);
+}
 
 .god-pentagram-node .champion-selector-cell {
   width: 100%;
@@ -1055,7 +1231,7 @@ body {
   border-radius: 8px;
   background: var(--bg-panel-solid);
   border: 1px solid var(--border-color);
-  box-shadow: 0 12px 48px rgba(0,0,0,0.8);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -1090,7 +1266,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.1);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -1168,9 +1344,17 @@ body {
 }
 
 @keyframes fleeRun {
-  0% { transform: translateX(0); }
-  50% { transform: translateX(-4px); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(-4px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
 }
 
 /* Focused Option Keyboard Highlighter */
@@ -1217,7 +1401,7 @@ body {
   border-top: 3px solid var(--text-accent);
   border-radius: 4px;
   padding: 0.5rem 0.85rem;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 15px rgba(0,240,255,0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 240, 255, 0.1);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1226,13 +1410,13 @@ body {
   font-size: 0.8rem;
   cursor: pointer;
   animation: toastSlideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
-             toastFadeOut 0.5s ease 3.5s forwards;
+    toastFadeOut 0.5s ease 3.5s forwards;
   backdrop-filter: blur(8px);
 }
 
 .toast-card.important-toast {
   border-top: 3px solid #ffd700;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(255,215,0,0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.3);
 }
 
 .toast-icon {
@@ -1245,13 +1429,27 @@ body {
 }
 
 @keyframes toastSlideDown {
-  0% { transform: translateY(-50px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
+  0% {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes toastFadeOut {
-  0% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-20px); pointer-events: none; }
+  0% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+  }
 }
 
 /* Floating Portal Prompt Panel */
@@ -1282,8 +1480,15 @@ body {
 }
 
 @keyframes promptFadeIn {
-  0% { opacity: 0; transform: translate(-50%, 15px); }
-  100% { opacity: 1; transform: translate(-50%, 0); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 15px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 
 /* Discrete hover tooltip sizing */

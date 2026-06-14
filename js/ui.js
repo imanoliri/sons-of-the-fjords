@@ -108,7 +108,7 @@ const MONSTER_EMOJIS = {
 
 // Initialize UI binding event listeners
 export function initUIBindings() {
-  
+
   // Screen Router Events
   document.getElementById('btn-start-game').addEventListener('click', () => {
     setScreen('world');
@@ -186,6 +186,34 @@ export function initUIBindings() {
 
     showToast('Game saved successfully!', '💾');
     logWorld(`Game saved as ${filename}`, 'gain-message');
+  });
+
+  bindButton('btn-load-game', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (parsed && typeof parsed === 'object') {
+            Object.assign(STATE, parsed);
+            notify('STATE_UPDATED');
+            showToast('Game loaded successfully!', '📂');
+            logWorld('Game loaded from save file.', 'gain-message');
+          } else {
+            showToast('Invalid save file format.', '⚠️');
+          }
+        } catch (err) {
+          showToast('Failed to parse save file: ' + err.message, '⚠️');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   });
 
   bindButton('btn-toggle-console', () => {
@@ -479,7 +507,7 @@ export function initUIBindings() {
         tryEnterCurrentLocation();
         return;
       }
-      
+
       if (dx !== 0 || dy !== 0) {
         e.preventDefault();
         const targetX = STATE.party.worldX + dx;
@@ -490,7 +518,7 @@ export function initUIBindings() {
           movePartyOnWorld(targetX, targetY);
         }
       }
-    } 
+    }
     // Check if player is on Location map screen
     else if (STATE.activeScreen === 'location') {
       let dx = 0;
@@ -499,7 +527,7 @@ export function initUIBindings() {
       else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') dy = 1;
       else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') dx = -1;
       else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') dx = 1;
-      
+
       if (dx !== 0 || dy !== 0) {
         e.preventDefault();
         const targetX = STATE.party.localX + dx;
@@ -520,15 +548,15 @@ export function initUIBindings() {
         if (key === '1') {
           e.preventDefault();
           const action = executePlunderMound(activePortalTarget.entity);
-          showToast(action.toast, action.icon);
+          logLocation(`${action.icon} ${action.toast}`, 'gain-message');
           notify('STATE_UPDATED');
         } else if (key === '2') {
           e.preventDefault();
           const action = executeSacrificeSheep(activePortalTarget.entity);
           if (action) {
-            showToast(action.toast, action.icon);
+            logLocation(`${action.icon} ${action.toast}`, 'gain-message');
           } else {
-            showToast('You have no sheep to sacrifice!', '⚠️');
+            logLocation('⚠️ You have no sheep to sacrifice!', 'warn-message');
           }
           notify('STATE_UPDATED');
         } else if (key === '3') {
@@ -542,7 +570,7 @@ export function initUIBindings() {
     // Check if player is on Town screen
     else if (STATE.activeScreen === 'town') {
       const key = e.key.toLowerCase();
-      
+
       // Resources shortcuts: f (food), g (gold from selling sheep), w (wood), s (sheep)
       if (key === 'f') {
         e.preventDefault();
@@ -564,7 +592,7 @@ export function initUIBindings() {
         e.preventDefault();
         document.getElementById('btn-buy-sheep')?.click();
       }
-      
+
       // Soldiers recruitment shortcuts: 1 (Shieldmaiden), 2 (Berserker), 3 (Huntsman)
       else if (key === '1') {
         e.preventDefault();
@@ -591,6 +619,34 @@ export function initUIBindings() {
       if (e.key === ' ' || e.code === 'Space') {
         e.preventDefault();
         togglePause();
+        return;
+      }
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        if (STATE.combat.deployHistory && STATE.combat.deployHistory.length > 0) {
+          const grid = STATE.combat.grid;
+          for (let i = STATE.combat.deployHistory.length - 1; i >= 0; i--) {
+            const unitId = STATE.combat.deployHistory[i];
+            let unitFound = null;
+            let unitR = -1;
+            let unitC = -1;
+            for (let r = 0; r < grid.length; r++) {
+              for (let c = 0; c < grid[r].length; c++) {
+                if (grid[r][c] && grid[r][c].id === unitId) {
+                  unitFound = grid[r][c];
+                  unitR = r;
+                  unitC = c;
+                  break;
+                }
+              }
+              if (unitFound) break;
+            }
+            if (unitFound && unitFound.alliance === 'player' && !unitFound.isCharmed && !unitFound.isConfused && !unitFound.isUndead) {
+              undeployUnit(unitR, unitC);
+              break;
+            }
+          }
+        }
         return;
       }
 
@@ -620,7 +676,7 @@ export function initUIBindings() {
         notify('COMBAT_UPDATE');
         return;
       }
-      
+
       // 1. Select soldier from pool (1 to maxBandSize)
       const keyNum = parseInt(key);
       if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= SOLDIERS_CONFIG.maxBandSize) {
@@ -659,15 +715,20 @@ export function initUIBindings() {
         if (!STATE.combat.paused) {
           togglePause(); // Ensure paused for deploying
         }
-        
-        let poolIdx = STATE.combat.selectedPoolIndex;
-        if (poolIdx === null && STATE.combat.pool.length > 0) {
-          poolIdx = 0; // Default to first soldier in queue
-        }
 
-        if (poolIdx !== null && poolIdx < STATE.combat.pool.length) {
-          const target = keyMap[key];
-          deployUnit(poolIdx, target.r, target.c);
+        const target = keyMap[key];
+        const existingUnit = STATE.combat.grid[target.r][target.c];
+        if (existingUnit && existingUnit.alliance === 'player' && !existingUnit.isCharmed && !existingUnit.isConfused && !existingUnit.isUndead) {
+          undeployUnit(target.r, target.c);
+        } else {
+          let poolIdx = STATE.combat.selectedPoolIndex;
+          if (poolIdx === null && STATE.combat.pool.length > 0) {
+            poolIdx = 0; // Default to first soldier in queue
+          }
+
+          if (poolIdx !== null && poolIdx < STATE.combat.pool.length) {
+            deployUnit(poolIdx, target.r, target.c);
+          }
         }
       }
     }
@@ -730,6 +791,59 @@ function initTooltipEvents() {
     elTooltip.style.top = (clientY + 15) + 'px';
   }
 
+  function getTownPrices(tx, ty) {
+    tx = Number(tx);
+    ty = Number(ty);
+
+    let forestCount = 0;
+    let waterCount = 0;
+    let plainsCount = 0;
+    let snowCount = 0;
+    let mountainCount = 0;
+
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        if (Math.abs(dx) + Math.abs(dy) <= 3) {
+          const nx = tx + dx;
+          const ny = ty + dy;
+          if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15) {
+            const terrain = STATE.worldMap.tiles[ny][nx];
+            if (terrain === 'forest') forestCount++;
+            else if (terrain === 'water' || terrain === 'river') waterCount++;
+            else if (terrain === 'plains') plainsCount++;
+            else if (terrain === 'snow') snowCount++;
+            else if (terrain === 'mountain') mountainCount++;
+          }
+        }
+      }
+    }
+
+    const dp = TOWN_CONFIG.dynamicPricing || {
+      food: { baseCost: 2, minCost: 1, maxCost: 5, foodGained: 5 },
+      woodBuy: { baseCost: 2, minCost: 1, maxCost: 5, woodGained: 2, scarceBonus: 2 },
+      sheepBuy: { baseCost: 6, minCost: 3, maxCost: 10, sheepGained: 1 },
+      sheepSell: { baseGain: 4, minGain: 1, maxGain: 8, sheepSold: 1, scarceBonus: 2 },
+      woodSell: { baseGain: 4, minGain: 1, maxGain: 8, woodSold: 10, scarceBonus: 2 }
+    };
+
+    let foodCost = Math.max(dp.food.minCost, Math.min(dp.food.maxCost, dp.food.baseCost + Math.floor((snowCount + mountainCount) / 2) - Math.floor((waterCount + plainsCount) / 2)));
+    let woodCost = Math.max(dp.woodBuy.minCost, Math.min(dp.woodBuy.maxCost, dp.woodBuy.baseCost + (forestCount === 0 ? dp.woodBuy.scarceBonus : 0) - Math.floor(forestCount / 3)));
+    let sheepBuyCost = Math.max(dp.sheepBuy.minCost, Math.min(dp.sheepBuy.maxCost, dp.sheepBuy.baseCost - Math.floor(plainsCount / 2) + Math.floor((snowCount + mountainCount + waterCount) / 3)));
+
+    if (STATE.godQuests.loki?.[3]) {
+      const m4Config = GODS_CONFIG.modifiers.milestones.loki.find(m => m.index === 3);
+      const reduction = m4Config?.priceReduction ?? 1;
+      foodCost = Math.max(dp.food.minCost, foodCost - reduction);
+      woodCost = Math.max(dp.woodBuy.minCost, woodCost - reduction);
+      sheepBuyCost = Math.max(dp.sheepBuy.minCost, sheepBuyCost - reduction);
+    }
+
+    const sheepSellGain = Math.max(dp.sheepSell.minGain, Math.min(dp.sheepSell.maxGain, dp.sheepSell.baseGain + (plainsCount <= 1 ? dp.sheepSell.scarceBonus : 0) - Math.floor(plainsCount / 3)));
+    const woodSellGain = Math.max(dp.woodSell.minGain, Math.min(dp.woodSell.maxGain, dp.woodSell.baseGain + (forestCount <= 1 ? dp.woodSell.scarceBonus : 0) - Math.floor(forestCount / 3)));
+
+    return { foodCost, woodCost, sheepBuyCost, sheepSellGain, woodSellGain, dp };
+  }
+
   function showWorldTileTooltip(tile, clientX, clientY) {
     const x = tile.dataset.x;
     const y = tile.dataset.y;
@@ -741,7 +855,7 @@ function initTooltipEvents() {
 
     const headerText = `${terrain ? terrain.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Terrain'}`;
     const coordsText = `X: ${x}, Y: ${y}`;
-    
+
     let borderAccent = 'var(--text-accent)';
     if (terrain === 'water') borderAccent = 'var(--tile-water)';
     else if (terrain === 'deep_water') borderAccent = 'var(--tile-deep-water)';
@@ -758,12 +872,35 @@ function initTooltipEvents() {
     if (locationName) {
       const typeLabel = locationType === 'town' ? 'Town' : 'Raid Site';
       contents.push(`🏘️ ${locationName} (${typeLabel})`);
+      if (locationType === 'town') {
+        const prices = getTownPrices(x, y);
+        const foodMod = prices.foodCost - prices.dp.food.baseCost;
+        const woodMod = prices.woodCost - prices.dp.woodBuy.baseCost;
+        const sheepBuyMod = prices.sheepBuyCost - prices.dp.sheepBuy.baseCost;
+        const sheepSellMod = prices.sheepSellGain - prices.dp.sheepSell.baseGain;
+        const woodSellMod = prices.woodSellGain - prices.dp.woodSell.baseGain;
+
+        const foodModText = foodMod !== 0 ? ` <span style="color:${foodMod > 0 ? 'var(--color-danger)' : 'var(--color-success)'}; font-size: 0.72rem; font-weight: bold;">(${foodMod > 0 ? '+' : ''}${foodMod})</span>` : '';
+        const woodModText = woodMod !== 0 ? ` <span style="color:${woodMod > 0 ? 'var(--color-danger)' : 'var(--color-success)'}; font-size: 0.72rem; font-weight: bold;">(${woodMod > 0 ? '+' : ''}${woodMod})</span>` : '';
+        const sheepBuyModText = sheepBuyMod !== 0 ? ` <span style="color:${sheepBuyMod > 0 ? 'var(--color-danger)' : 'var(--color-success)'}; font-size: 0.72rem; font-weight: bold;">(${sheepBuyMod > 0 ? '+' : ''}${sheepBuyMod})</span>` : '';
+        const sheepSellModText = sheepSellMod !== 0 ? ` <span style="color:${sheepSellMod > 0 ? 'var(--color-success)' : 'var(--color-danger)'}; font-size: 0.72rem; font-weight: bold;">(${sheepSellMod > 0 ? '+' : ''}${sheepSellMod})</span>` : '';
+        const woodSellModText = woodSellMod !== 0 ? ` <span style="color:${woodSellMod > 0 ? 'var(--color-success)' : 'var(--color-danger)'}; font-size: 0.72rem; font-weight: bold;">(${woodSellMod > 0 ? '+' : ''}${woodSellMod})</span>` : '';
+
+        let priceLines = [];
+        priceLines.push(`<span>🍖 Buy Food: buy ${prices.dp.food.foodGained} for <b>${prices.foodCost}g</b>${foodModText}</span>`);
+        priceLines.push(`<span>🪵 Buy Wood: buy ${prices.dp.woodBuy.woodGained} for <b>${prices.woodCost}g</b>${woodModText}</span>`);
+        priceLines.push(`<span>🐑 Buy Sheep: buy ${prices.dp.sheepBuy.sheepGained} for <b>${prices.sheepBuyCost}g</b>${sheepBuyModText}</span>`);
+        priceLines.push(`<span>🐑 Sell Sheep: sell ${prices.dp.sheepSell.sheepSold} for <b>${prices.sheepSellGain}g</b>${sheepSellModText}</span>`);
+        priceLines.push(`<span>🪵 Sell Wood: sell ${prices.dp.woodSell.woodSold} for <b>${prices.woodSellGain}g</b>${woodSellModText}</span>`);
+
+        contents.push('<div style="margin-top: 5px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 5px; font-size: 0.78rem; display: flex; flex-direction: column; gap: 2px;">' + priceLines.join('') + '</div>');
+      }
       const danger = tile.dataset.dangerLevel;
       if (danger && locationType === 'raid') {
         contents.push(`💀 Danger Level: ${'💀'.repeat(danger)} (Level ${danger})`);
       }
     }
-    
+
     if (contents.length === 0) {
       if (terrain === 'deep_water') {
         contents.push('🌊 Deep Water. Extremely dangerous, non-traversable.');
@@ -776,8 +913,8 @@ function initTooltipEvents() {
       }
     }
 
-    // Add concrete enemy description for any land/raid tiles on world map
-    if (locationType === 'raid' || (terrain !== 'water' && terrain !== 'deep_water' && terrain !== 'river')) {
+    // Add concrete enemy description for any land/raid tiles on world map (excluding towns)
+    if (locationType !== 'town' && (locationType === 'raid' || (terrain !== 'water' && terrain !== 'deep_water' && terrain !== 'river'))) {
       const biome = locationType === 'raid' ? (locationBiome || 'default') : terrain;
       const poolMap = {
         forest: 'spiders and wolves',
@@ -826,7 +963,7 @@ function initTooltipEvents() {
       if (section === 'milestone') {
         const idx = parseInt(godTarget.dataset.milestoneIdx);
         const achieved = STATE.godQuests[gKey][idx];
-        
+
         // Define runeSets internally or retrieve rune
         const runeSets = {
           odin: ['ᚨ', 'ᛗ', 'ᚷ', 'ᚹ', 'ᛃ'],
@@ -846,18 +983,18 @@ function initTooltipEvents() {
         const runeName = runeNames[runeChar] ? ` <span style="font-style:italic; font-size:0.75rem; color:var(--text-muted); font-weight:normal; margin-left:6px;">(${runeChar} ${runeNames[runeChar]})</span>` : '';
 
         header = `${lore.icon} Milestone ${['I', 'II', 'III', 'IV', 'V'][idx]}${runeName}`;
-        
-        let statusHtml = achieved 
-          ? `<span style="color:var(--color-success)">✅ Completed</span>` 
+
+        let statusHtml = achieved
+          ? `<span style="color:var(--color-success)">✅ Completed</span>`
           : `<span style="color:var(--text-muted)">🔒 Unlocked at Favor +${idx + 1}</span>`;
-          
+
         let effectHtml = '';
         if (idx === 4) {
           effectHtml = `<b style="color:${lore.color}">Blessing: ${lore.buff}</b>`;
         } else {
           effectHtml = `<b style="color:${lore.color}">${lore.milestoneEffects[idx]}</b>`;
         }
-        
+
         content = `${statusHtml}<br><div style="margin-top:4px;">${effectHtml}</div>`;
       } else if (section === 'champion') {
         header = `${lore.icon} Champion Buff`;
@@ -893,7 +1030,7 @@ function initTooltipEvents() {
       }
       return;
     }
-    
+
     if (tile.classList.contains('fog')) {
       elTooltip.style.display = 'none';
       return;
@@ -932,9 +1069,9 @@ function initTooltipEvents() {
     if (tile.classList.contains('combat-cell')) {
       const r = Number(tile.dataset.row);
       const c = Number(tile.dataset.col);
-      headerText = `Combat Grid Lane ${r+1}`;
+      headerText = `Combat Grid Lane ${r + 1}`;
       coordsText = `Col: ${c}`;
-      
+
       const unitEl = tile.querySelector('.combat-unit');
       if (unitEl) {
         const unit = STATE.combat.grid[r] ? STATE.combat.grid[r][c] : null;
@@ -942,8 +1079,8 @@ function initTooltipEvents() {
           const stats = getEffectiveStats(unit);
           const allianceText = unit.alliance === 'player' ? 'Viking Soldier' : 'Monster';
           headerText = `${unit.name} (${allianceText})`;
-          
-           const contents = [
+
+          const contents = [
             `<b>HP:</b> ${unit.hp} / ${formatStat(stats.maxHp)}`,
             `<b>Damage:</b> ${formatStat(stats.dmg)}`,
             `<b>Range:</b> ${formatStat(stats.range)}`,
@@ -989,7 +1126,7 @@ function initTooltipEvents() {
   document.body.addEventListener('mouseout', (e) => {
     const tile = e.target.closest('.world-tile, .location-tile, .combat-cell');
     const godTarget = e.target.closest('[data-god-tooltip]');
-    
+
     if (tile && (tile.classList.contains('world-tile') || tile.dataset.entityType === 'burial_mound')) {
       const enteringTile = e.relatedTarget?.closest('.world-tile, .location-tile');
       if (enteringTile !== tile) {
@@ -999,7 +1136,7 @@ function initTooltipEvents() {
     } else if (tile && !e.relatedTarget?.closest('.world-tile, .location-tile, .combat-cell')) {
       elTooltip.style.display = 'none';
     }
-    
+
     if (godTarget && !e.relatedTarget?.closest('[data-god-tooltip]')) {
       elTooltip.style.display = 'none';
     }
@@ -1013,7 +1150,7 @@ function autoDiscoverAdjacent(locId) {
 
   const px = STATE.party.localX;
   const py = STATE.party.localY;
-  
+
   let radius = 1;
   if (STATE.godQuests.odin?.[1]) {
     const m1Config = GODS_CONFIG.modifiers.milestones.odin.find(m => m.index === 1);
@@ -1171,7 +1308,7 @@ function attemptLocalMove(targetX, targetY) {
   // Check tile entities
   if (tile.entity) {
     const ent = tile.entity;
-    
+
     if (ent.type === 'enemy_army' && !ent.isDefeated) {
       // Set pending coordinates, trigger combat, but do NOT move yet
       STATE.party.pendingLocalX = targetX;
@@ -1260,6 +1397,14 @@ function renderResourceBar() {
   elBand.innerText = STATE.band.length;
   elDay.innerText = STATE.day || 1;
 
+  const timeFactor = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.timeFactor) || 0.02;
+  const maxCap = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.maxTimeFactorCap) !== undefined ? LOCATION_CONFIG.difficultyScaling.maxTimeFactorCap : 2.5;
+  const dayValue = STATE.day || 1;
+  const dayMulti = Math.min(maxCap, dayValue * timeFactor).toFixed(2);
+  if (elWorldDifficultyStatus) {
+    elWorldDifficultyStatus.innerText = `+${dayMulti}x Risk`;
+  }
+
   const activeWraths = Object.keys(STATE.godFavor).filter(g => STATE.godFavor[g] <= -4);
   let blessingHtml = '';
   const tempBlessings = [];
@@ -1271,23 +1416,22 @@ function renderResourceBar() {
     STATE.permanentlyActivatedBlessings.forEach(b => {
       if (b !== STATE.activeBlessing) {
         const lore = GOD_LORE[b];
-        tempBlessings.push(`<span data-god-tooltip="${b}" data-tooltip-section="champion" style="color: var(--color-${b}); cursor: pointer;">${lore.icon} ${b.toUpperCase()} (Perm)</span>`);
+        tempBlessings.push(`<span data-god-tooltip="${b}" data-tooltip-section="champion" style="color: var(--color-${b}); cursor: pointer;">${lore.icon} ${b.toUpperCase()}</span>`);
       }
     });
   }
 
   if (tempBlessings.length > 0) {
-    blessingHtml = `Buffs: ${tempBlessings.join(', ')}`;
+    blessingHtml = tempBlessings.join(', ');
   } else {
     blessingHtml = `<span>No Active Buff</span>`;
   }
 
   if (activeWraths.length > 0) {
     const wrathNames = activeWraths.map(g => {
-      const lore = GOD_LORE[g];
-      return `<span data-god-tooltip="${g}" data-tooltip-section="curse" style="color:var(--color-danger); font-weight:bold; cursor: pointer;">${g.toUpperCase()}'S WRATH ⚡</span>`;
-    }).join(', ');
-    elBlessing.innerHTML = `${blessingHtml} | <span style="font-size:0.85em;">Active Curses: ${wrathNames}</span>`;
+      return `<span data-god-tooltip="${g}" data-tooltip-section="curse" style="color:var(--color-danger); font-weight:bold; cursor: pointer;">${g.toUpperCase()}'S WRATH</span>`;
+    });
+    elBlessing.innerHTML = `${blessingHtml}<br>${wrathNames.join(' ⚡ ')}`;
   } else {
     elBlessing.innerHTML = blessingHtml;
   }
@@ -1298,11 +1442,7 @@ function renderWorldMap() {
   elWorldMap.innerHTML = '';
   elWorldCoords.innerText = `Longship Pos - X: ${STATE.party.worldX}, Y: ${STATE.party.worldY}`;
 
-  const timeFactor = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.timeFactor) || 0.02;
-  const maxCap = (LOCATION_CONFIG.difficultyScaling && LOCATION_CONFIG.difficultyScaling.maxTimeFactorCap) !== undefined ? LOCATION_CONFIG.difficultyScaling.maxTimeFactorCap : 2.5;
-  const dayValue = STATE.day || 1;
-  const dayMulti = Math.min(maxCap, dayValue * timeFactor).toFixed(2);
-  elWorldDifficultyStatus.innerText = `Day Multiplier: +${dayMulti}x (Day ${dayValue})`;
+
 
   const tiles = STATE.worldMap.tiles;
   const revealed = STATE.worldMap.revealed;
@@ -1316,10 +1456,10 @@ function renderWorldMap() {
       elCell.classList.add('world-tile');
       elCell.dataset.x = x;
       elCell.dataset.y = y;
-      
+
       const isFog = revealed[y][x];
       const hasLocation = locations[`${x},${y}`];
-      
+
       if (isFog) {
         elCell.classList.add('fog');
       } else {
@@ -1344,7 +1484,14 @@ function renderWorldMap() {
             const isStaticRaid = loc.id.startsWith('raid_');
             if (isStaticRaid) {
               const marker = document.createElement('span');
-              marker.innerText = '⚔️';
+              const emojiMap = {
+                raid_1: '⛪', // Monastery
+                raid_2: '🌊', // Shore
+                raid_3: '🪦', // Burial Mound
+                raid_4: '⛰️', // Cave (Mountain)
+                raid_5: '🏰'  // Ruins
+              };
+              marker.innerText = emojiMap[loc.id] || '⚔️';
               marker.classList.add('raid-marker');
               elCell.appendChild(marker);
             } else {
@@ -1404,14 +1551,14 @@ function renderWorldMap() {
 function movePartyOnWorld(x, y) {
   x = Number(x);
   y = Number(y);
-  
+
   const previousTerrain = STATE.worldMap.tiles[STATE.party.worldY][STATE.party.worldX];
   const targetTerrain = STATE.worldMap.tiles[y][x];
 
   // Verify costs
   let cost = 3;
   let woodCost = 0;
-  
+
   if (targetTerrain === 'water' || targetTerrain === 'river') {
     const thorWrath = GODS_CONFIG.modifiers.wrath.thor;
     const extraSeaWood = thorWrath?.extraSeaWoodCost ?? 1;
@@ -1632,15 +1779,15 @@ function enterLocation(locData) {
   } else {
     // Generate/Load Location Sub-Grid
     STATE.party.currentLocationId = locData.id;
-    
+
     generateLocationMap(locData.id, locData.terrain);
-    
+
     // Start player at local coordinates 5,5 (start tile)
     STATE.party.localX = 5;
     STATE.party.localY = 5;
-    
+
     autoDiscoverAdjacent(locData.id);
-    
+
     setScreen('location');
     logWorld(`Entering raid coordinates: ${locData.name}.`);
   }
@@ -1705,31 +1852,41 @@ function renderTownScreen() {
   if (marketList) {
     marketList.innerHTML = '';
     const trades = [
-      { id: 'btn-buy-food', label: `Buy ${dp.food.foodGained} Food (-${foodCost} Gold)`, btnText: 'Buy [F]', action: () => {
-        const res = buyFood(foodCost, dp.food.foodGained);
-        logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
-        renderTownScreen();
-      }},
-      { id: 'btn-buy-wood', label: `Buy ${dp.woodBuy.woodGained} Wood (-${woodCost} Gold)`, btnText: 'Buy [W]', action: () => {
-        const res = buyWood(woodCost, dp.woodBuy.woodGained);
-        logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
-        renderTownScreen();
-      }},
-      { id: 'btn-sell-sheep', label: `Sell ${dp.sheepSell.sheepSold} Sheep (+${sheepSellGain} Gold)`, btnText: 'Sell [G]', action: () => {
-        const res = sellSheepDynamic(sheepSellGain, dp.sheepSell.sheepSold);
-        logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
-        renderTownScreen();
-      }},
-      { id: 'btn-sell-wood', label: `Sell ${dp.woodSell.woodSold} Wood (+${woodSellGain} Gold)`, btnText: 'Sell [H]', action: () => {
-        const res = sellWoodDynamic(woodSellGain, dp.woodSell.woodSold);
-        logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
-        renderTownScreen();
-      }},
-      { id: 'btn-buy-sheep', label: `Buy ${dp.sheepBuy.sheepGained} Sheep (-${sheepBuyCost} Gold)`, btnText: 'Buy [S]', action: () => {
-        const res = buySheepDynamic(sheepBuyCost, dp.sheepBuy.sheepGained);
-        logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
-        renderTownScreen();
-      }}
+      {
+        id: 'btn-buy-food', label: `Buy ${dp.food.foodGained} Food (-${foodCost} Gold)`, btnText: 'Buy [F]', action: () => {
+          const res = buyFood(foodCost, dp.food.foodGained);
+          logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+          renderTownScreen();
+        }
+      },
+      {
+        id: 'btn-buy-wood', label: `Buy ${dp.woodBuy.woodGained} Wood (-${woodCost} Gold)`, btnText: 'Buy [W]', action: () => {
+          const res = buyWood(woodCost, dp.woodBuy.woodGained);
+          logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+          renderTownScreen();
+        }
+      },
+      {
+        id: 'btn-sell-sheep', label: `Sell ${dp.sheepSell.sheepSold} Sheep (+${sheepSellGain} Gold)`, btnText: 'Sell [G]', action: () => {
+          const res = sellSheepDynamic(sheepSellGain, dp.sheepSell.sheepSold);
+          logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+          renderTownScreen();
+        }
+      },
+      {
+        id: 'btn-sell-wood', label: `Sell ${dp.woodSell.woodSold} Wood (+${woodSellGain} Gold)`, btnText: 'Sell [H]', action: () => {
+          const res = sellWoodDynamic(woodSellGain, dp.woodSell.woodSold);
+          logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+          renderTownScreen();
+        }
+      },
+      {
+        id: 'btn-buy-sheep', label: `Buy ${dp.sheepBuy.sheepGained} Sheep (-${sheepBuyCost} Gold)`, btnText: 'Buy [S]', action: () => {
+          const res = buySheepDynamic(sheepBuyCost, dp.sheepBuy.sheepGained);
+          logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+          renderTownScreen();
+        }
+      }
     ];
 
     trades.forEach(t => {
@@ -1750,27 +1907,27 @@ function renderTownScreen() {
 
   // Build relic lists for temple offerings
   elShrineList.innerHTML = '';
-  const relics = STATE.inventory.filter(i => 
-    i.includes('Shard of Gungnir') || 
-    i.includes('Mjolnir\'s Core') || 
-    i.includes('Amber Tear') || 
-    i.includes('Urn of Ash') || 
+  const relics = STATE.inventory.filter(i =>
+    i.includes('Shard of Gungnir') ||
+    i.includes('Mjolnir\'s Core') ||
+    i.includes('Amber Tear') ||
+    i.includes('Urn of Ash') ||
     i.includes('Trickster Coin')
   );
 
   if (relics.length > 0) {
     elShrineEmpty.classList.add('hidden');
-    
+
     // Map objects mappings
     relics.forEach(relic => {
       const god = GODS_CONFIG.relicToGod[relic] || 'odin';
       const mapName = god.charAt(0).toUpperCase() + god.slice(1);
       const row = document.createElement('div');
       row.classList.add('trade-row');
-      
+
       const label = document.createElement('span');
       label.innerText = relic;
-      
+
       const btn = document.createElement('button');
       btn.classList.add('btn', 'btn-sm', 'btn-primary');
       if (STATE.godFavor[god] >= 5) {
@@ -1800,10 +1957,10 @@ function renderTownScreen() {
       const lore = GOD_LORE[god];
       const isActive = STATE.activeBlessing === god;
       const isPermanent = STATE.permanentlyActivatedBlessings && STATE.permanentlyActivatedBlessings.includes(god);
-      
+
       const row = document.createElement('div');
       row.classList.add('trade-row');
-      
+
       const label = document.createElement('span');
       if (isPermanent) {
         label.innerHTML = `<b style="color:${lore.color}">${lore.icon} ${god.charAt(0).toUpperCase() + god.slice(1)}</b> <span style="color:var(--color-success);font-size:0.8em">✨ PERMANENT ACTIVE</span><br><i style="font-size:0.82em;opacity:0.75">${lore.buff}</i>`;
@@ -1916,7 +2073,7 @@ function renderTownScreen() {
 // Render 10x10 Dungeon Discovery View (Carcassonne)
 function renderLocationMap() {
   elLocMap.innerHTML = '';
-  
+
   const locId = STATE.party.currentLocationId;
   const locState = STATE.locations[locId];
   if (!locState) return;
@@ -1928,7 +2085,7 @@ function renderLocationMap() {
   const diffVal = diffValNum.toFixed(2);
 
   elLocTitle.innerText = locName;
-  
+
   let threatColor = 'var(--color-success)'; // green
   if (diffValNum >= 1.0 && diffValNum <= 1.5) {
     threatColor = 'var(--color-loki)'; // orange
@@ -1990,7 +2147,7 @@ function renderLocationMap() {
       btn1.innerText = '[1] Plunder';
       btn1.addEventListener('click', () => {
         const action = executePlunderMound(ent);
-        showToast(action.toast, action.icon);
+        logLocation(`${action.icon} ${action.toast}`, 'gain-message');
         notify('STATE_UPDATED');
       });
 
@@ -2001,9 +2158,9 @@ function renderLocationMap() {
       btn2.addEventListener('click', () => {
         const action = executeSacrificeSheep(ent);
         if (action) {
-          showToast(action.toast, action.icon);
+          logLocation(`${action.icon} ${action.toast}`, 'gain-message');
         } else {
-          showToast('You have no sheep to sacrifice!', '⚠️');
+          logLocation('⚠️ You have no sheep to sacrifice!', 'warn-message');
         }
         notify('STATE_UPDATED');
       });
@@ -2035,7 +2192,7 @@ function renderLocationMap() {
       elCell.classList.add('location-tile');
       elCell.dataset.x = x;
       elCell.dataset.y = y;
-      
+
       const coordKey = `${x},${y}`;
       const tile = placed[coordKey];
       const isNeighbor = Math.abs(x - px) + Math.abs(y - py) === 1;
@@ -2044,7 +2201,7 @@ function renderLocationMap() {
         // Render terrain
         elCell.classList.add(`terrain-${tile.terrainType}`);
         elCell.dataset.terrain = tile.terrainType;
-        
+
         let entityDesc = '';
         if (tile.entity) {
           const ent = tile.entity;
@@ -2066,13 +2223,13 @@ function renderLocationMap() {
               entityDesc = '🕳️ Cave Sub-Dungeon Portal';
             }
           }
-          
+
           if (entityDesc) {
             elCell.dataset.entityType = ent.type;
             elCell.dataset.entityState = entityDesc;
           }
         }
-        
+
         // Show interactive entity if present
         if (tile.entity) {
           const ent = tile.entity;
@@ -2086,7 +2243,7 @@ function renderLocationMap() {
               if (x === px && y === py) triggerEncounterEvent(coordKey, ent);
               else attemptLocalPathMove(x, y);
             });
-          } 
+          }
           else if (ent.type === 'wood_source' && !ent.isLooted) {
             badge.innerText = '🪵';
             badge.addEventListener('click', (e) => {
@@ -2134,7 +2291,7 @@ function renderLocationMap() {
               e.stopPropagation();
               attemptLocalPathMove(x, y);
             });
-          } 
+          }
           else if (ent.type === 'burial_mound' && !ent.isExplored) {
             badge.innerText = '🪦';
             badge.addEventListener('click', (e) => {
@@ -2145,7 +2302,7 @@ function renderLocationMap() {
                 attemptLocalPathMove(x, y);
               }
             });
-          } 
+          }
           else if (ent.type === 'dolmen' && !ent.isVisited) {
             badge.innerText = '🏆';
             badge.addEventListener('click', (e) => {
@@ -2199,7 +2356,7 @@ function renderLocationMap() {
       } else {
         // Render fog of war
         elCell.classList.add('fog');
-        
+
         // Adjacent tiles are clickable to move/discover
         if (isNeighbor) {
           elCell.classList.add('tile-border-highlight');
@@ -2282,43 +2439,43 @@ function triggerEncounterEvent(coordKey, entity) {
     }
     adjustResource('gold', goldGained);
     entity.isLooted = true;
-    showToast(`Uncovered buried chest! Looted +${goldGained} Gold.${STATE.godQuests.loki?.[0] ? ` (Loki bonus +${bonus})` : ''}`, '🪙');
+    logLocation(`🪙 Uncovered buried chest! Looted +${goldGained} Gold.${STATE.godQuests.loki?.[0] ? ` (Loki bonus +${bonus})` : ''}`, 'gain-message');
     notify('STATE_UPDATED');
-  } 
+  }
   else if (entity.type === 'wood_source') {
     adjustResource('wood', entity.wood);
     entity.isLooted = true;
-    showToast(`Harvested wood source! Gathered +${entity.wood} Wood.`, '🪵');
+    logLocation(`🪵 Harvested wood source! Gathered +${entity.wood} Wood.`, 'gain-message');
     notify('STATE_UPDATED');
   }
   else if (entity.type === 'sheep_source') {
     adjustResource('sheep', entity.sheep);
     entity.isLooted = true;
-    showToast(`Rescued lost sheep! Added +${entity.sheep} Sheep to herd.`, '🐑');
+    logLocation(`🐑 Rescued lost sheep! Added +${entity.sheep} Sheep to herd.`, 'gain-message');
     notify('STATE_UPDATED');
   }
   else if (entity.type === 'ore_deposit') {
     adjustResource('gold', entity.gold);
     entity.isLooted = true;
-    showToast(`Mined ore deposit! Gained +${entity.gold} Gold.`, '🪨');
+    logLocation(`🪨 Mined ore deposit! Gained +${entity.gold} Gold.`, 'gain-message');
     notify('STATE_UPDATED');
   }
   else if (entity.type === 'fishing_spot') {
     adjustResource('food', entity.food);
     entity.isLooted = true;
-    showToast(`Caught fresh fish! Added +${entity.food} Food.`, '🎣');
+    logLocation(`🎣 Caught fresh fish! Added +${entity.food} Food.`, 'gain-message');
     notify('STATE_UPDATED');
   }
   else if (entity.type === 'berry_bush') {
     adjustResource('food', entity.food);
     entity.isLooted = true;
-    showToast(`Gathered wild berries! Added +${entity.food} Food.`, '🍒');
+    logLocation(`🍒 Gathered wild berries! Added +${entity.food} Food.`, 'gain-message');
     notify('STATE_UPDATED');
   }
   else if (entity.type === 'dolmen') {
     STATE.inventory.push(entity.magicObjectId);
     entity.isVisited = true;
-    showToast(`Retrieved ${entity.magicObjectId} relic from Druid Dolmen!`, '🏆');
+    logLocation(`🏆 Retrieved ${entity.magicObjectId} relic from Druid Dolmen!`, 'gain-message');
     notify('STATE_UPDATED');
   }
   else {
@@ -2344,7 +2501,7 @@ function triggerEncounterEvent(coordKey, entity) {
         const action = executePlunderMound(entity);
         hideOverlay(elModalEvent);
         notify('STATE_UPDATED');
-        showToast(action.toast, action.icon);
+        logLocation(`${action.icon} ${action.toast}`, 'gain-message');
       });
 
       const choice2 = document.createElement('button');
@@ -2354,9 +2511,9 @@ function triggerEncounterEvent(coordKey, entity) {
         const action = executeSacrificeSheep(entity);
         if (action) {
           hideOverlay(elModalEvent);
-          showToast(action.toast, action.icon);
+          logLocation(`${action.icon} ${action.toast}`, 'gain-message');
         } else {
-          showToast('You have no sheep to sacrifice!', '⚠️');
+          logLocation('⚠️ You have no sheep to sacrifice!', 'warn-message');
         }
         notify('STATE_UPDATED');
       });
@@ -2459,7 +2616,7 @@ function renderFormationElement() {
 // Render 10x8 Combat lanes grid
 function renderCombatGrid() {
   elCombatGrid.innerHTML = '';
-  
+
   const grid = STATE.combat.grid;
   if (!grid || grid.length === 0) return;
 
@@ -2479,7 +2636,7 @@ function renderCombatGrid() {
             deployUnit(STATE.combat.selectedPoolIndex, r, c);
           });
         }
-        
+
         // Render keyboard shortcut key hint in the cell (qweruiop for col 0, asdfjklö for col 1)
         const hints = {
           '0,0': 'Q', '1,0': 'W', '2,0': 'E', '3,0': 'R', '4,0': 'U', '5,0': 'I', '6,0': 'O', '7,0': 'P',
@@ -2499,7 +2656,7 @@ function renderCombatGrid() {
       if (unit) {
         const elUnit = document.createElement('div');
         elUnit.classList.add('combat-unit', `alliance-${unit.alliance}`);
-        
+
         // Attack dynamic animations
         if (unit.isAttacking) {
           elUnit.classList.add('attacking');
@@ -2618,7 +2775,7 @@ function renderCombatGrid() {
     } else if (ratio < 0.8) {
       bgColor = 'orange';
     }
-    
+
     card.innerHTML = `
       <span>${numHint}${icons[unit.type]} ${unit.name}</span>
       <span style="font-size:0.75rem">${unit.type}</span>
@@ -2693,7 +2850,7 @@ function showGodLorePopup(gKey) {
   }).join('');
 
   const favorActionHtml = lore.favorAction || '';
-  
+
   const opps = GODS_CONFIG.pentagramOpposites[gKey] || [];
   const oppositesHtml = opps.map(oppKey => {
     const oppLore = GOD_LORE[oppKey];
@@ -2755,7 +2912,7 @@ function renderQuestsScreen() {
   // To map opposites exactly across the star, the gods must be arranged in the polar coordinate order:
   // odin, thor, freya, hel, loki. (Top starts at -90 degrees, increments by 72 deg).
   const gods = ['odin', 'thor', 'freya', 'hel', 'loki'];
-  
+
   // Calculate polar coordinates dynamically
   // Center is (50, 50), Radius is 40
   const cx = 50;
@@ -2793,14 +2950,19 @@ function renderQuestsScreen() {
     <polygon points="${starPointsStr}" class="pentagram-star" />
   `;
   elQuestsList.appendChild(pentagramSvg);
-  
+
   gods.forEach(gKey => {
     const lore = GOD_LORE[gKey];
     const node = document.createElement('div');
     node.classList.add('god-pentagram-node', `deity-${gKey}`);
+    const isPermanent = STATE.permanentlyActivatedBlessings && STATE.permanentlyActivatedBlessings.includes(gKey);
+    const isActive = STATE.activeBlessing === gKey;
+    if (isPermanent || isActive) {
+      node.classList.add('permanently-active');
+    }
     node.style.top = coordinates[gKey].top;
     node.style.left = coordinates[gKey].left;
-    
+
     // ── God Identity (hover = full god info tooltip) ──
     const idCol = document.createElement('div');
     idCol.classList.add('god-identity');
@@ -2810,7 +2972,7 @@ function renderQuestsScreen() {
     idCol.addEventListener('click', () => {
       showGodLorePopup(gKey);
     });
-    
+
     const favor = STATE.godFavor[gKey];
     const favorColor = favor > 0 ? 'var(--color-success)' : favor < 0 ? 'var(--color-danger)' : 'var(--text-muted)';
     const favorSign = favor > 0 ? '+' : '';
@@ -2819,11 +2981,11 @@ function renderQuestsScreen() {
     name.classList.add('god-name');
     name.innerHTML = `${lore.icon} ${lore.title.split('—')[0].trim()}`;
     name.style.color = `var(--color-${gKey})`;
-    
+
     const favorEl = document.createElement('span');
     favorEl.classList.add('god-favor-score');
     favorEl.innerHTML = `Favor: <b style="color:${favorColor}">${favorSign}${favor}</b> / 5`;
-    
+
     idCol.appendChild(name);
     idCol.appendChild(favorEl);
     node.appendChild(idCol);
@@ -2831,7 +2993,7 @@ function renderQuestsScreen() {
     // ── Milestones track ──
     const trackCol = document.createElement('div');
     trackCol.classList.add('god-progress-bar');
-    
+
     const track = STATE.godQuests[gKey];
     const runeSets = {
       odin: ['ᚨ', 'ᛗ', 'ᚷ', 'ᚹ', 'ᛃ'],
@@ -2860,18 +3022,18 @@ function renderQuestsScreen() {
     // ── Champion toggle button/label ──
     const toggleCol = document.createElement('div');
     toggleCol.classList.add('champion-selector-cell');
-    
+
     const isChampion = track.every(x => x === true);
     if (isChampion) {
       const btn = document.createElement('button');
       btn.classList.add('btn', 'btn-sm');
       btn.dataset.godTooltip = gKey;
       btn.dataset.tooltipSection = 'champion';
-      
+
       const isPermanent = STATE.permanentlyActivatedBlessings && STATE.permanentlyActivatedBlessings.includes(gKey);
       if (isPermanent) {
         btn.innerText = 'Always Active ✨';
-        btn.classList.add('btn-success');
+        btn.classList.add('btn-primary', 'btn-always-active');
         btn.disabled = true;
       } else if (STATE.activeBlessing === gKey) {
         btn.innerText = 'Active ✨';
@@ -2893,7 +3055,7 @@ function renderQuestsScreen() {
       locked.dataset.tooltipSection = 'champion_locked';
       toggleCol.appendChild(locked);
     }
-    
+
     node.appendChild(toggleCol);
     elQuestsList.appendChild(node);
   });
@@ -2913,23 +3075,23 @@ function renderPartyPanel() {
       row.style.padding = '0.5rem 0';
       row.style.maxWidth = '450px';
       row.style.margin = '0 auto';
-      
+
       const details = document.createElement('div');
       details.style.display = 'flex';
       details.style.flexDirection = 'column';
       details.style.gap = '2px';
-      
+
       const effStats = getEffectiveStats(unit);
 
       const name = document.createElement('span');
       const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
       name.innerHTML = `<b>${icons[unit.type] || '⚔️'} ${unit.name}</b> (${unit.type.toUpperCase()})`;
-      
+
       const stats = document.createElement('span');
       stats.style.fontSize = '0.75rem';
       stats.style.color = 'var(--text-muted)';
       stats.innerText = `ATK: ${formatStat(effStats.dmg)} | SPD: ${formatStat(effStats.speed)} | RNG: ${formatStat(effStats.range)}`;
-      
+
       details.appendChild(name);
       details.appendChild(stats);
 
@@ -3007,14 +3169,14 @@ function renderPartyPanel() {
       row.style.padding = '0.5rem 0';
       row.style.maxWidth = '450px';
       row.style.margin = '0 auto';
-      
+
       const label = document.createElement('span');
       label.innerHTML = `💎 <b>${item}</b>`;
-      
+
       const qty = document.createElement('span');
       qty.style.fontWeight = 'bold';
       qty.innerText = `x${count}`;
-      
+
       row.appendChild(label);
       row.appendChild(qty);
       elPartyInventoryContent.appendChild(row);
@@ -3092,7 +3254,7 @@ export function showToast(msg, icon = '✨', isImportant = false) {
 
   const card = document.createElement('div');
   card.className = `toast-card glass-panel ${isImportant ? 'important-toast' : ''}`;
-  
+
   card.innerHTML = `
     <span class="toast-icon">${icon}</span>
     <span class="toast-message">${msg}</span>
@@ -3125,7 +3287,7 @@ function updateModalKeyboardNavigation() {
   }
 
   const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'))
-    .filter(btn => !btn.classList.contains('btn-close-x') && !btn.classList.contains('modal-close-btn'));
+    .filter(btn => !btn.classList.contains('btn-close-x') && !btn.classList.contains('modal-close-btn') && !btn.classList.contains('btn-no-shortcut'));
   if (buttons.length === 0) return;
 
   if (activeModalFocusIndex >= buttons.length) {
@@ -3137,7 +3299,7 @@ function updateModalKeyboardNavigation() {
     if (!btn.dataset.cleanText) {
       btn.dataset.cleanText = cleanText;
     }
-    
+
     // Set HTML with a nice stylized key-badge
     btn.innerHTML = `<span class="key-badge">${idx + 1}</span> ${btn.dataset.cleanText}`;
 
@@ -3165,7 +3327,7 @@ function hideOverlay(el) {
 export function handleStateNotification(event, data) {
   if (event === 'SCREEN_CHANGE') {
     render();
-  } 
+  }
   else if (event === 'FAVOR_UPDATED' || event === 'RESOURCES_UPDATED') {
     renderResourceBar();
     if (STATE.activeScreen === 'quests') renderQuestsScreen();
@@ -3216,15 +3378,15 @@ export function handleStateNotification(event, data) {
   else if (event === 'COMBAT_VICTORY') {
     logWorld('VICTORY! The lane has been cleared of monsters.', 'gain-message');
     showToast('Victory! You cleared the monsters.', '⚔️', true);
-    
+
     // Auto-resolve pending move on victory
     if (STATE.party.pendingLocalX !== undefined && STATE.party.pendingLocalY !== undefined) {
       STATE.party.localX = STATE.party.pendingLocalX;
       STATE.party.localY = STATE.party.pendingLocalY;
-      
+
       const locId = STATE.party.currentLocationId;
       autoDiscoverAdjacent(locId);
-      
+
       const locState = STATE.locations[locId];
       if (locState) {
         const coordKey = `${STATE.party.localX},${STATE.party.localY}`;
@@ -3236,8 +3398,8 @@ export function handleStateNotification(event, data) {
       delete STATE.party.pendingLocalX;
       delete STATE.party.pendingLocalY;
     }
-    
-    {
+
+    setTimeout(() => {
       const locId = STATE.party.currentLocationId;
       if (!locId) {
         setScreen('world');
@@ -3245,7 +3407,7 @@ export function handleStateNotification(event, data) {
         const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
         setScreen((locData && locData.type === 'town') ? 'world' : 'location');
       }
-    }
+    }, 1000);
   }
   else if (event === 'COMBAT_FLEE') {
     const stolenParts = Object.entries(data.stolen)
@@ -3298,7 +3460,7 @@ export function handleStateNotification(event, data) {
     elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-${godName}`;
     elModalAscension.querySelector('.logo-text').innerText = `⚡ ${godName.toUpperCase()} CHAMPION ⚡`;
     elModalAscensionText.innerHTML = `You have completed all Milestones for <b>${lore.title}</b>!<br><br><b>Patron Buff unlocked:</b><br><i style="color: var(--color-${godName})">${lore.buff}</i>`;
-    
+
     // Hide final ascension button
     document.getElementById('btn-ascend-victory').classList.add('hidden');
     document.getElementById('btn-ascend-continue').innerText = 'Continue';
@@ -3329,7 +3491,7 @@ export function handleStateNotification(event, data) {
     elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-odin`;
     elModalAscension.querySelector('.logo-text').innerText = 'A S C E N S I O N';
     elModalAscensionText.innerHTML = `You have completed all milestones for <b>ALL 5 GODS</b>!<br><br>The gates of Valhalla are open. You have achieved final ascension!`;
-    
+
     // Unhide final ascension button
     document.getElementById('btn-ascend-victory').classList.remove('hidden');
     document.getElementById('btn-ascend-continue').innerText = 'Stay in Midgard';
@@ -3337,7 +3499,7 @@ export function handleStateNotification(event, data) {
     // Remove any previously injected buff button
     const prevBuff = document.getElementById('btn-ascend-buff');
     if (prevBuff) prevBuff.remove();
-    
+
     showOverlay(elModalAscension);
   }
   else if (event === 'GAME_OVER') {
