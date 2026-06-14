@@ -1145,9 +1145,9 @@ function initTooltipEvents() {
               
               if (unlocked) {
                 if (hasCast) {
-                  statusSymbol = '❌';
+                  statusSymbol = '🔲';
                   statusText = 'Depleted';
-                  statusColor = 'var(--color-danger)';
+                  statusColor = 'var(--text-muted)';
                 } else {
                   statusSymbol = '✅';
                   statusText = 'Ready';
@@ -2962,9 +2962,9 @@ function renderCombatGrid() {
           
           if (unlocked) {
             if (hasCast) {
-              statusSymbol = '❌';
+              statusSymbol = '🔲';
               statusText = 'Depleted';
-              statusColor = 'var(--color-danger)';
+              statusColor = 'var(--text-muted)';
             } else {
               statusSymbol = '✅';
               statusText = 'Ready';
