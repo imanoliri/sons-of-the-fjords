@@ -3424,6 +3424,12 @@ export function logLocation(msg, typeClass = 'system-message') {
 
 /* --- Visual Effects Helpers --- */
 
+function getCellEl(r, c) {
+  const combatGrid = document.getElementById('combat-grid');
+  if (!combatGrid) return null;
+  return combatGrid.querySelector(`.combat-cell[data-row="${r}"][data-col="${c}"]`);
+}
+
 /**
  * Spawn a floating text label rising from a specific cell.
  */
