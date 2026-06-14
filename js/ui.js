@@ -103,7 +103,11 @@ const MONSTER_EMOJIS = {
   'Draugr Warrior': '🧟',
   'Cave Troll': '👹',
   'Frost Giant (Jotunn)': '❄️',
-  'Lindwurm': '🐉'
+  'Lindwurm': '🐉',
+  'Ice Wolf': '🥶',
+  'Mercenary Guard': '💂',
+  'Shore Raider': '🏴‍☠️',
+  'Archipelago Wraith': '👻'
 };
 
 // Initialize UI binding event listeners
@@ -2853,7 +2857,11 @@ function renderCombatGrid() {
             'Draugr Warrior': '🧟',
             'Cave Troll': '👹',
             'Frost Giant (Jotunn)': '❄️',
-            'Lindwurm': '🐉'
+            'Lindwurm': '🐉',
+            'Ice Wolf': '🥶',
+            'Mercenary Guard': '💂',
+            'Shore Raider': '🏴‍☠️',
+            'Archipelago Wraith': '👻'
           };
           elUnit.innerText = avatars[unit.type] || '👾';
         }

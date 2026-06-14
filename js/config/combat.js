@@ -32,7 +32,12 @@ export const COMBAT_CONFIG = {
     'Draugr Warrior':      { hp: 35,  dmg: 5,  speed: 1, range: 1 },
     'Cave Troll':          { hp: 70,  dmg: 8,  speed: 1, range: 1 },
     'Frost Giant (Jotunn)':{ hp: 120, dmg: 10, speed: 1, range: 1 },
-    'Lindwurm':            { hp: 50,  dmg: 6,  speed: 2, range: 1 }
+    'Lindwurm':            { hp: 50,  dmg: 6,  speed: 2, range: 1 },
+    // New Monsters & Foes for specific worlds
+    'Ice Wolf':            { hp: 30,  dmg: 5,  speed: 3, range: 1 }, // Tundra/Frozen Wastes
+    'Mercenary Guard':     { hp: 45,  dmg: 6,  speed: 2, range: 1 }, // Iron Coast
+    'Shore Raider':        { hp: 40,  dmg: 5,  speed: 2, range: 1 }, // Iron Coast / Dark Archipelago
+    'Archipelago Wraith':  { hp: 38,  dmg: 6,  speed: 1, range: 2 }  // Dark Archipelago ruins
   },
 
   // Fallback stats for unknown monsters

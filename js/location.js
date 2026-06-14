@@ -4,8 +4,9 @@
 
 import { STATE } from './state.js';
 import { LOCATION_CONFIG as CFG } from './config/location.js';
-import { WORLD_CONFIG } from './config/world.js';
+import { WORLD_CONFIG, getActiveMap } from './config/world.js';
 import { GODS_CONFIG } from './config/gods.js';
+import { getActiveMap as getActiveWorldMap } from './world.js';
 
 // Spawns/Initializes the Carcassonne stack for a location
 export function generateLocationMap(locationId, worldTileTerrain, parentLocationId = null, parentCoords = null) {
@@ -538,6 +539,24 @@ function buildEntityOfType(locationId, type, terrain, x, y, locationType, diffic
       pool = [...resolvedPool];
     } else {
       pool = [...(pools.default || e.monsterPool)];
+    }
+
+    // Map-specific monster pool adjustments
+    const activeMap = getActiveWorldMap();
+    if (activeMap) {
+      if (activeMap.id === 'frozen_wastes') {
+        // Swap or add Ice Wolves and Frost Giants
+        pool = pool.filter(m => m !== 'Fenrir Pack Wolf');
+        pool.push('Ice Wolf');
+      } else if (activeMap.id === 'iron_coast') {
+        // Swap or add Mercenary Guards and Shore Raiders
+        pool = pool.filter(m => m !== 'Giant Brood-Spider');
+        pool.push('Mercenary Guard', 'Shore Raider');
+      } else if (activeMap.id === 'dark_archipelago') {
+        // Swap or add Archipelago Wraiths and Shore Raiders
+        pool = pool.filter(m => m !== 'Draugr Warrior');
+        pool.push('Archipelago Wraith', 'Shore Raider');
+      }
     }
 
     const ds = CFG.difficultyScaling || {};
