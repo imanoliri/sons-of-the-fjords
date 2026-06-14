@@ -520,15 +520,15 @@ export function initUIBindings() {
         if (key === '1') {
           e.preventDefault();
           const action = executePlunderMound(activePortalTarget.entity);
-          showToast(action.toast, action.icon);
+          logLocation(`${action.icon} ${action.toast}`, 'gain-message');
           notify('STATE_UPDATED');
         } else if (key === '2') {
           e.preventDefault();
           const action = executeSacrificeSheep(activePortalTarget.entity);
           if (action) {
-            showToast(action.toast, action.icon);
+            logLocation(`${action.icon} ${action.toast}`, 'gain-message');
           } else {
-            showToast('You have no sheep to sacrifice!', '⚠️');
+            logLocation('⚠️ You have no sheep to sacrifice!', 'warn-message');
           }
           notify('STATE_UPDATED');
         } else if (key === '3') {
@@ -2109,7 +2109,7 @@ function renderLocationMap() {
       btn1.innerText = '[1] Plunder';
       btn1.addEventListener('click', () => {
         const action = executePlunderMound(ent);
-        showToast(action.toast, action.icon);
+        logLocation(`${action.icon} ${action.toast}`, 'gain-message');
         notify('STATE_UPDATED');
       });
 
@@ -2120,9 +2120,9 @@ function renderLocationMap() {
       btn2.addEventListener('click', () => {
         const action = executeSacrificeSheep(ent);
         if (action) {
-          showToast(action.toast, action.icon);
+          logLocation(`${action.icon} ${action.toast}`, 'gain-message');
         } else {
-          showToast('You have no sheep to sacrifice!', '⚠️');
+          logLocation('⚠️ You have no sheep to sacrifice!', 'warn-message');
         }
         notify('STATE_UPDATED');
       });
@@ -2401,43 +2401,43 @@ function triggerEncounterEvent(coordKey, entity) {
     }
     adjustResource('gold', goldGained);
     entity.isLooted = true;
-    showToast(`Uncovered buried chest! Looted +${goldGained} Gold.${STATE.godQuests.loki?.[0] ? ` (Loki bonus +${bonus})` : ''}`, '🪙');
+    logLocation(`🪙 Uncovered buried chest! Looted +${goldGained} Gold.${STATE.godQuests.loki?.[0] ? ` (Loki bonus +${bonus})` : ''}`, 'gain-message');
     notify('STATE_UPDATED');
   } 
   else if (entity.type === 'wood_source') {
     adjustResource('wood', entity.wood);
     entity.isLooted = true;
-    showToast(`Harvested wood source! Gathered +${entity.wood} Wood.`, '🪵');
+    logLocation(`🪵 Harvested wood source! Gathered +${entity.wood} Wood.`, 'gain-message');
     notify('STATE_UPDATED');
   }
   else if (entity.type === 'sheep_source') {
     adjustResource('sheep', entity.sheep);
     entity.isLooted = true;
-    showToast(`Rescued lost sheep! Added +${entity.sheep} Sheep to herd.`, '🐑');
+    logLocation(`🐑 Rescued lost sheep! Added +${entity.sheep} Sheep to herd.`, 'gain-message');
     notify('STATE_UPDATED');
   }
   else if (entity.type === 'ore_deposit') {
     adjustResource('gold', entity.gold);
     entity.isLooted = true;
-    showToast(`Mined ore deposit! Gained +${entity.gold} Gold.`, '🪨');
+    logLocation(`🪨 Mined ore deposit! Gained +${entity.gold} Gold.`, 'gain-message');
     notify('STATE_UPDATED');
   }
   else if (entity.type === 'fishing_spot') {
     adjustResource('food', entity.food);
     entity.isLooted = true;
-    showToast(`Caught fresh fish! Added +${entity.food} Food.`, '🎣');
+    logLocation(`🎣 Caught fresh fish! Added +${entity.food} Food.`, 'gain-message');
     notify('STATE_UPDATED');
   }
   else if (entity.type === 'berry_bush') {
     adjustResource('food', entity.food);
     entity.isLooted = true;
-    showToast(`Gathered wild berries! Added +${entity.food} Food.`, '🍒');
+    logLocation(`🍒 Gathered wild berries! Added +${entity.food} Food.`, 'gain-message');
     notify('STATE_UPDATED');
   }
   else if (entity.type === 'dolmen') {
     STATE.inventory.push(entity.magicObjectId);
     entity.isVisited = true;
-    showToast(`Retrieved ${entity.magicObjectId} relic from Druid Dolmen!`, '🏆');
+    logLocation(`🏆 Retrieved ${entity.magicObjectId} relic from Druid Dolmen!`, 'gain-message');
     notify('STATE_UPDATED');
   }
   else {
@@ -2463,7 +2463,7 @@ function triggerEncounterEvent(coordKey, entity) {
         const action = executePlunderMound(entity);
         hideOverlay(elModalEvent);
         notify('STATE_UPDATED');
-        showToast(action.toast, action.icon);
+        logLocation(`${action.icon} ${action.toast}`, 'gain-message');
       });
 
       const choice2 = document.createElement('button');
@@ -2473,9 +2473,9 @@ function triggerEncounterEvent(coordKey, entity) {
         const action = executeSacrificeSheep(entity);
         if (action) {
           hideOverlay(elModalEvent);
-          showToast(action.toast, action.icon);
+          logLocation(`${action.icon} ${action.toast}`, 'gain-message');
         } else {
-          showToast('You have no sheep to sacrifice!', '⚠️');
+          logLocation('⚠️ You have no sheep to sacrifice!', 'warn-message');
         }
         notify('STATE_UPDATED');
       });
