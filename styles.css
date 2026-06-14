@@ -2110,15 +2110,17 @@ body {
 }
 
 .huntsman-arrow-projectile {
-  font-size: 1.25rem;
+  font-size: 0.85rem;
+  color: #ffd700;
   pointer-events: none;
-  filter: drop-shadow(0 0 4px #fff);
+  filter: drop-shadow(0 0 3px #ffd700);
   width: auto;
   height: auto;
   z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
 }
 
 
