@@ -10,12 +10,12 @@ import { GODS_CONFIG as GC } from './config/gods.js';
 let combatTimer = null;
 
 export function sortPoolByPoints() {
-  const order = STATE.combat.formationOrder || ['shieldmaiden', 'berserker', 'huntsman'];
+  const order = STATE.combat.formationOrder || ['shieldmaiden', 'berserker', 'huntsman', 'huskarl'];
   STATE.combat.pool.sort((a, b) => {
     const idxA = order.indexOf(a.type);
     const idxB = order.indexOf(b.type);
-    const ptsA = idxA !== -1 ? (3 - idxA) : 1;
-    const ptsB = idxB !== -1 ? (3 - idxB) : 1;
+    const ptsA = idxA !== -1 ? (order.length - idxA) : 1;
+    const ptsB = idxB !== -1 ? (order.length - idxB) : 1;
     
     const pA = ptsA * (a.hp / a.maxHp);
     const pB = ptsB * (b.hp / b.maxHp);
@@ -333,6 +333,11 @@ function combatTick() {
         if (!currentTarget || currentTarget.hp <= 0) break;
 
         let dmgTaken = getEffectiveStats(unit).dmg.total;
+
+        // Heavy armor: reduces incoming damage by 1
+        if (currentTarget.type === 'huskarl') {
+          dmgTaken = Math.max(0, dmgTaken - 1);
+        }
 
         // Freya Milestone 4: Shieldmaidens block 1 DMG per hit
         if (currentTarget.alliance === 'player' && currentTarget.type === 'shieldmaiden' && STATE.godQuests.freya?.[3]) {

@@ -288,6 +288,12 @@ export function initUIBindings() {
     logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
   });
 
+  bindButton('btn-recruit-huskarl', () => {
+    const cost = TOWN_CONFIG.recruitCosts.huskarl;
+    const res = buyRecruit('huskarl', cost);
+    logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+  });
+
   bindButton('btn-heal-warriors', () => {
     const res = healWarriors();
     logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
@@ -605,6 +611,10 @@ export function initUIBindings() {
       else if (key === '3') {
         e.preventDefault();
         document.getElementById('btn-recruit-huntsman')?.click();
+      }
+      else if (key === '4') {
+        e.preventDefault();
+        document.getElementById('btn-recruit-huskarl')?.click();
       }
     }
     // Check if player is on Combat screen
@@ -1636,10 +1646,17 @@ function movePartyOnWorld(x, y) {
     }
   }
 
-  // Set position
   STATE.party.worldX = x;
   STATE.party.worldY = y;
   STATE.day = (STATE.day || 1) + 1;
+
+  // Apply Huskarl upkeep: 1 gold each per move on the world map.
+  const huskarlsCount = STATE.band.filter(u => u.type === 'huskarl').length;
+  if (huskarlsCount > 0) {
+    adjustResource('gold', -huskarlsCount);
+    logWorld(`Huskarl Upkeep: Paid ${huskarlsCount} Gold for elite frontline soldiers.`, 'warn-message');
+  }
+
   renderResourceBar();
 
   // Reveal fog in a 2-tile radius around player
@@ -2042,7 +2059,7 @@ function renderTownScreen() {
   }
 
   // Render recruiting stats with modifiers
-  ['shieldmaiden', 'berserker', 'huntsman'].forEach(t => {
+  ['shieldmaiden', 'berserker', 'huntsman', 'huskarl'].forEach(t => {
     const el = document.getElementById(`recruit-stats-${t}`);
     if (el) {
       const dummy = { type: t, hp: 0, maxHp: 0, dmg: 0, speed: 0, range: 0 };
@@ -2052,20 +2069,17 @@ function renderTownScreen() {
   });
 
   // Great Hall recruitment labels
-  const baseCosts = {
-    shieldmaiden: { gold: 5, food: 10 },
-    berserker: { gold: 7, sheep: 1 },
-    huntsman: { gold: 6, wood: 3 }
-  };
-  ['shieldmaiden', 'berserker', 'huntsman'].forEach(t => {
+  ['shieldmaiden', 'berserker', 'huntsman', 'huskarl'].forEach(t => {
     const labelEl = document.getElementById(`label-recruit-${t}`);
     if (labelEl) {
-      let gCost = baseCosts[t].gold;
-      const otherRes = Object.keys(baseCosts[t]).find(k => k !== 'gold');
-      const otherAmt = baseCosts[t][otherRes];
-      const otherLabel = otherRes.charAt(0).toUpperCase() + otherRes.slice(1);
+      const costs = TOWN_CONFIG.recruitCosts[t];
+      const costStrings = [];
+      for (const [res, amt] of Object.entries(costs)) {
+        const resLabel = res.charAt(0).toUpperCase() + res.slice(1);
+        costStrings.push(`-${amt} ${resLabel}`);
+      }
       const capName = t.charAt(0).toUpperCase() + t.slice(1);
-      labelEl.innerText = `Hire ${capName} (-${gCost} Gold, -${otherAmt} ${otherLabel})`;
+      labelEl.innerText = `Hire ${capName} (${costStrings.join(', ')})`;
     }
   });
 }
@@ -2544,8 +2558,8 @@ function renderFormationElement() {
   if (!container) return;
   container.innerHTML = '';
 
-  const order = STATE.combat.formationOrder || ['berserker', 'shieldmaiden', 'huntsman'];
-  const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
+  const order = STATE.combat.formationOrder || ['berserker', 'shieldmaiden', 'huntsman', 'huskarl'];
+  const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️' };
 
   order.forEach((type, idx) => {
     // Separator arrow between icons
@@ -2689,6 +2703,7 @@ function renderCombatGrid() {
             shieldmaiden: '🛡️',
             berserker: '🪓',
             huntsman: '🏹',
+            huskarl: '⚔️',
             'Giant Brood-Spider': '🕷️',
             'Fenrir Pack Wolf': '🐺',
             'Draugr Warrior': '🧟',
@@ -2765,7 +2780,7 @@ function renderCombatGrid() {
       card.classList.add('selected');
     }
 
-    const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
+    const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️' };
     const numHint = idx < SOLDIERS_CONFIG.maxBandSize ? `<span class="pool-number-hint">[${idx + 1}]</span> ` : '';
     const ratio = unit.hp / unit.maxHp;
     const hpPct = ratio * 100;
@@ -3084,7 +3099,7 @@ function renderPartyPanel() {
       const effStats = getEffectiveStats(unit);
 
       const name = document.createElement('span');
-      const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
+      const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️' };
       name.innerHTML = `<b>${icons[unit.type] || '⚔️'} ${unit.name}</b> (${unit.type.toUpperCase()})`;
 
       const stats = document.createElement('span');

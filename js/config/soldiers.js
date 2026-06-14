@@ -24,13 +24,15 @@ export const SOLDIERS_CONFIG = {
   recruitStats: {
     shieldmaiden: { hp: 60, maxHp: 60, dmg: 4, speed: 2, range: 1 },
     berserker:    { hp: 45, maxHp: 45, dmg: 8, speed: 3, range: 1 },
-    huntsman:     { hp: 35, maxHp: 35, dmg: 6, speed: 2, range: 4 }
+    huntsman:     { hp: 35, maxHp: 35, dmg: 6, speed: 2, range: 4 },
+    huskarl:      { hp: 85, maxHp: 85, dmg: 9, speed: 2, range: 1 }
   },
 
   // Random name pools per type
   recruitNames: {
     shieldmaiden: ['Brynhild', 'Hervor', 'Gerd', 'Signy'],
     berserker:    ['Gunnar', 'Torstein', 'Ragnar', 'Bjorn'],
-    huntsman:     ['Egil', 'Ullr', 'Solveig', 'Kari']
+    huntsman:     ['Egil', 'Ullr', 'Solveig', 'Kari'],
+    huskarl:      ['Torvald', 'Hakon', 'Knut', 'Harald']
   }
 };

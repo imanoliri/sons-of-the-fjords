@@ -18,6 +18,7 @@ export const COMBAT_CONFIG = {
 
   // Pool sort points per unit type (higher = sorted first)
   poolSortPoints: {
+    huskarl:     4,
     berserker:   3,
     shieldmaiden: 2,
     huntsman:    1
