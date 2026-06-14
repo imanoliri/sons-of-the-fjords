@@ -359,7 +359,6 @@ function combatTick() {
 
         // Hel Champion Blessing: Once-per-battle 50% chance to turn into an undead when hurt under 50% max HP
         if (currentTarget.alliance === 'enemy' && currentTarget.hp > 0 && !currentTarget.helUndeadChecked) {
-          currentTarget.helUndeadChecked = true;
           const activeBlessings = new Set();
           if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
           if (STATE.permanentlyActivatedBlessings) {
@@ -369,6 +368,7 @@ function combatTick() {
             const helBlessing = GC.modifiers.blessings.hel;
             const threshold = helBlessing?.threshold ?? 0.5;
             if (currentTarget.hp < currentTarget.maxHp * threshold) {
+              currentTarget.helUndeadChecked = true;
               const raiseChance = helBlessing?.raiseChance ?? 0.5;
               if (Math.random() < raiseChance) {
                 const duration = helBlessing?.raiseDurationTicks ?? 3;
