@@ -1592,101 +1592,198 @@ body {
 }
 
 /* ==========================================================================
-   RUNE VISUAL EFFECTS
+   RUNE VISUAL EFFECTS — Enhanced
    ========================================================================== */
 
-/* --- On-grid rune flash overlay --- */
-.rune-flash {
+/* ---- STRIKE: initial hit on center cell ---- */
+.rune-strike {
+  position: absolute;
+  inset: -4px;
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 25;
+  animation: runeStrikeBurst 0.35s ease-out forwards;
+}
+
+.rune-strike.rune-odin  { background: rgba(0,240,255,0.95);   box-shadow: 0 0 0 4px var(--color-odin),  inset 0 0 30px white; }
+.rune-strike.rune-thor  { background: rgba(255,215,0,0.95);   box-shadow: 0 0 0 4px var(--color-thor),  inset 0 0 30px white; }
+.rune-strike.rune-hel   { background: rgba(155,89,182,0.95);  box-shadow: 0 0 0 4px var(--color-hel),   inset 0 0 30px white; }
+.rune-strike.rune-loki  { background: rgba(230,126,34,0.95);  box-shadow: 0 0 0 4px var(--color-loki),  inset 0 0 30px white; }
+.rune-strike.rune-freya { background: rgba(46,204,113,0.95);  box-shadow: 0 0 0 4px var(--color-freya), inset 0 0 30px white; }
+
+@keyframes runeStrikeBurst {
+  0%   { opacity: 1; transform: scale(0.1); }
+  30%  { opacity: 1; transform: scale(1.2); }
+  60%  { opacity: 0.85; transform: scale(0.95); }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+/* ---- WAVE: ripple that hits adjacent cells ---- */
+.rune-wave {
   position: absolute;
   inset: 0;
   border-radius: 8px;
   pointer-events: none;
   z-index: 20;
-  animation: runeFlashFade 0.7s ease-out forwards;
+  animation: runeWaveExpand 0.5s ease-out forwards;
 }
 
-.rune-flash.rune-odin  { background: radial-gradient(circle, rgba(0,240,255,0.7) 0%, rgba(0,240,255,0) 70%); box-shadow: 0 0 18px var(--color-odin); }
-.rune-flash.rune-thor  { background: radial-gradient(circle, rgba(255,215,0,0.7) 0%, rgba(255,215,0,0) 70%);  box-shadow: 0 0 18px var(--color-thor); }
-.rune-flash.rune-hel   { background: radial-gradient(circle, rgba(155,89,182,0.7) 0%, rgba(155,89,182,0) 70%); box-shadow: 0 0 18px var(--color-hel); }
-.rune-flash.rune-loki  { background: radial-gradient(circle, rgba(230,126,34,0.7) 0%, rgba(230,126,34,0) 70%);  box-shadow: 0 0 18px var(--color-loki); }
-.rune-flash.rune-freya { background: radial-gradient(circle, rgba(46,204,113,0.7) 0%, rgba(46,204,113,0) 70%); box-shadow: 0 0 18px var(--color-freya); }
+.rune-wave.rune-odin  { background: rgba(0,240,255,0.55);   border: 2px solid var(--color-odin); }
+.rune-wave.rune-thor  { background: rgba(255,215,0,0.55);   border: 2px solid var(--color-thor); }
+.rune-wave.rune-hel   { background: rgba(155,89,182,0.55);  border: 2px solid var(--color-hel); }
+.rune-wave.rune-loki  { background: rgba(230,126,34,0.55);  border: 2px solid var(--color-loki); }
+.rune-wave.rune-freya { background: rgba(46,204,113,0.55);  border: 2px solid var(--color-freya); }
 
-@keyframes runeFlashFade {
-  0%   { opacity: 1; transform: scale(0.6); }
-  40%  { opacity: 1; transform: scale(1.1); }
-  100% { opacity: 0; transform: scale(1.3); }
+@keyframes runeWaveExpand {
+  0%   { opacity: 0; transform: scale(0.3); }
+  25%  { opacity: 1; transform: scale(1.0); }
+  100% { opacity: 0; transform: scale(1.15); }
 }
 
-/* --- Rune label that floats up from the caster --- */
+/* ---- Strike emoji icon (floating on cell) ---- */
+.rune-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.6rem;
+  pointer-events: none;
+  z-index: 30;
+  animation: runeIconPop 0.8s ease-out forwards;
+  filter: drop-shadow(0 0 8px white);
+}
+
+@keyframes runeIconPop {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.2); }
+  25%  { opacity: 1; transform: translate(-50%,-60%) scale(1.4); }
+  60%  { opacity: 1; transform: translate(-50%,-70%) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%,-90%) scale(0.8); }
+}
+
+/* ---- Rune label floating from caster ---- */
 .rune-cast-label {
   position: absolute;
-  top: -8px;
+  bottom: 110%;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.6rem;
+  font-size: 0.72rem;
   font-family: var(--font-runes);
   font-weight: bold;
   white-space: nowrap;
   pointer-events: none;
-  z-index: 30;
-  animation: runeLabelRise 1.2s ease-out forwards;
-  text-shadow: 0 0 6px currentColor;
+  z-index: 40;
+  padding: 2px 6px;
+  border-radius: 4px;
+  animation: runeLabelRise 1.4s ease-out forwards;
+  text-shadow: 0 0 8px currentColor;
 }
 
-.rune-cast-label.rune-odin  { color: var(--color-odin); }
-.rune-cast-label.rune-thor  { color: var(--color-thor); }
-.rune-cast-label.rune-hel   { color: var(--color-hel); }
-.rune-cast-label.rune-loki  { color: var(--color-loki); }
-.rune-cast-label.rune-freya { color: var(--color-freya); }
+.rune-cast-label.rune-odin  { color: var(--color-odin);  background: rgba(0,240,255,0.15);  border: 1px solid var(--color-odin); }
+.rune-cast-label.rune-thor  { color: var(--color-thor);  background: rgba(255,215,0,0.15);  border: 1px solid var(--color-thor); }
+.rune-cast-label.rune-hel   { color: var(--color-hel);   background: rgba(155,89,182,0.15); border: 1px solid var(--color-hel); }
+.rune-cast-label.rune-loki  { color: var(--color-loki);  background: rgba(230,126,34,0.15); border: 1px solid var(--color-loki); }
+.rune-cast-label.rune-freya { color: var(--color-freya); background: rgba(46,204,113,0.15); border: 1px solid var(--color-freya); }
 
 @keyframes runeLabelRise {
-  0%   { opacity: 1; transform: translateX(-50%) translateY(0); }
-  70%  { opacity: 1; transform: translateX(-50%) translateY(-20px); }
-  100% { opacity: 0; transform: translateX(-50%) translateY(-30px); }
+  0%   { opacity: 0; transform: translateX(-50%) translateY(0) scale(0.7); }
+  15%  { opacity: 1; transform: translateX(-50%) translateY(-4px) scale(1); }
+  70%  { opacity: 1; transform: translateX(-50%) translateY(-22px) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-36px) scale(0.9); }
 }
 
-/* --- Runecaster glows while casting --- */
+/* ---- Runecaster: full-body glow pulse while casting ---- */
 .combat-unit.casting-rune {
-  animation: runecastPulse 0.5s ease-in-out 2;
+  animation: runecastPulse 0.45s ease-in-out 3;
+  z-index: 10;
 }
 
 @keyframes runecastPulse {
-  0%   { box-shadow: 0 0 6px rgba(0,240,255,0.3); }
-  50%  { box-shadow: 0 0 22px rgba(0,240,255,0.9), 0 0 40px rgba(0,240,255,0.4); }
-  100% { box-shadow: 0 0 6px rgba(0,240,255,0.3); }
+  0%   { box-shadow: 0 0 4px rgba(0,240,255,0.3),  0 0 0px rgba(0,240,255,0); transform: scale(1); }
+  50%  { box-shadow: 0 0 28px rgba(0,240,255,1),   0 0 50px rgba(0,240,255,0.5); transform: scale(1.18); }
+  100% { box-shadow: 0 0 4px rgba(0,240,255,0.3),  0 0 0px rgba(0,240,255,0); transform: scale(1); }
 }
 
-/* --- Stunned unit badge & state --- */
+/* ---- STUNNED: full border ring + floating stars overhead ---- */
 .combat-unit.stunned {
-  opacity: 0.7;
-  border-color: var(--color-thor) !important;
-  box-shadow: 0 0 10px rgba(255,215,0,0.5) !important;
+  border: 2px solid var(--color-thor) !important;
+  box-shadow: 0 0 0 3px var(--color-thor), 0 0 16px rgba(255,215,0,0.7) !important;
+  animation: stunnedFlicker 0.6s ease-in-out infinite alternate;
+  opacity: 0.75;
 }
 
+@keyframes stunnedFlicker {
+  0%   { box-shadow: 0 0 0 3px var(--color-thor), 0 0 10px rgba(255,215,0,0.5); }
+  100% { box-shadow: 0 0 0 3px var(--color-thor), 0 0 24px rgba(255,215,0,0.9), 0 0 40px rgba(255,215,0,0.3); }
+}
+
+/* Floating ★★★ orbit above stunned unit */
+.stun-orbit {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  pointer-events: none;
+  z-index: 20;
+  animation: stunOrbit 0.9s linear infinite;
+  white-space: nowrap;
+  color: var(--color-thor);
+  text-shadow: 0 0 6px var(--color-thor);
+}
+
+@keyframes stunOrbit {
+  0%   { transform: translateX(-50%) rotate(0deg)   translateY(-2px); }
+  50%  { transform: translateX(-50%) rotate(180deg) translateY(-5px); }
+  100% { transform: translateX(-50%) rotate(360deg) translateY(-2px); }
+}
+
+/* Tick counter badge on stunned unit */
 .stun-badge {
   position: absolute;
   top: -6px;
   right: -6px;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   background: var(--color-thor);
   color: #000;
   border-radius: 50%;
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  z-index: 10;
+  font-weight: 900;
+  z-index: 21;
   line-height: 1;
+  box-shadow: 0 0 6px var(--color-thor);
 }
 
-/* --- DoT shimmer (Odin burn) --- */
+/* ---- DoT BURNING (Odin): intense fire border + glow ---- */
 .combat-unit.burning {
-  animation: dotShimmer 0.8s ease-in-out infinite alternate;
+  animation: dotFireBorder 0.5s ease-in-out infinite alternate, stunnedFlicker 1s ease-in-out infinite alternate;
+  border-color: #ff6b00 !important;
 }
 
-@keyframes dotShimmer {
-  0%   { border-color: var(--color-danger); box-shadow: 0 0 6px rgba(231,76,60,0.4); }
-  100% { border-color: var(--color-odin);  box-shadow: 0 0 14px rgba(0,240,255,0.6); }
-}
+@keyframes dotFireBorder {
+  0%   { box-shadow: 0 0 6px #ff4400, 0 0 12px rgba(255,68,0,0.4),  inset 0 0 6px rgba(255,100,0,0.2); border-color: #ff6600 !important; }
+  50%  { box-shadow: 0 0 14px #ffaa00, 0 0 26px rgba(255,170,0,0.6), inset 0 0 10px rgba(0,240,255,0.15); border-color: var(--color-odin) !important; }
+  100% { box-shadow: 0 0 6px #ff4400, 0 0 12px rgba(255,68,0,0.4),  inset 0 0 6px rgba(255,100,0,0.2); border-color: #ff6600 !important; }
+}
+
+/* Fire icon floating on burning unit */
+.burn-icon {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  pointer-events: none;
+  z-index: 20;
+  animation: burnFloat 1s ease-in-out infinite;
+}
+
+@keyframes burnFloat {
+  0%   { transform: translateX(-50%) translateY(0) scale(1);    opacity: 0.9; }
+  50%  { transform: translateX(-48%) translateY(-5px) scale(1.1); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(0) scale(1);    opacity: 0.9; }
+}
+
