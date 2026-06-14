@@ -169,8 +169,8 @@ export function initUIBindings() {
     const compStr = Object.entries(compCounts).map(([type, count]) => `${count}${type}`).join('_');
     const composition = compStr || 'crewless';
 
-    // Filename: timestamp at the beginning
-    const filename = `${timestamp}_save_${godsStr}_${composition}.json`;
+    // Filename: save_[timestamp]_[gods]_[composition].json
+    const filename = `save_${timestamp}_${godsStr}_${composition}.json`;
 
     // Download state
     const stateStr = JSON.stringify(STATE, null, 2);
