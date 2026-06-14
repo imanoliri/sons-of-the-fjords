@@ -104,7 +104,7 @@ const MONSTER_EMOJIS = {
   'Cave Troll': '👹',
   'Frost Giant (Jotunn)': '❄️',
   'Lindwurm': '🐉',
-  'Ice Wolf': '🥶',
+  'Ice Wolf': '🐺',
   'Mercenary Guard': '💂',
   'Shore Raider': '🏴‍☠️',
   'Archipelago Wraith': '👻'
@@ -2858,7 +2858,7 @@ function renderCombatGrid() {
             'Cave Troll': '👹',
             'Frost Giant (Jotunn)': '❄️',
             'Lindwurm': '🐉',
-            'Ice Wolf': '🥶',
+            'Ice Wolf': '🐺',
             'Mercenary Guard': '💂',
             'Shore Raider': '🏴‍☠️',
             'Archipelago Wraith': '👻'
