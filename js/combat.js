@@ -463,10 +463,16 @@ function combatTick() {
                 return sum;
               }, 0);
               
-              // Only trigger if at least one ally in this cluster is in danger (below 80% HP)
+              // If number of enemies is bigger than our soldiers, use 50% HP danger threshold; otherwise, 80%.
+              const enemyCount = allEnemies.length;
+              // include the runecaster in player soldiers count:
+              const allyCount = allPlayerUnits.length;
+              const ratioThreshold = enemyCount > allyCount ? 0.5 : 0.8;
+
+              // Only trigger if at least one ally in this cluster is in danger (below the adaptive threshold)
               const hasCriticalAlly = neighbors.some(n => {
                 const cell = grid[n.r]?.[n.c];
-                return cell && cell.alliance === 'player' && cell.hp < getEffectiveStats(cell).maxHp.total * 0.8;
+                return cell && cell.alliance === 'player' && cell.hp < getEffectiveStats(cell).maxHp.total * ratioThreshold;
               });
 
               if (healSum > bestHealScore && hasCriticalAlly) {
