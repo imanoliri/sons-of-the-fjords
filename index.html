@@ -148,6 +148,20 @@
                 </div>
                 <button class="btn btn-sm" id="btn-recruit-huntsman">Hire [3]</button>
               </div>
+              <div class="trade-row">
+                <div class="recruit-info-col">
+                  <span id="label-recruit-huskarl">Hire Huskarl (-12 Gold, -15 Food, -5 Wood)</span>
+                  <span id="recruit-stats-huskarl" class="recruit-stats-subtext"></span>
+                </div>
+                <button class="btn btn-sm" id="btn-recruit-huskarl">Hire [4]</button>
+              </div>
+              <div class="trade-row">
+                <div class="recruit-info-col">
+                  <span id="label-recruit-runecaster">Hire Runecaster (-15 Gold, -15 Food, -8 Wood)</span>
+                  <span id="recruit-stats-runecaster" class="recruit-stats-subtext"></span>
+                </div>
+                <button class="btn btn-sm" id="btn-recruit-runecaster">Hire [5]</button>
+              </div>
               <div class="trade-row heal-warriors-row" id="row-heal-warriors">
                 <span id="heal-warriors-label">Heal Warriors (2g if &lt;80% HP, 4g if &lt;20% HP)</span>
                 <button class="btn btn-sm btn-primary" id="btn-heal-warriors">Heal</button>
@@ -243,7 +257,7 @@
 
                 <div style="display: flex; align-items: center; gap: 0.4rem; margin-left: auto;">
                   <span style="font-size: 0.8rem; opacity: 0.8; white-space: nowrap;">Formation:</span>
-                  <div id="formation-container" style="display: flex; gap: 0.3rem; align-items: center;"></div>
+                  <div id="formation-container" style="display: flex; gap: 0.1rem; align-items: center;"></div>
                 </div>
                 <input type="range" id="slider-combat-speed" min="200" max="1500" value="600" step="50"
                   style="display: none;">
@@ -252,7 +266,10 @@
             </div>
 
             <!-- 10x8 COMBAT ARENA -->
-            <div class="combat-grid" id="combat-grid"></div>
+            <div style="position: relative; width: max-content; margin: 0 auto;">
+              <div class="combat-grid" id="combat-grid"></div>
+              <div id="combat-effects-overlay" style="position: absolute; inset: 0; pointer-events: none; z-index: 99; overflow: visible;"></div>
+            </div>
 
             <!-- DEPLOYMENT HAND -->
             <div class="deployment-panel">
@@ -289,6 +306,8 @@
         </div>
       </div>
     </div>
+
+
 
     <!-- OVERLAY MODAL: ASCENSION (VICTORY) -->
     <div class="modal-overlay hidden" id="modal-ascension">

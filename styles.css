@@ -1590,3 +1590,572 @@ body {
   transform: scale(1.15);
   opacity: 0.9;
 }
+
+/* ==========================================================================
+   RUNE VISUAL EFFECTS — Enhanced
+   ========================================================================== */
+
+/* ---- STRIKE: initial hit on center cell ---- */
+.rune-strike {
+  position: absolute;
+  inset: -4px;
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 25;
+  animation: runeStrikeBurst 0.35s ease-out forwards;
+}
+
+.rune-strike.rune-odin  { background: rgba(0,240,255,0.95);   box-shadow: 0 0 0 4px var(--color-odin),  inset 0 0 30px white; }
+.rune-strike.rune-thor  { background: rgba(255,215,0,0.95);   box-shadow: 0 0 0 4px var(--color-thor),  inset 0 0 30px white; }
+.rune-strike.rune-hel   { background: rgba(155,89,182,0.95);  box-shadow: 0 0 0 4px var(--color-hel),   inset 0 0 30px white; }
+.rune-strike.rune-loki  { background: rgba(230,126,34,0.95);  box-shadow: 0 0 0 4px var(--color-loki),  inset 0 0 30px white; }
+.rune-strike.rune-freya { background: rgba(46,204,113,0.95);  box-shadow: 0 0 0 4px var(--color-freya), inset 0 0 30px white; }
+
+@keyframes runeStrikeBurst {
+  0%   { opacity: 1; transform: scale(0.1); }
+  30%  { opacity: 1; transform: scale(1.2); }
+  60%  { opacity: 0.85; transform: scale(0.95); }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+/* ---- WAVE: ripple that hits adjacent cells ---- */
+.rune-wave {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 20;
+  animation: runeWaveExpand 0.5s ease-out forwards;
+}
+
+.rune-wave.rune-odin  { background: rgba(0,240,255,0.55);   border: 2px solid var(--color-odin); }
+.rune-wave.rune-thor  { background: rgba(255,215,0,0.55);   border: 2px solid var(--color-thor); }
+.rune-wave.rune-hel   { background: rgba(155,89,182,0.55);  border: 2px solid var(--color-hel); }
+.rune-wave.rune-loki  { background: rgba(230,126,34,0.55);  border: 2px solid var(--color-loki); }
+.rune-wave.rune-freya { background: rgba(46,204,113,0.55);  border: 2px solid var(--color-freya); }
+
+@keyframes runeWaveExpand {
+  0%   { opacity: 0; transform: scale(0.3); }
+  25%  { opacity: 1; transform: scale(1.0); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+
+/* ---- Strike emoji icon (floating on cell) ---- */
+.rune-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.6rem;
+  pointer-events: none;
+  z-index: 30;
+  animation: runeIconPop 0.8s ease-out forwards;
+  filter: drop-shadow(0 0 8px white);
+}
+
+@keyframes runeIconPop {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.2); }
+  25%  { opacity: 1; transform: translate(-50%,-60%) scale(1.4); }
+  60%  { opacity: 1; transform: translate(-50%,-70%) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%,-90%) scale(0.8); }
+}
+
+/* ---- Rune label floating from caster ---- */
+.rune-cast-label {
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  font-family: var(--font-runes);
+  font-weight: bold;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 40;
+  padding: 2px 6px;
+  border-radius: 4px;
+  animation: runeLabelRise 1.4s ease-out forwards;
+  text-shadow: 0 0 8px currentColor;
+}
+
+.rune-cast-label.rune-odin  { color: var(--color-odin);  background: rgba(0,240,255,0.15);  border: 1px solid var(--color-odin); }
+.rune-cast-label.rune-thor  { color: var(--color-thor);  background: rgba(255,215,0,0.15);  border: 1px solid var(--color-thor); }
+.rune-cast-label.rune-hel   { color: var(--color-hel);   background: rgba(155,89,182,0.15); border: 1px solid var(--color-hel); }
+.rune-cast-label.rune-loki  { color: var(--color-loki);  background: rgba(230,126,34,0.15); border: 1px solid var(--color-loki); }
+.rune-cast-label.rune-freya { color: var(--color-freya); background: rgba(46,204,113,0.15); border: 1px solid var(--color-freya); }
+
+@keyframes runeLabelRise {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(0) scale(0.7); }
+  15%  { opacity: 1; transform: translateX(-50%) translateY(-4px) scale(1); }
+  70%  { opacity: 1; transform: translateX(-50%) translateY(-22px) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-36px) scale(0.9); }
+}
+
+/* ---- Runecaster: full-body glow pulse while casting ---- */
+.combat-unit.casting-rune {
+  animation: runecastPulse 0.45s ease-in-out 3;
+  z-index: 10;
+}
+
+@keyframes runecastPulse {
+  0%   { box-shadow: 0 0 4px rgba(0,240,255,0.3),  0 0 0px rgba(0,240,255,0); transform: scale(1); }
+  50%  { box-shadow: 0 0 28px rgba(0,240,255,1),   0 0 50px rgba(0,240,255,0.5); transform: scale(1.18); }
+  100% { box-shadow: 0 0 4px rgba(0,240,255,0.3),  0 0 0px rgba(0,240,255,0); transform: scale(1); }
+}
+
+/* ---- STUNNED: full border ring + floating stars overhead ---- */
+.combat-unit.stunned {
+  border: 2px solid var(--color-thor) !important;
+  box-shadow: 0 0 0 3px var(--color-thor), 0 0 16px rgba(255,215,0,0.7) !important;
+  animation: stunnedFlicker 0.6s ease-in-out infinite alternate;
+  opacity: 0.75;
+}
+
+@keyframes stunnedFlicker {
+  0%   { box-shadow: 0 0 0 3px var(--color-thor), 0 0 10px rgba(255,215,0,0.5); }
+  100% { box-shadow: 0 0 0 3px var(--color-thor), 0 0 24px rgba(255,215,0,0.9), 0 0 40px rgba(255,215,0,0.3); }
+}
+
+/* Floating ★★★ orbit above stunned unit */
+.stun-orbit {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  pointer-events: none;
+  z-index: 20;
+  animation: stunOrbit 0.9s linear infinite;
+  white-space: nowrap;
+  color: var(--color-thor);
+  text-shadow: 0 0 6px var(--color-thor);
+}
+
+@keyframes stunOrbit {
+  0%   { transform: translateX(-50%) rotate(0deg)   translateY(-2px); }
+  50%  { transform: translateX(-50%) rotate(180deg) translateY(-5px); }
+  100% { transform: translateX(-50%) rotate(360deg) translateY(-2px); }
+}
+
+/* Tick counter badge on stunned unit */
+.stun-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 0.6rem;
+  background: var(--color-thor);
+  color: #000;
+  border-radius: 50%;
+  width: 15px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  z-index: 21;
+  line-height: 1;
+  box-shadow: 0 0 6px var(--color-thor);
+}
+
+/* ---- DoT BURNING (Odin): intense fire border + glow ---- */
+.combat-unit.burning {
+  animation: dotFireBorder 0.5s ease-in-out infinite alternate, stunnedFlicker 1s ease-in-out infinite alternate;
+  border-color: #ff6b00 !important;
+}
+
+@keyframes dotFireBorder {
+  0%   { box-shadow: 0 0 6px #ff4400, 0 0 12px rgba(255,68,0,0.4),  inset 0 0 6px rgba(255,100,0,0.2); border-color: #ff6600 !important; }
+  50%  { box-shadow: 0 0 14px #ffaa00, 0 0 26px rgba(255,170,0,0.6), inset 0 0 10px rgba(0,240,255,0.15); border-color: var(--color-odin) !important; }
+  100% { box-shadow: 0 0 6px #ff4400, 0 0 12px rgba(255,68,0,0.4),  inset 0 0 6px rgba(255,100,0,0.2); border-color: #ff6600 !important; }
+}
+
+/* Fire icon floating on burning unit */
+.burn-icon {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  pointer-events: none;
+  z-index: 20;
+  animation: burnFloat 1s ease-in-out infinite;
+}
+
+@keyframes burnFloat {
+  0%   { transform: translateX(-50%) translateY(0) scale(1);    opacity: 0.9; }
+  50%  { transform: translateX(-48%) translateY(-5px) scale(1.1); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(0) scale(1);    opacity: 0.9; }
+}
+
+/* ==========================================================================
+   COMBAT VISUAL EFFECTS - Floaty Text & Particles
+   ========================================================================== */
+
+/* Floaty Text */
+.floaty-text-fx {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-runes);
+  font-weight: bold;
+  font-size: 0.85rem;
+  text-shadow: 0 0 4px #000, 0 0 8px currentColor;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 50;
+  animation: floatyRise 1s ease-out forwards;
+}
+
+@keyframes floatyRise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -10px) scale(1.1);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -25px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -35px) scale(0.9);
+  }
+}
+
+/* Combat Particle Overlay Base */
+.combat-particle-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  border-radius: 4px;
+}
+
+/* 1. Undead Risen: Draugr Rising dark-green smoke overlay */
+.particle-raise-undead {
+  background: radial-gradient(circle, rgba(46, 204, 113, 0.4) 0%, rgba(0, 0, 0, 0) 70%);
+  box-shadow: inset 0 0 15px rgba(46, 204, 113, 0.6);
+  animation: undeadRiseFX 0.8s ease-out forwards;
+}
+
+@keyframes undeadRiseFX {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: inset 0 0 25px rgba(46, 204, 113, 0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+}
+
+/* 2. Armor Hit: steel metallic border flash */
+.particle-armor-hit {
+  border: 2px solid #fff;
+  box-shadow: 0 0 15px #fff, inset 0 0 10px #ccc;
+  animation: armorHitFX 0.6s ease-out forwards;
+}
+
+@keyframes armorHitFX {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* 3. Shield Block: green wooden outline burst */
+.particle-shield-block {
+  border: 3px solid var(--color-freya);
+  box-shadow: 0 0 20px var(--color-freya), inset 0 0 12px rgba(46, 204, 113, 0.5);
+  animation: shieldBlockFX 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes shieldBlockFX {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* 4. Survive Lethal: emerald green aura pulse */
+.particle-survive-lethal {
+  background: radial-gradient(circle, rgba(46, 204, 113, 0.5) 0%, rgba(0, 0, 0, 0) 80%);
+  box-shadow: 0 0 25px var(--color-freya);
+  animation: surviveLethalFX 0.8s ease-in-out forwards;
+}
+
+@keyframes surviveLethalFX {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* 5. Leap Wind: white gust lines sweeping */
+.particle-leap-wind {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+  filter: blur(2px);
+  animation: leapWindFX 0.6s ease-out forwards;
+}
+
+@keyframes leapWindFX {
+  0% {
+    opacity: 0;
+    transform: translateX(-50px) skewX(-20deg);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(50px) skewX(-20deg);
+  }
+}
+
+/* Visual States applied to units */
+
+/* Undead risen unit tint */
+.combat-unit.undead-risen {
+  filter: sepia(0.5) hue-rotate(80deg) brightness(0.85) saturate(1.2);
+  border: 1px solid var(--color-freya) !important;
+}
+
+/* Charmed state: pink heart aura */
+.combat-unit.charmed-state {
+  box-shadow: 0 0 10px #ff69b4, inset 0 0 6px #ff69b4;
+  border-color: #ff69b4 !important;
+  animation: charmedPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes charmedPulse {
+  0% {
+    box-shadow: 0 0 8px #ff69b4;
+  }
+  50% {
+    box-shadow: 0 0 18px #ff69b4, inset 0 0 10px rgba(255, 105, 180, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 8px #ff69b4;
+  }
+}
+
+/* Confused state: golden yellow/orange dizzy glow */
+.combat-unit.confused-state {
+  box-shadow: 0 0 10px var(--color-loki), inset 0 0 6px var(--color-loki);
+  border-color: var(--color-loki) !important;
+  animation: confusedPulse 1s infinite linear;
+}
+
+@keyframes confusedPulse {
+  0% {
+    transform: rotate(0deg);
+    box-shadow: 0 0 8px var(--color-loki);
+  }
+  33% {
+    transform: rotate(1deg) scale(1.02);
+  }
+  66% {
+    transform: rotate(-1deg) scale(0.98);
+  }
+  100% {
+    transform: rotate(0deg);
+    box-shadow: 0 0 14px var(--color-loki);
+  }
+}
+
+/* Stance visual modifiers for player units */
+.combat-unit.stance-defend {
+  border: 2px solid var(--text-accent) !important;
+  box-shadow: inset 0 0 8px rgba(0, 240, 255, 0.4);
+}
+
+.combat-unit.stance-hold {
+  border: 2px solid var(--color-thor) !important;
+  box-shadow: inset 0 0 8px rgba(255, 215, 0, 0.4);
+}
+
+.combat-unit.stance-retreat {
+  border: 2px dashed var(--color-danger) !important;
+  opacity: 0.9;
+}
+
+/* Status/Stance Overlays on Units */
+
+.charm-heart-orbit {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.95rem;
+  z-index: 25;
+  pointer-events: none;
+  animation: heartFloatPulse 1.2s infinite ease-in-out;
+  filter: drop-shadow(0 0 4px #ff69b4);
+}
+
+@keyframes heartFloatPulse {
+  0% {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateX(-50%) translateY(-4px) scale(1.25);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 0.8;
+  }
+}
+
+.confuse-question-orbit {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.95rem;
+  z-index: 25;
+  pointer-events: none;
+  animation: confuseSwayOrbit 1.2s infinite ease-in-out;
+  filter: drop-shadow(0 0 4px var(--color-loki));
+}
+
+@keyframes confuseSwayOrbit {
+  0% {
+    transform: translateX(-50%) rotate(-15deg) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) rotate(15deg) translateY(-3px);
+  }
+  100% {
+    transform: translateX(-50%) rotate(-15deg) translateY(0);
+  }
+}
+
+.undead-skull-overlay {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.95rem;
+  z-index: 25;
+  pointer-events: none;
+  animation: skullFloat 1.8s infinite ease-in-out;
+  filter: drop-shadow(0 0 5px var(--color-freya));
+}
+
+@keyframes skullFloat {
+  0% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translateX(-50%) translateY(-5px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 0.75;
+  }
+}
+
+/* Stance Indicator Badge */
+.stance-icon-badge {
+  position: absolute;
+  bottom: -6px;
+  left: -6px;
+  font-size: 0.75rem;
+  background: rgba(18, 22, 28, 0.9);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 21;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+.huntsman-arrow-projectile {
+  font-size: 0.85rem;
+  color: #8b5a2b;
+  pointer-events: none;
+  filter: drop-shadow(0 0 2px rgba(139, 90, 43, 0.6));
+  width: auto;
+  height: auto;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+
+/* 7. Healing Pulse Particle */
+.particle-heal-pulse {
+  background: radial-gradient(circle, rgba(46, 204, 113, 0.4) 0%, rgba(0, 0, 0, 0) 75%);
+  box-shadow: inset 0 0 15px rgba(46, 204, 113, 0.5);
+  animation: healPulseFX 0.8s ease-out forwards;
+}
+
+@keyframes healPulseFX {
+  0% { opacity: 0; transform: scale(0.8); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+
+/* 8. Death Fade Particle */
+.particle-death-fade {
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 80%);
+  box-shadow: inset 0 0 20px #000;
+  animation: deathFadeFX 0.8s ease-out forwards;
+}
+
+@keyframes deathFadeFX {
+  0% { opacity: 0; transform: scale(0.9); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.2); }
+}
+
+
+
+
+
+
+
+
+
+

@@ -19,7 +19,9 @@ export const TOWN_CONFIG = {
   recruitCosts: {
     shieldmaiden: { gold: 5, food: 10 },
     berserker:    { gold: 7, sheep: 1 },
-    huntsman:     { gold: 6, wood: 3 }
+    huntsman:     { gold: 6, wood: 3 },
+    huskarl:      { gold: 12, food: 15, wood: 5 },
+    runecaster:   { gold: 15, food: 15, wood: 8 }
   },
 
   // Dynamic pricing coefficients and limits based on surrounding geography

@@ -169,8 +169,8 @@ export function initUIBindings() {
     const compStr = Object.entries(compCounts).map(([type, count]) => `${count}${type}`).join('_');
     const composition = compStr || 'crewless';
 
-    // Filename
-    const filename = `save_${godsStr}_${composition}_${timestamp}.json`;
+    // Filename: save_[timestamp]_[gods]_[composition].json
+    const filename = `save_${timestamp}_${godsStr}_${composition}.json`;
 
     // Download state
     const stateStr = JSON.stringify(STATE, null, 2);
@@ -288,6 +288,18 @@ export function initUIBindings() {
     logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
   });
 
+  bindButton('btn-recruit-huskarl', () => {
+    const cost = TOWN_CONFIG.recruitCosts.huskarl;
+    const res = buyRecruit('huskarl', cost);
+    logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+  });
+
+  bindButton('btn-recruit-runecaster', () => {
+    const cost = TOWN_CONFIG.recruitCosts.runecaster;
+    const res = buyRecruit('runecaster', cost);
+    logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+  });
+
   bindButton('btn-heal-warriors', () => {
     const res = healWarriors();
     logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
@@ -325,6 +337,8 @@ export function initUIBindings() {
   bindButton('btn-combat-pause', () => {
     togglePause();
   });
+
+
 
   bindButton('btn-combat-flee', () => {
     fleeCombat();
@@ -605,6 +619,14 @@ export function initUIBindings() {
       else if (key === '3') {
         e.preventDefault();
         document.getElementById('btn-recruit-huntsman')?.click();
+      }
+      else if (key === '4') {
+        e.preventDefault();
+        document.getElementById('btn-recruit-huskarl')?.click();
+      }
+      else if (key === '5') {
+        e.preventDefault();
+        document.getElementById('btn-recruit-runecaster')?.click();
       }
     }
     // Check if player is on Combat screen
@@ -988,13 +1010,7 @@ function initTooltipEvents() {
           ? `<span style="color:var(--color-success)">✅ Completed</span>`
           : `<span style="color:var(--text-muted)">🔒 Unlocked at Favor +${idx + 1}</span>`;
 
-        let effectHtml = '';
-        if (idx === 4) {
-          effectHtml = `<b style="color:${lore.color}">Blessing: ${lore.buff}</b>`;
-        } else {
-          effectHtml = `<b style="color:${lore.color}">${lore.milestoneEffects[idx]}</b>`;
-        }
-
+        let effectHtml = `<b style="color:${lore.color}">${lore.milestoneEffects[idx]}</b>`;
         content = `${statusHtml}<br><div style="margin-top:4px;">${effectHtml}</div>`;
       } else if (section === 'champion') {
         header = `${lore.icon} Champion Buff`;
@@ -1086,6 +1102,37 @@ function initTooltipEvents() {
             `<b>Range:</b> ${formatStat(stats.range)}`,
             `<b>Speed:</b> ${formatStat(stats.speed)}`
           ];
+          
+          if (unit.type === 'runecaster') {
+            contents.push(`<hr style="margin: 4px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.15);">`);
+            contents.push(`<b>🔮 Runecaster Divine Runes:</b>`);
+            const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
+            godNames.forEach(g => {
+              const unlocked = STATE.godQuests[g]?.[4] === true;
+              const hasCast = unit.runesCast && unit.runesCast[g] === true;
+              
+              let statusSymbol = '🔒';
+              let statusText = 'Locked';
+              let statusColor = 'var(--text-muted)';
+              
+              if (unlocked) {
+                if (hasCast) {
+                  statusSymbol = '🔲';
+                  statusText = 'Depleted';
+                  statusColor = 'var(--text-muted)';
+                } else {
+                  statusSymbol = '✅';
+                  statusText = 'Ready';
+                  statusColor = `var(--color-${g})`;
+                }
+              }
+              
+              const nameCapitalized = g.charAt(0).toUpperCase() + g.slice(1);
+              contents.push(`<span style="font-size: 0.75rem; color: ${statusColor}">${statusSymbol} Rune of ${nameCapitalized} (${statusText})</span>`);
+            });
+            borderAccent = 'var(--color-hel)';
+          }
+
           contentsText = contents.join('<br>');
         } else {
           contentsText = unitEl.title || 'Combat unit/monster.';
@@ -1636,10 +1683,17 @@ function movePartyOnWorld(x, y) {
     }
   }
 
-  // Set position
   STATE.party.worldX = x;
   STATE.party.worldY = y;
   STATE.day = (STATE.day || 1) + 1;
+
+  // Apply Huskarl upkeep: 1 gold each per move on the world map.
+  const huskarlsCount = STATE.band.filter(u => u.type === 'huskarl').length;
+  if (huskarlsCount > 0) {
+    adjustResource('gold', -huskarlsCount);
+    logWorld(`Huskarl Upkeep: Paid ${huskarlsCount} Gold for elite frontline soldiers.`, 'warn-message');
+  }
+
   renderResourceBar();
 
   // Reveal fog in a 2-tile radius around player
@@ -2042,7 +2096,7 @@ function renderTownScreen() {
   }
 
   // Render recruiting stats with modifiers
-  ['shieldmaiden', 'berserker', 'huntsman'].forEach(t => {
+  ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'].forEach(t => {
     const el = document.getElementById(`recruit-stats-${t}`);
     if (el) {
       const dummy = { type: t, hp: 0, maxHp: 0, dmg: 0, speed: 0, range: 0 };
@@ -2052,20 +2106,17 @@ function renderTownScreen() {
   });
 
   // Great Hall recruitment labels
-  const baseCosts = {
-    shieldmaiden: { gold: 5, food: 10 },
-    berserker: { gold: 7, sheep: 1 },
-    huntsman: { gold: 6, wood: 3 }
-  };
-  ['shieldmaiden', 'berserker', 'huntsman'].forEach(t => {
+  ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'].forEach(t => {
     const labelEl = document.getElementById(`label-recruit-${t}`);
     if (labelEl) {
-      let gCost = baseCosts[t].gold;
-      const otherRes = Object.keys(baseCosts[t]).find(k => k !== 'gold');
-      const otherAmt = baseCosts[t][otherRes];
-      const otherLabel = otherRes.charAt(0).toUpperCase() + otherRes.slice(1);
+      const costs = TOWN_CONFIG.recruitCosts[t];
+      const costStrings = [];
+      for (const [res, amt] of Object.entries(costs)) {
+        const resLabel = res.charAt(0).toUpperCase() + res.slice(1);
+        costStrings.push(`-${amt} ${resLabel}`);
+      }
       const capName = t.charAt(0).toUpperCase() + t.slice(1);
-      labelEl.innerText = `Hire ${capName} (-${gCost} Gold, -${otherAmt} ${otherLabel})`;
+      labelEl.innerText = `Hire ${capName} (${costStrings.join(', ')})`;
     }
   });
 }
@@ -2544,8 +2595,17 @@ function renderFormationElement() {
   if (!container) return;
   container.innerHTML = '';
 
-  const order = STATE.combat.formationOrder || ['berserker', 'shieldmaiden', 'huntsman'];
-  const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
+  let order = [...(STATE.combat.formationOrder || ['shieldmaiden', 'huntsman', 'berserker', 'huskarl', 'runecaster'])];
+  // Ensure all 5 soldier types are present in case order is loaded from an old save file
+  const requiredTypes = ['berserker', 'shieldmaiden', 'huntsman', 'huskarl', 'runecaster'];
+  requiredTypes.forEach(t => {
+    if (!order.includes(t)) {
+      order.push(t);
+    }
+  });
+  STATE.combat.formationOrder = order;
+
+  const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
 
   order.forEach((type, idx) => {
     // Separator arrow between icons
@@ -2561,9 +2621,9 @@ function renderFormationElement() {
     chip.draggable = true;
     chip.title = `${type.charAt(0).toUpperCase() + type.slice(1)} (${3 - idx} pts) — drag to reorder`;
     chip.style.cssText = `
-      font-size: 1.2rem;
+      font-size: 1.15rem;
       cursor: grab;
-      padding: 2px 5px;
+      padding: 1px 3px;
       border-radius: 4px;
       border: 1px solid transparent;
       transition: border-color 0.15s, background 0.15s;
@@ -2657,9 +2717,95 @@ function renderCombatGrid() {
         const elUnit = document.createElement('div');
         elUnit.classList.add('combat-unit', `alliance-${unit.alliance}`);
 
+        // Emoji display based on soldier/monster class type or fleeing state
+        if (unit.isFleeing) {
+          elUnit.classList.add('fleeing');
+          elUnit.innerText = '🏃‍♂️';
+        } else {
+          const avatars = {
+            shieldmaiden: '🛡️',
+            berserker: '🪓',
+            huntsman: '🏹',
+            huskarl: '⚔️',
+            runecaster: '🔮',
+            'Giant Brood-Spider': '🕷️',
+            'Fenrir Pack Wolf': '🐺',
+            'Draugr Warrior': '🧟',
+            'Cave Troll': '👹',
+            'Frost Giant (Jotunn)': '❄️',
+            'Lindwurm': '🐉'
+          };
+          elUnit.innerText = avatars[unit.type] || '👾';
+        }
+
+        // Undead, Charmed, or Confused states visual style hooks
+        if (unit.isUndead) {
+          elUnit.classList.add('undead-risen');
+          const badge = document.createElement('span');
+          badge.className = 'undead-skull-overlay';
+          badge.innerText = '💀';
+          elUnit.appendChild(badge);
+        }
+        if (unit.isCharmed) {
+          elUnit.classList.add('charmed-state');
+          const badge = document.createElement('span');
+          badge.className = 'charm-heart-orbit';
+          badge.innerText = '💖';
+          elUnit.appendChild(badge);
+        }
+        if (unit.isConfused) {
+          elUnit.classList.add('confused-state');
+          const badge = document.createElement('span');
+          badge.className = 'confuse-question-orbit';
+          badge.innerText = '🌀';
+          elUnit.appendChild(badge);
+        }
+
+        // Apply active player stances visual style classes to player units
+        if (unit.alliance === 'player') {
+          const stance = STATE.combat.stance || 'attack';
+          elUnit.classList.add(`stance-${stance}`);
+          if (stance !== 'attack') {
+            const stanceBadge = document.createElement('span');
+            stanceBadge.className = 'stance-icon-badge';
+            stanceBadge.innerText = stance === 'defend' ? '🛡️' : stance === 'hold' ? '⚓' : '🏃';
+            elUnit.appendChild(stanceBadge);
+          }
+        }
+
         // Attack dynamic animations
         if (unit.isAttacking) {
           elUnit.classList.add('attacking');
+        }
+
+        // Runecaster casting glow (set externally)
+        if (unit.isCastingRune) {
+          elUnit.classList.add('casting-rune');
+        }
+
+        // Stunned visual badge + orbit stars
+        if (unit.stunnedTicksLeft > 0) {
+          elUnit.classList.add('stunned');
+          // Orbiting star row
+          const orbit = document.createElement('span');
+          orbit.className = 'stun-orbit';
+          orbit.innerText = '★★★';
+          elUnit.appendChild(orbit);
+          // Tick-count badge
+          const stunBadge = document.createElement('span');
+          stunBadge.className = 'stun-badge';
+          stunBadge.title = `Stunned (${unit.stunnedTicksLeft} ticks left)`;
+          stunBadge.innerText = unit.stunnedTicksLeft;
+          elUnit.appendChild(stunBadge);
+        }
+
+        // DoT shimmer + fire icon — burning from Odin rune
+        if (STATE.combat.activeDoTs?.some(d => d.unit?.id === unit.id && d.ticksLeft > 0)) {
+          elUnit.classList.add('burning');
+          const burnIcon = document.createElement('span');
+          burnIcon.className = 'burn-icon';
+          burnIcon.innerText = '🔥';
+          elUnit.appendChild(burnIcon);
         }
 
         // Allow removing unit from deployment grid if paused, OR fleeing if fleeMode is active
@@ -2680,24 +2826,6 @@ function renderCombatGrid() {
           }
         }
 
-        // Emoji display based on soldier/monster class type or fleeing state
-        if (unit.isFleeing) {
-          elUnit.classList.add('fleeing');
-          elUnit.innerText = '🏃‍♂️';
-        } else {
-          const avatars = {
-            shieldmaiden: '🛡️',
-            berserker: '🪓',
-            huntsman: '🏹',
-            'Giant Brood-Spider': '🕷️',
-            'Fenrir Pack Wolf': '🐺',
-            'Draugr Warrior': '🧟',
-            'Cave Troll': '👹',
-            'Frost Giant (Jotunn)': '❄️',
-            'Lindwurm': '🐉'
-          };
-          elUnit.innerText = avatars[unit.type] || '👾';
-        }
         const stats = getEffectiveStats(unit);
         elUnit.title = `${unit.name} (${unit.hp}/${stats.maxHp.total} HP)`;
 
@@ -2765,7 +2893,7 @@ function renderCombatGrid() {
       card.classList.add('selected');
     }
 
-    const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
+    const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
     const numHint = idx < SOLDIERS_CONFIG.maxBandSize ? `<span class="pool-number-hint">[${idx + 1}]</span> ` : '';
     const ratio = unit.hp / unit.maxHp;
     const hpPct = ratio * 100;
@@ -2823,6 +2951,71 @@ function renderCombatGrid() {
       }
       STATE.combat.selectedPoolIndex = idx;
       notify('STATE_UPDATED');
+    });
+
+    // Custom hover tooltip for pool cards
+    card.addEventListener('mouseover', (e) => {
+      const stats = getEffectiveStats(unit);
+      let borderAccent = 'var(--text-accent)';
+      let headerText = `${unit.name} (Viking Soldier)`;
+      const contents = [
+        `<b>HP:</b> ${unit.hp} / ${formatStat(stats.maxHp)}`,
+        `<b>Damage:</b> ${formatStat(stats.dmg)}`,
+        `<b>Range:</b> ${formatStat(stats.range)}`,
+        `<b>Speed:</b> ${formatStat(stats.speed)}`
+      ];
+
+      if (unit.type === 'runecaster') {
+        contents.push(`<hr style="margin: 4px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.15);">`);
+        contents.push(`<b>🔮 Runecaster Divine Runes:</b>`);
+        const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
+        godNames.forEach(g => {
+          const unlocked = STATE.godQuests[g]?.[4] === true;
+          const hasCast = unit.runesCast && unit.runesCast[g] === true;
+          
+          let statusSymbol = '🔒';
+          let statusText = 'Locked';
+          let statusColor = 'var(--text-muted)';
+          
+          if (unlocked) {
+            if (hasCast) {
+              statusSymbol = '🔲';
+              statusText = 'Depleted';
+              statusColor = 'var(--text-muted)';
+            } else {
+              statusSymbol = '✅';
+              statusText = 'Ready';
+              statusColor = `var(--color-${g})`;
+            }
+          }
+          
+          const nameCapitalized = g.charAt(0).toUpperCase() + g.slice(1);
+          contents.push(`<span style="font-size: 0.75rem; color: ${statusColor}">${statusSymbol} Rune of ${nameCapitalized} (${statusText})</span>`);
+        });
+        borderAccent = 'var(--color-hel)';
+      }
+
+      elTooltip.innerHTML = `
+        <div class="game-tooltip-header">
+          <span>${headerText}</span>
+        </div>
+        <div class="game-tooltip-contents">${contents.join('<br>')}</div>
+      `;
+      elTooltip.style.borderLeftColor = borderAccent;
+      elTooltip.style.display = 'flex';
+      elTooltip.style.left = (e.clientX + 15) + 'px';
+      elTooltip.style.top = (e.clientY + 15) + 'px';
+    });
+
+    card.addEventListener('mousemove', (e) => {
+      if (elTooltip.style.display === 'flex') {
+        elTooltip.style.left = (e.clientX + 15) + 'px';
+        elTooltip.style.top = (e.clientY + 15) + 'px';
+      }
+    });
+
+    card.addEventListener('mouseleave', () => {
+      elTooltip.style.display = 'none';
     });
 
     elCombatPoolList.appendChild(card);
@@ -3034,10 +3227,15 @@ function renderQuestsScreen() {
       if (isPermanent) {
         btn.innerText = 'Always Active ✨';
         btn.classList.add('btn-primary', 'btn-always-active');
-        btn.disabled = true;
+        btn.style.cursor = 'help';
+        btn.disabled = false; // Enable hover interaction even if permanently active
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+        });
       } else if (STATE.activeBlessing === gKey) {
         btn.innerText = 'Active ✨';
         btn.classList.add('btn-primary');
+        btn.style.cursor = 'help';
       } else {
         btn.innerText = 'Activate Buff';
         btn.addEventListener('click', () => {
@@ -3084,7 +3282,7 @@ function renderPartyPanel() {
       const effStats = getEffectiveStats(unit);
 
       const name = document.createElement('span');
-      const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹' };
+      const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
       name.innerHTML = `<b>${icons[unit.type] || '⚔️'} ${unit.name}</b> (${unit.type.toUpperCase()})`;
 
       const stats = document.createElement('span');
@@ -3242,6 +3440,208 @@ export function logLocation(msg, typeClass = 'system-message') {
 }
 
 // Display a discrete Norse-themed toast notification
+
+/* --- Visual Effects Helpers --- */
+
+function getCellEl(r, c) {
+  const combatGrid = document.getElementById('combat-grid');
+  if (!combatGrid) return null;
+  return combatGrid.querySelector(`.combat-cell[data-row="${r}"][data-col="${c}"]`);
+}
+
+function getCellPosition(row, col) {
+  const cell = getCellEl(row, col);
+  if (!cell) return null;
+  const grid = document.getElementById('combat-grid');
+  if (!grid) return null;
+  const gridRect = grid.getBoundingClientRect();
+  const cellRect = cell.getBoundingClientRect();
+  return {
+    left: cellRect.left - gridRect.left,
+    top: cellRect.top - gridRect.top,
+    width: cellRect.width,
+    height: cellRect.height
+  };
+}
+
+/**
+ * Spawn a floating text label rising from a specific cell.
+ */
+function spawnFloatyText(row, col, text, color = '#fff') {
+  const pos = getCellPosition(row, col);
+  if (!pos) return;
+  const overlayContainer = document.getElementById('combat-effects-overlay');
+  if (!overlayContainer) return;
+
+  const floaty = document.createElement('div');
+  floaty.className = 'floaty-text-fx';
+  floaty.style.color = color;
+  floaty.style.position = 'absolute';
+  floaty.style.left = `${pos.left + pos.width / 2}px`;
+  floaty.style.top = `${pos.top + pos.height / 2}px`;
+  floaty.innerText = text;
+
+  overlayContainer.appendChild(floaty);
+  setTimeout(() => floaty.remove(), 1000);
+}
+
+/**
+ * Spawn a brief full-cell visual particle burst (like block shield, leap wind, or critical green glow).
+ */
+function spawnCombatParticle(row, col, className) {
+  const pos = getCellPosition(row, col);
+  if (!pos) return;
+  const overlayContainer = document.getElementById('combat-effects-overlay');
+  if (!overlayContainer) return;
+
+  const particle = document.createElement('div');
+  particle.className = `combat-particle-overlay ${className}`;
+  particle.style.position = 'absolute';
+  particle.style.left = `${pos.left}px`;
+  particle.style.top = `${pos.top}px`;
+  particle.style.width = `${pos.width}px`;
+  particle.style.height = `${pos.height}px`;
+
+  overlayContainer.appendChild(particle);
+  setTimeout(() => particle.remove(), 800);
+}
+
+/**
+ * Spawn a huntsman shooting projectile (arrow) flying from attacker to defender.
+ */
+function spawnHuntsmanProjectile(attackerRow, attackerCol, defenderRow, defenderCol) {
+  const overlayContainer = document.getElementById('combat-effects-overlay');
+  if (!overlayContainer) return;
+
+  const attackerPos = getCellPosition(attackerRow, attackerCol);
+  const defenderPos = getCellPosition(defenderRow, defenderCol);
+  if (!attackerPos || !defenderPos) return;
+
+  const arrow = document.createElement('div');
+  arrow.className = 'huntsman-arrow-projectile';
+  arrow.innerText = '→';
+  arrow.style.position = 'absolute';
+  
+  const startX = attackerPos.left + attackerPos.width / 2;
+  const startY = attackerPos.top + attackerPos.height / 2;
+  const endX = defenderPos.left + defenderPos.width / 2;
+  const endY = defenderPos.top + defenderPos.height / 2;
+
+  arrow.style.left = `${startX}px`;
+  arrow.style.top = `${startY}px`;
+  arrow.style.zIndex = '100';
+
+  // Calculate rotation angle
+  const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+  arrow.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+
+  overlayContainer.appendChild(arrow);
+
+  // Trigger CSS transition
+  requestAnimationFrame(() => {
+    arrow.style.transition = 'all 0.25s linear';
+    arrow.style.left = `${endX}px`;
+    arrow.style.top = `${endY}px`;
+  });
+
+  // Remove after animation completes
+  setTimeout(() => {
+    arrow.remove();
+  }, 250);
+}
+
+/* --- Rune visual helpers --- */
+
+/** Per-rune strike icons shown on hit cells */
+const RUNE_ICONS = {
+  odin:  '⚡',
+  thor:  '🔨',
+  hel:   '💀',
+  loki:  '🌀',
+  freya: '🌸'
+};
+
+/**
+ * Staged rune animation:
+ *  1. Immediately: bright full-cell "strike" on the center cell + icon pop.
+ *  2. After 150ms: wave ripple spreads to each adjacent cell in the AoE radius.
+ * Non-AoE runes only show the center strike.
+ */
+function flashRuneOnCells(row, col, runeName, aoe = false, runecasterRow = null, runecasterCol = null) {
+  const overlayContainer = document.getElementById('combat-effects-overlay');
+  if (!overlayContainer) return;
+
+  const addAndClean = (el, pos) => {
+    el.style.position = 'absolute';
+    el.style.left = `${pos.left}px`;
+    el.style.top = `${pos.top}px`;
+    el.style.width = `${pos.width}px`;
+    el.style.height = `${pos.height}px`;
+    overlayContainer.appendChild(el);
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+  };
+
+  // --- Step 1: center strike ---
+  const centerPos = getCellPosition(row, col);
+  if (centerPos) {
+    const strike = document.createElement('div');
+    strike.className = `rune-strike rune-${runeName}`;
+    addAndClean(strike, centerPos);
+
+    const icon = document.createElement('span');
+    icon.className = 'rune-icon';
+    icon.innerText = RUNE_ICONS[runeName] || '✨';
+    icon.style.position = 'absolute';
+    icon.style.left = `${centerPos.left + centerPos.width / 2}px`;
+    icon.style.top = `${centerPos.top + centerPos.height / 2}px`;
+    icon.style.transform = 'translate(-50%, -50%)';
+    overlayContainer.appendChild(icon);
+    icon.addEventListener('animationend', () => icon.remove(), { once: true });
+  }
+
+  // --- Step 1b: floating label on runecaster cell ---
+  if (runecasterRow !== null) {
+    const rcPos = getCellPosition(runecasterRow, runecasterCol);
+    if (rcPos) {
+      const label = document.createElement('span');
+      label.className = `rune-cast-label rune-${runeName}`;
+      label.innerText = `${RUNE_ICONS[runeName]} ${runeName.toUpperCase()} RUNE`;
+      label.style.position = 'absolute';
+      label.style.left = `${rcPos.left + rcPos.width / 2}px`;
+      label.style.top = `${rcPos.top}px`;
+      overlayContainer.appendChild(label);
+      label.addEventListener('animationend', () => label.remove(), { once: true });
+    }
+  }
+
+  // --- Step 2: wave ripple to adjacent cells after short delay ---
+  if (aoe) {
+    setTimeout(() => {
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const adjPos = getCellPosition(row + dr, col + dc);
+          if (!adjPos) continue;
+          const wave = document.createElement('div');
+          wave.className = `rune-wave rune-${runeName}`;
+          wave.style.animationDelay = `${(Math.abs(dr) + Math.abs(dc)) * 30}ms`;
+          addAndClean(wave, adjPos);
+        }
+      }
+    }, 160);
+  }
+}
+
+/**
+ * Briefly mark a runecaster unit as casting (adds CSS class, clears after animation).
+ * Works by setting a flag read during the next renderCombatGrid call.
+ */
+function markRunecasterCasting(unit) {
+  if (!unit) return;
+  unit.isCastingRune = true;
+  setTimeout(() => { unit.isCastingRune = false; }, 600);
+}
+
 export function showToast(msg, icon = '✨', isImportant = false) {
   const containerId = isImportant ? 'toast-container-important' : 'toast-container';
   const container = document.getElementById(containerId);
@@ -3340,21 +3740,37 @@ export function handleStateNotification(event, data) {
     if (STATE.activeScreen === 'combat') renderCombatGrid();
   }
   else if (event === 'COMBAT_DAMAGE') {
-    if (STATE.activeScreen === 'combat') renderCombatGrid();
+    if (STATE.activeScreen === 'combat') {
+      if (data.attacker && data.attacker.type === 'huntsman' && data.defender) {
+        spawnHuntsmanProjectile(data.attacker.row, data.attacker.col, data.defender.row, data.defender.col);
+      }
+      renderCombatGrid();
+    }
   }
   else if (event === 'COMBAT_DEATH') {
     logWorld(`Dead: Unit '${data.name}' was slain on the lanes.`, 'combat-message');
+    if (STATE.activeScreen === 'combat' && data.row !== undefined && data.col !== undefined) {
+      spawnCombatParticle(data.row, data.col, 'particle-death-fade');
+      spawnFloatyText(data.row, data.col, '💀 SLAIN', 'var(--color-danger)');
+    }
   }
   else if (event === 'COMBAT_EFFECT_TRIGGER') {
     if (data.effect === 'loki_miss') {
       logWorld(`🎭 Loki's Trick: Enemy missed their attack!`, 'warn-message');
       showToast(`Enemy missed (Loki)`, '🎭');
+      if (data.unit) {
+        spawnFloatyText(data.unit.row, data.unit.col, '💨 DODGED!', 'var(--color-loki)');
+      }
     } else if (data.effect === 'hel_miss') {
       logWorld(`💀 Hel's Chill: Enemy missed their attack!`, 'warn-message');
       showToast(`Enemy missed (Hel)`, '💀');
+      if (data.unit) {
+        spawnFloatyText(data.unit.row, data.unit.col, '💨 MISSED!', 'var(--color-hel)');
+      }
     } else if (data.effect === 'thor_double') {
       logWorld(`⚡ Thor's Wrath: Allied unit '${data.unit.name}' strikes twice!`, 'gain-message');
       showToast(`Double Strike!`, '⚡');
+      spawnFloatyText(data.unit.row, data.unit.col, '⚡ DOUBLE STRIKE!', 'var(--color-thor)');
     } else if (data.effect === 'loki_charm') {
       logWorld(`🌀 Loki's Mirror: Spawning enemy '${data.unit.name}' is Charmed to fight for you!`, 'gain-message');
       showToast(`Charm: ${data.unit.name}!`, '🌀');
@@ -3367,6 +3783,59 @@ export function handleStateNotification(event, data) {
     } else if (data.effect === 'hel_undead') {
       logWorld(`💀 Hel's Necromancy: Hurt enemy '${data.unit.name}' converted into an allied Undead Draugr!`, 'gain-message');
       showToast(`Draugr Rises!`, '💀');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-raise-undead');
+      spawnFloatyText(data.unit.row, data.unit.col, '🧟 RISEN!', 'var(--color-hel)');
+    } else if (data.effect === 'huskarl_armor') {
+      spawnFloatyText(data.unit.row, data.unit.col, '🛡️ Blocked 1', '#ccc');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-armor-hit');
+    } else if (data.effect === 'shieldmaiden_block') {
+      const amt = data.amount || 1;
+      spawnFloatyText(data.unit.row, data.unit.col, `🛡️ Blocked ${amt}`, 'var(--color-freya)');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-armor-hit');
+    } else if (data.effect === 'hel_survive') {
+      spawnFloatyText(data.unit.row, data.unit.col, '💚 SURVIVED!', 'var(--color-hel)');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-survive-lethal');
+    } else if (data.effect === 'unit_leap') {
+      spawnFloatyText(data.unit.row, data.unit.col, '💨 LEAP!', 'var(--color-thor)');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-leap-wind');
+
+    } else if (data.effect === 'unit_heal') {
+      spawnFloatyText(data.unit.row, data.unit.col, `💚 +${data.amount} HP`, 'var(--color-success)');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-heal-pulse');
+    } else if (data.effect === 'rune_odin') {
+      const t = data.target;
+      logWorld(`⚡ ${data.unit.name} carved the Odin Rune — lightning AoE burst at [${t.row},${t.col}]! 25 dmg + 5/tick DoT for 3 ticks. (-1 Gold)`, 'gain-message');
+      showToast(`Odin Rune: Lightning Cluster!`, '⚡', true);
+      flashRuneOnCells(t.row, t.col, 'odin', true, data.unit.row, data.unit.col);
+      markRunecasterCasting(data.unit);
+    } else if (data.effect === 'rune_thor') {
+      const t = data.target;
+      logWorld(`🔨 ${data.unit.name} carved the Thor Rune — smashed ${t.name} for 50 dmg + 10 AoE + 2-tick stun! (-1 Gold)`, 'gain-message');
+      showToast(`Thor Rune: Thunderstrike!`, '🔨', true);
+      flashRuneOnCells(t.row, t.col, 'thor', true, data.unit.row, data.unit.col);
+      markRunecasterCasting(data.unit);
+    } else if (data.effect === 'rune_hel') {
+      const t = data.target;
+      logWorld(`💀 ${data.unit.name} carved the Hel Rune — halved ${t.name}'s HP (now ${t.hp})! (-1 Gold)`, 'gain-message');
+      showToast(`Hel Rune: Death's Grip!`, '💀', true);
+      flashRuneOnCells(t.row, t.col, 'hel', false, data.unit.row, data.unit.col);
+      markRunecasterCasting(data.unit);
+    } else if (data.effect === 'loki_rune_teleport') {
+      logWorld(`🌀 Loki Rune teleported ${data.unit.name} back to the start of its lane! (-1 Gold)`, 'gain-message');
+      showToast(`Loki Rune: Banished!`, '🌀', true);
+      flashRuneOnCells(data.unit.row, data.unit.col, 'loki', false);
+    } else if (data.effect === 'rune_loki') {
+      const t = data.target;
+      logWorld(`🌀 ${data.unit.name} carved the Loki Rune — banished ${t.name} to the start of lane ${t.row}! (-1 Gold)`, 'gain-message');
+      showToast(`Loki Rune: Banished!`, '🌀', true);
+      flashRuneOnCells(t.row, t.col, 'loki', false, data.unit.row, data.unit.col);
+      markRunecasterCasting(data.unit);
+    } else if (data.effect === 'rune_freya') {
+      const t = data.target;
+      logWorld(`🌸 ${data.unit.name} carved the Freya Rune — healed allies around [${t.row},${t.col}] to full HP! (-1 Gold)`, 'gain-message');
+      showToast(`Freya Rune: Blessed Healing!`, '🌸', true);
+      flashRuneOnCells(t.row, t.col, 'freya', true, data.unit.row, data.unit.col);
+      markRunecasterCasting(data.unit);
     }
   }
   else if (event === 'COMBAT_BREACH') {

@@ -10,12 +10,23 @@ import { GODS_CONFIG as GC } from './config/gods.js';
 let combatTimer = null;
 
 export function sortPoolByPoints() {
-  const order = STATE.combat.formationOrder || ['shieldmaiden', 'berserker', 'huntsman'];
+  let order = [...(STATE.combat.formationOrder || ['shieldmaiden', 'huntsman', 'berserker', 'huskarl', 'runecaster'])];
+  const requiredTypes = ['berserker', 'shieldmaiden', 'huntsman', 'huskarl', 'runecaster'];
+  let modified = false;
+  requiredTypes.forEach(t => {
+    if (!order.includes(t)) {
+      order.push(t);
+      modified = true;
+    }
+  });
+  if (modified) {
+    STATE.combat.formationOrder = order;
+  }
   STATE.combat.pool.sort((a, b) => {
     const idxA = order.indexOf(a.type);
     const idxB = order.indexOf(b.type);
-    const ptsA = idxA !== -1 ? (3 - idxA) : 1;
-    const ptsB = idxB !== -1 ? (3 - idxB) : 1;
+    const ptsA = idxA !== -1 ? (order.length - idxA) : 1;
+    const ptsB = idxB !== -1 ? (order.length - idxB) : 1;
     
     const pA = ptsA * (a.hp / a.maxHp);
     const pB = ptsB * (b.hp / b.maxHp);
@@ -36,6 +47,7 @@ export function startCombat(locationId, coordKey, enemyData) {
   STATE.combat.fleeMode = false;
   STATE.combat.stance = 'attack';
   STATE.combat.deployHistory = [];
+  STATE.combat.activeDoTs = [];
 
   // 1. Initialize grid
   const grid = [];
@@ -221,7 +233,6 @@ export function adjustCombatSpeed(newSpeedMs) {
   }
 }
 
-// Tick execution: updates units movement, attacks, and bounds
 function combatTick() {
   if (STATE.combat.paused || !STATE.combat.active) return;
 
@@ -229,6 +240,29 @@ function combatTick() {
   const gridSnapshot = grid.map(row => [...row]);
   const sizeR = CFG.gridRows;
   const sizeC = CFG.gridCols;
+
+  // Reset per-tick rune targeting set (radius-overlap prevention)
+  const runeTargetedCells = new Set();
+
+  // Process active Odin Rune Damage-over-Time ticks
+  if (!STATE.combat.activeDoTs) STATE.combat.activeDoTs = [];
+  STATE.combat.activeDoTs = STATE.combat.activeDoTs.filter(dot => {
+    dot.ticksLeft--;
+    const target = dot.unit;
+    if (target && target.hp > 0) {
+      target.hp = Math.max(0, target.hp - dot.dmgPerTick);
+      notify('COMBAT_DAMAGE', { attacker: { name: 'Odin Rune' }, defender: target });
+      if (target.hp <= 0) {
+        if (grid[target.row] && grid[target.row][target.col] === target) {
+          grid[target.row][target.col] = null;
+          removeUnitFromRegistry(target);
+          if (target.alliance === 'enemy') recordMonsterKill(target.type);
+          notify('COMBAT_DEATH', target);
+        }
+      }
+    }
+    return dot.ticksLeft > 0 && target && target.hp > 0;
+  });
 
   const boardUnits = [];
   for (let r = 0; r < sizeR; r++)
@@ -238,6 +272,12 @@ function combatTick() {
   for (const unit of boardUnits) {
     if (unit.hp <= 0) continue;
 
+    // Process stunned units — skip their action this tick
+    if (unit.stunnedTicksLeft > 0) {
+      unit.stunnedTicksLeft--;
+      continue;
+    }
+
     // Freya Milestone 2: Any unit below 25% HP heals 1 HP/tick
     if (unit.alliance === 'player' && STATE.godQuests.freya?.[1]) {
       const effStats = getEffectiveStats(unit);
@@ -246,6 +286,7 @@ function combatTick() {
       const healAmount = m2Config?.healAmount ?? 1;
       if (unit.hp < effStats.maxHp.total * healThreshold) {
         unit.hp = Math.min(effStats.maxHp.total, unit.hp + healAmount);
+        notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_heal', unit: unit, amount: healAmount });
       }
     }
 
@@ -260,6 +301,7 @@ function combatTick() {
           const effStats = getEffectiveStats(unit);
           const healAmount = GC.modifiers.blessings.freya?.healAmount ?? 2;
           unit.hp = Math.min(effStats.maxHp.total, unit.hp + healAmount);
+          notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_heal', unit: unit, amount: healAmount });
         }
       }
     }
@@ -297,6 +339,269 @@ function combatTick() {
     }
 
     const target = unit.isFleeing ? null : findTargetInLane(unit, gridSnapshot);
+
+    // ---- RUNECASTER: Divine Rune AI ----
+    if (unit.type === 'runecaster' && unit.alliance === 'player' && !unit.isFleeing) {
+      if (!unit.runesCast) unit.runesCast = {};
+
+      // Gather available runes (god milestone 5 unlocked + not yet cast this battle)
+      const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
+      const availableRunes = godNames.filter(g =>
+        STATE.godQuests[g]?.[4] === true && !unit.runesCast[g]
+      );
+
+      let bestRune = null;
+      let bestScore = 0;
+
+      // Helper: get all cells in radius 1 (Manhattan)
+      const getRadius1Cells = (row, col) => {
+        const cells = [];
+        for (let dr = -1; dr <= 1; dr++)
+          for (let dc = -1; dc <= 1; dc++) {
+            const nr = row + dr, nc = col + dc;
+            if (nr >= 0 && nr < sizeR && nc >= 0 && nc < sizeC) cells.push({ r: nr, c: nc });
+          }
+        return cells;
+      };
+
+      // Helper: cell key for rune targeting set
+      const cellKey = (r, c) => `${r},${c}`;
+
+      // All enemies on board
+      const allEnemies = [];
+      for (let r = 0; r < sizeR; r++)
+        for (let c = 0; c < sizeC; c++) {
+          const cell = grid[r][c];
+          if (cell && cell.alliance === 'enemy' && cell.hp > 0) allEnemies.push(cell);
+        }
+
+      // All player allies on board
+      const allAllies = [];
+      for (let r = 0; r < sizeR; r++)
+        for (let c = 0; c < sizeC; c++) {
+          const cell = grid[r][c];
+          if (cell && cell.alliance === 'player' && cell.hp > 0 && cell.id !== unit.id) allAllies.push(cell);
+        }
+
+      if (availableRunes.length > 0 && STATE.resources.gold >= 1) {
+        for (const rune of availableRunes) {
+          let score = 0;
+          let runeTarget = null;
+
+          if (rune === 'odin') {
+            // Score: enemies in radius 1 around densest cell × (25 immediate + 15 DoT)
+            let bestCluster = null, bestCount = 0;
+            for (const e of allEnemies) {
+              const neighbors = getRadius1Cells(e.row, e.col);
+              const count = neighbors.filter(n => grid[n.r]?.[n.c]?.alliance === 'enemy').length;
+              if (count > bestCount) { bestCount = count; bestCluster = e; }
+            }
+            if (bestCluster) {
+              // Ensure no overlap with already-targeted cells this tick
+              const alreadyTargeted = getRadius1Cells(bestCluster.row, bestCluster.col)
+                .some(n => runeTargetedCells.has(cellKey(n.r, n.c)));
+              if (!alreadyTargeted) {
+                score = bestCount * (25 + 15); // 25 immediate + 5×3 DoT
+                runeTarget = bestCluster;
+              }
+            }
+          }
+
+          if (rune === 'thor') {
+            // Score: direct 50 + splash to radius-1 enemies × 10 + stunned count × 20
+            const topEnemy = allEnemies.reduce((best, e) => (e.hp > (best?.hp ?? 0) ? e : best), null);
+            if (topEnemy) {
+              const already = runeTargetedCells.has(cellKey(topEnemy.row, topEnemy.col));
+              if (!already) {
+                const splashCells = getRadius1Cells(topEnemy.row, topEnemy.col);
+                const splashEnemies = splashCells.filter(n => grid[n.r]?.[n.c]?.alliance === 'enemy').length;
+                score = 50 + splashEnemies * 10 + splashEnemies * 20;
+                runeTarget = topEnemy;
+              }
+            }
+          }
+
+          if (rune === 'hel') {
+            // Score: HP removed by halving (favors high-HP units)
+            // Target: advancing enemy closest to player side with highest HP
+            const threatening = allEnemies
+              .filter(e => e.col < sizeC / 2)
+              .sort((a, b) => b.hp - a.hp);
+            const topThreat = threatening[0] || allEnemies.sort((a, b) => b.hp - a.hp)[0];
+            if (topThreat) {
+              const already = runeTargetedCells.has(cellKey(topThreat.row, topThreat.col));
+              if (!already) {
+                score = Math.floor(topThreat.hp / 2);
+                runeTarget = topThreat;
+              }
+            }
+          }
+
+          if (rune === 'loki') {
+            // Score: enemy dmg × (proximity to col 0) — favors imminent threats
+            let bestLoki = null, bestLokiScore = 0;
+            for (const e of allEnemies) {
+              const proximityScore = (sizeC - e.col) * 5; // closer to player = higher
+              const dmgScore = getEffectiveStats(e).dmg.total * 3;
+              const total = proximityScore + dmgScore;
+              if (total > bestLokiScore) { bestLokiScore = total; bestLoki = e; }
+            }
+            if (bestLoki) {
+              const already = runeTargetedCells.has(cellKey(bestLoki.row, bestLoki.col));
+              if (!already) { score = bestLokiScore; runeTarget = bestLoki; }
+            }
+          }
+
+          if (rune === 'freya') {
+            // Include ALL player units (including the runecaster itself, excluding charmed/confused/undead) for healing targets
+            const allPlayerUnits = [];
+            for (let r = 0; r < sizeR; r++) {
+              for (let c = 0; c < sizeC; c++) {
+                const cell = grid[r][c];
+                if (cell && cell.alliance === 'player' && cell.hp > 0 && !cell.isCharmed && !cell.isConfused && !cell.isUndead) {
+                  allPlayerUnits.push(cell);
+                }
+              }
+            }
+
+            let bestHeal = null, bestHealScore = 0;
+            for (const ally of allPlayerUnits) {
+              const neighbors = getRadius1Cells(ally.row, ally.col);
+              const healSum = neighbors.reduce((sum, n) => {
+                const cell = grid[n.r]?.[n.c];
+                if (cell && cell.alliance === 'player' && !cell.isCharmed && !cell.isConfused && !cell.isUndead) {
+                  const m = getEffectiveStats(cell).maxHp.total - cell.hp;
+                  return sum + Math.max(0, m);
+                }
+                return sum;
+              }, 0);
+              
+              // If number of enemies is bigger than our soldiers, use 50% HP danger threshold; otherwise, 80%.
+              const enemyCount = allEnemies.filter(e => !e.isCharmed && !e.isConfused && !e.isUndead).length;
+              // include the runecaster in player soldiers count:
+              const allyCount = allPlayerUnits.length;
+              const ratioThreshold = enemyCount > allyCount ? 0.5 : 0.8;
+
+              // Only trigger if at least one ally in this cluster is in danger (below the adaptive threshold)
+              const hasCriticalAlly = neighbors.some(n => {
+                const cell = grid[n.r]?.[n.c];
+                return cell && cell.alliance === 'player' && !cell.isCharmed && !cell.isConfused && !cell.isUndead && cell.hp < getEffectiveStats(cell).maxHp.total * ratioThreshold;
+              });
+
+              if (healSum > bestHealScore && hasCriticalAlly) {
+                bestHealScore = healSum;
+                bestHeal = ally;
+              }
+            }
+            
+            if (bestHeal) {
+              const already = getRadius1Cells(bestHeal.row, bestHeal.col)
+                .some(n => runeTargetedCells.has(cellKey(n.r, n.c)));
+              if (!already) {
+                score = bestHealScore;
+                runeTarget = bestHeal;
+              }
+            }
+          }
+
+          if (score > bestScore) { bestScore = score; bestRune = { name: rune, target: runeTarget }; }
+        }
+      }
+
+      if (bestRune && bestRune.target && STATE.resources.gold >= 1) {
+        // Deduct gold & mark rune used
+        adjustResource('gold', -1);
+        unit.runesCast[bestRune.name] = true;
+        const rt = bestRune.target;
+        const rnName = bestRune.name;
+
+        // Mark targeted area to prevent double-targeting this tick
+        getRadius1Cells(rt.row, rt.col).forEach(n => runeTargetedCells.add(cellKey(n.r, n.c)));
+        runeTargetedCells.add(cellKey(rt.row, rt.col));
+
+        notify('COMBAT_EFFECT_TRIGGER', { effect: `rune_${rnName}`, unit: unit, target: rt });
+
+        if (rnName === 'odin') {
+          // 25 AoE damage + 5/tick DoT for 3 ticks
+          getRadius1Cells(rt.row, rt.col).forEach(n => {
+            const cell = grid[n.r]?.[n.c];
+            if (cell && cell.alliance === 'enemy' && cell.hp > 0) {
+              cell.hp = Math.max(0, cell.hp - 25);
+              notify('COMBAT_DAMAGE', { attacker: { name: '⚡ Odin Rune' }, defender: cell });
+              if (!STATE.combat.activeDoTs) STATE.combat.activeDoTs = [];
+              STATE.combat.activeDoTs.push({ unit: cell, dmgPerTick: 5, ticksLeft: 3 });
+              if (cell.hp <= 0) {
+                if (grid[cell.row]?.[cell.col] === cell) { grid[cell.row][cell.col] = null; removeUnitFromRegistry(cell); if (cell.alliance === 'enemy') recordMonsterKill(cell.type); notify('COMBAT_DEATH', cell); }
+              }
+            }
+          });
+        } else if (rnName === 'thor') {
+          // 50 direct + 10 splash + 2-tick stun
+          rt.hp = Math.max(0, rt.hp - 50);
+          notify('COMBAT_DAMAGE', { attacker: { name: '🔨 Thor Rune' }, defender: rt });
+          getRadius1Cells(rt.row, rt.col).forEach(n => {
+            const cell = grid[n.r]?.[n.c];
+            if (cell && cell.alliance === 'enemy' && cell.hp > 0 && cell.id !== rt.id) {
+              cell.hp = Math.max(0, cell.hp - 10);
+              notify('COMBAT_DAMAGE', { attacker: { name: '🔨 Thor Rune' }, defender: cell });
+            }
+          });
+          // Stun all in radius 1
+          getRadius1Cells(rt.row, rt.col).forEach(n => {
+            const cell = grid[n.r]?.[n.c];
+            if (cell && cell.alliance === 'enemy' && cell.hp > 0) {
+              cell.stunnedTicksLeft = 2;
+            }
+          });
+          if (rt.hp > 0) rt.stunnedTicksLeft = 2;
+          // Death checks
+          [rt, ...getRadius1Cells(rt.row, rt.col).map(n => grid[n.r]?.[n.c]).filter(Boolean)].forEach(cell => {
+            if (cell && cell.hp <= 0 && grid[cell.row]?.[cell.col] === cell) {
+              grid[cell.row][cell.col] = null; removeUnitFromRegistry(cell);
+              if (cell.alliance === 'enemy') recordMonsterKill(cell.type); notify('COMBAT_DEATH', cell);
+            }
+          });
+        } else if (rnName === 'hel') {
+          // Halve current HP
+          rt.hp = Math.ceil(rt.hp / 2);
+          notify('COMBAT_DAMAGE', { attacker: { name: '💀 Hel Rune' }, defender: rt });
+          if (rt.hp <= 0 && grid[rt.row]?.[rt.col] === rt) {
+            grid[rt.row][rt.col] = null; removeUnitFromRegistry(rt);
+            if (rt.alliance === 'enemy') recordMonsterKill(rt.type); notify('COMBAT_DEATH', rt);
+          }
+        } else if (rnName === 'loki') {
+          // Teleport enemy to beginning of its lane (rightmost column)
+          if (grid[rt.row]?.[rt.col] === rt) {
+            grid[rt.row][rt.col] = null;
+            // Find rightmost free cell in enemy's starting side
+            let placed = false;
+            for (let c = sizeC - 1; c >= sizeC - 3; c--) {
+              if (!grid[rt.row][c]) { rt.col = c; grid[rt.row][c] = rt; placed = true; break; }
+            }
+            if (!placed) { rt.col = sizeC - 1; grid[rt.row][sizeC - 1] = rt; }
+          }
+          notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_rune_teleport', unit: rt });
+        } else if (rnName === 'freya') {
+          // Heal all allies in radius 1 to full HP (excluding charmed, confused, or undead)
+          getRadius1Cells(rt.row, rt.col).forEach(n => {
+            const cell = grid[n.r]?.[n.c];
+            if (cell && cell.alliance === 'player' && cell.hp > 0 && !cell.isCharmed && !cell.isConfused && !cell.isUndead) {
+              const effMax = getEffectiveStats(cell).maxHp.total;
+              const healedAmt = effMax - cell.hp;
+              if (healedAmt > 0) {
+                cell.hp = effMax;
+                notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_heal', unit: cell, amount: healedAmt });
+              }
+            }
+          });
+        }
+
+        notify('COMBAT_UPDATE');
+        continue; // Runecaster cast a rune, no normal attack this tick
+      }
+    }
+    // ---- END RUNECASTER ----
+
     if (target && target.hp > 0) {
       // Loki Milestone 2: Enemy attack speed reduced by 10% (10% miss chance)
       if (unit.alliance === 'enemy' && STATE.godQuests.loki?.[1]) {
@@ -334,11 +639,19 @@ function combatTick() {
 
         let dmgTaken = getEffectiveStats(unit).dmg.total;
 
+
+        // Heavy armor: reduces incoming damage by 1
+        if (currentTarget.type === 'huskarl') {
+          dmgTaken = Math.max(0, dmgTaken - 1);
+          notify('COMBAT_EFFECT_TRIGGER', { effect: 'huskarl_armor', unit: currentTarget });
+        }
+
         // Freya Milestone 4: Shieldmaidens block 1 DMG per hit
         if (currentTarget.alliance === 'player' && currentTarget.type === 'shieldmaiden' && STATE.godQuests.freya?.[3]) {
           const m4Config = GC.modifiers.milestones.freya.find(m => m.index === 3);
           const blockAmount = m4Config?.blockAmount ?? 1;
           dmgTaken = Math.max(0, dmgTaken - blockAmount);
+          notify('COMBAT_EFFECT_TRIGGER', { effect: 'shieldmaiden_block', unit: currentTarget, amount: blockAmount });
         }
 
         let nextHp = currentTarget.hp - dmgTaken;
@@ -349,6 +662,7 @@ function combatTick() {
           if (helM2?.surviveLethal ?? true) {
             currentTarget.hasSurvivedLethal = true;
             nextHp = 1;
+            notify('COMBAT_EFFECT_TRIGGER', { effect: 'hel_survive', unit: currentTarget });
           }
         }
 
@@ -619,8 +933,14 @@ function combatTick() {
           if (grid[unit.row][unit.col] === unit) {
             grid[unit.row][unit.col] = null;
           }
+          const isLeaping = leapVal > 1;
+          const oldCol = unit.col;
           unit.col = lastValidCol;
           grid[unit.row][lastValidCol] = unit;
+
+          if (isLeaping) {
+            notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_leap', unit: unit, oldCol: oldCol });
+          }
         }
 
         if (reachedBoundary) {
