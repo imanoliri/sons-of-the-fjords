@@ -1137,11 +1137,28 @@ function initTooltipEvents() {
             const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
             godNames.forEach(g => {
               const unlocked = STATE.godQuests[g]?.[4] === true;
-              const statusSymbol = unlocked ? '✅' : '🔒';
+              const hasCast = unit.runesCast && unit.runesCast[g] === true;
+              
+              let statusSymbol = '🔒';
+              let statusText = 'Locked';
+              let statusColor = 'var(--text-muted)';
+              
+              if (unlocked) {
+                if (hasCast) {
+                  statusSymbol = '❌';
+                  statusText = 'Depleted';
+                  statusColor = 'var(--color-danger)';
+                } else {
+                  statusSymbol = '✅';
+                  statusText = 'Ready';
+                  statusColor = `var(--color-${g})`;
+                }
+              }
+              
               const nameCapitalized = g.charAt(0).toUpperCase() + g.slice(1);
-              contents.push(`<span style="font-size: 0.75rem; color: ${unlocked ? 'var(--color-' + g + ')' : 'var(--text-muted)'}">${statusSymbol} Rune of ${nameCapitalized}</span>`);
+              contents.push(`<span style="font-size: 0.75rem; color: ${statusColor}">${statusSymbol} Rune of ${nameCapitalized} (${statusText})</span>`);
             });
-            borderAccent = 'var(--color-thor)';
+            borderAccent = 'var(--color-hel)';
           }
 
           contentsText = contents.join('<br>');
@@ -2937,11 +2954,28 @@ function renderCombatGrid() {
         const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
         godNames.forEach(g => {
           const unlocked = STATE.godQuests[g]?.[4] === true;
-          const statusSymbol = unlocked ? '✅' : '🔒';
+          const hasCast = unit.runesCast && unit.runesCast[g] === true;
+          
+          let statusSymbol = '🔒';
+          let statusText = 'Locked';
+          let statusColor = 'var(--text-muted)';
+          
+          if (unlocked) {
+            if (hasCast) {
+              statusSymbol = '❌';
+              statusText = 'Depleted';
+              statusColor = 'var(--color-danger)';
+            } else {
+              statusSymbol = '✅';
+              statusText = 'Ready';
+              statusColor = `var(--color-${g})`;
+            }
+          }
+          
           const nameCapitalized = g.charAt(0).toUpperCase() + g.slice(1);
-          contents.push(`<span style="font-size: 0.75rem; color: ${unlocked ? 'var(--color-' + g + ')' : 'var(--text-muted)'}">${statusSymbol} Rune of ${nameCapitalized}</span>`);
+          contents.push(`<span style="font-size: 0.75rem; color: ${statusColor}">${statusSymbol} Rune of ${nameCapitalized} (${statusText})</span>`);
         });
-        borderAccent = 'var(--color-thor)';
+        borderAccent = 'var(--color-hel)';
       }
 
       elTooltip.innerHTML = `
