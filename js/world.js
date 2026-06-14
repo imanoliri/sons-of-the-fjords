@@ -3,10 +3,30 @@
    ========================================================================== */
 
 import { STATE } from './state.js';
-import { WORLD_CONFIG } from './config/world.js';
+import { MAPS, WORLD_CONFIG } from './config/world.js';
+
+// Currently active map config (defaults to first map)
+let activeMapConfig = MAPS[0];
+
+/** Set the active map before calling initializeWorld() */
+export function setActiveMap(mapId) {
+  const found = MAPS.find(m => m.id === mapId);
+  if (found) activeMapConfig = found;
+}
+
+/** Get all available maps (for the landing screen picker) */
+export function getAvailableMaps() {
+  return MAPS;
+}
+
+/** Get the currently selected map config */
+export function getActiveMap() {
+  return activeMapConfig;
+}
 
 export function initializeWorld() {
-  const size = WORLD_CONFIG.gridSize;
+  const cfg = activeMapConfig;
+  const size = cfg.gridSize;
   const tiles = [];
   const revealed = [];
 
@@ -18,7 +38,7 @@ export function initializeWorld() {
       let terrain = 'plains';
 
       // Evaluate the terrain zones from config
-      for (const zone of WORLD_CONFIG.terrainZones) {
+      for (const zone of cfg.terrainZones) {
         if (zone.condition === 'default') {
           terrain = zone.label;
           break;
@@ -41,16 +61,16 @@ export function initializeWorld() {
   STATE.worldMap.revealed = revealed;
 
   // 2. Spawn Static Locations from config
-  STATE.worldMap.locations = { ...WORLD_CONFIG.locations };
+  STATE.worldMap.locations = { ...cfg.locations };
 
   // 3. Set initial party spawn point from config
-  STATE.party.worldX = WORLD_CONFIG.partyStart.x;
-  STATE.party.worldY = WORLD_CONFIG.partyStart.y;
+  STATE.party.worldX = cfg.partyStart.x;
+  STATE.party.worldY = cfg.partyStart.y;
 }
 
 // Check adjacent traversability
 export function getAdjacentCoords(cx, cy) {
-  const size = WORLD_CONFIG.gridSize;
+  const size = activeMapConfig.gridSize;
   const coords = [];
   const deltas = [
     { x: 0, y: -1 }, // North

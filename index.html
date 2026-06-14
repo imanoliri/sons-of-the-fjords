@@ -63,26 +63,37 @@
       <section class="screen screen-menu active" id="screen-menu">
         <div class="menu-box glass-panel animate-glow">
           <h1 class="logo-text">Sons of the Fjords</h1>
-          <p class="subtitle">Procedural Norse Exploration & Lane Battle Prototype</p>
-          <div class="menu-buttons">
-            <button class="btn btn-primary" id="btn-start-game">Settle the Drakkar</button>
+          <p class="subtitle">Procedural Norse Exploration &amp; Lane Battle Prototype</p>
+
+          <!-- MAP SELECTION -->
+          <div class="map-selection-section">
+            <h3 class="map-selection-heading">Choose Your Saga</h3>
+
+            <div class="map-cards-container" id="map-cards-container">
+              <!-- Populated dynamically by ui.js -->
+            </div>
+
+            <div class="map-carousel-dots" id="map-carousel-dots">
+              <!-- Dots populated dynamically -->
+            </div>
           </div>
+
+          <div class="menu-buttons">
+            <button class="btn btn-primary btn-start-voyage" id="btn-start-game">⚓ Set Sail</button>
+          </div>
+
           <div class="instructions-panel">
             <h3>How to Play</h3>
             <ul>
-              <li><strong>World Map (15x15)</strong>: Sail your drakkar across sea tiles (safe and fast) or walk on land
+              <li><strong>World Map</strong>: Sail your drakkar across sea tiles (safe and fast) or walk on land
                 (slow, consumes more food, triggers monster attacks).</li>
-              <li><strong>Starvation</strong>: If food hits 0, each step on the World Map kills one random band member!
-              </li>
-              <li><strong>Raid Sites (10x10)</strong>: Pre-generated layout with Fog of War. Move cardinally to explore
-                and push back the fog. Defeat monsters, open chests, check burial mounds, or visit dolmen shrines to
-                obtain <strong>Magic Objects</strong>.</li>
-              <li><strong>Lane Combat (10x8)</strong>: Automated lane battle. Deploy soldiers from your pool (pauses the
-                game) into lanes. Soldiers reaching the end give <strong>+1 Gold</strong> and return to your pool. If
-                monsters breach the left edge, they steal random resources. Units are lost permanently on death.</li>
+              <li><strong>Starvation</strong>: If food hits 0, each step on the World Map kills one random band member!</li>
+              <li><strong>Raid Sites (10x10)</strong>: Pre-generated layout with Fog of War. Defeat monsters, open chests,
+                check burial mounds, or visit dolmen shrines to obtain <strong>Magic Objects</strong>.</li>
+              <li><strong>Lane Combat (10x8)</strong>: Automated lane battle. Deploy soldiers into lanes. Soldiers reaching
+                the end give <strong>+1 Gold</strong> and return to your pool. Units are lost permanently on death.</li>
               <li><strong>The 5 Gods</strong>: Trade Magic Objects to advance god favor tracks. Reaching 5/5 unlocks
-                permanent favor, immunizes you from their wrath, and yields ultimate buffs (only one god's positive
-                buffs can be active at a time).</li>
+                permanent favor and ultimate buffs.</li>
             </ul>
           </div>
         </div>
@@ -95,7 +106,7 @@
             <div class="world-map-grid" id="world-map"></div>
           </div>
           <div class="sidebar-panel glass-panel">
-            <h2 class="section-title">Fjord Expedition</h2>
+            <h2 class="section-title" id="world-map-title">Fjord Expedition</h2>
             <div id="world-coordinates" class="coordinates-display">X: 0, Y: 0</div>
 
             <div id="world-event-log" class="event-log">

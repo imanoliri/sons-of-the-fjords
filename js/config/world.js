@@ -2,33 +2,149 @@
    CONFIG: WORLD MAP — Sons of the Fjords
    ========================================================================== */
 
-export const WORLD_CONFIG = {
-  gridSize: 15,
+// ─── MAP DEFINITIONS ────────────────────────────────────────────────────────
+// Each map has metadata for the landing screen + the terrain/location data
+// used by world.js to build the actual grid.
 
-  // Party starting position on the world map
-  partyStart: { x: 2, y: 7 },
+export const MAPS = [
+  // ── MAP 1: Fjordlands ──────────────────────────────────────────────────────
+  {
+    id: 'fjordlands',
+    name: 'Fjordlands',
+    subtitle: 'The Classic Norse Saga',
+    description: 'Sail winding fjords, march through ancient forests, and plunder monastery treasures. A balanced campaign for seasoned raiders.',
+    difficulty: 1,           // 1–4 (shown as ☆ indicators on the card)
+    difficultyLabel: 'Balanced',
+    emoji: '⚔️',
+    terrainHighlights: ['plains','forest','water','snow','mountain'],
+    gridSize: 15,
+    partyStart: { x: 2, y: 7 },
+    terrainZones: [
+      { label: 'snow',     condition: 'y <= 2' },
+      { label: 'mountain', condition: 'y >= 13 || x === 14 || (x === 0 && y >= 11)' },
+      { label: 'water',    condition: 'y === 7 || y === 8' },
+      { label: 'water',    condition: 'x <= 2' },
+      { label: 'river',    condition: 'x === 8 && y >= 3 && y <= 6' },
+      { label: 'river',    condition: 'x === 6 && y >= 9 && y <= 12' },
+      { label: 'forest',   condition: '(x >= 9 && x <= 12 && y >= 3 && y <= 6) || (x >= 3 && x <= 5 && y >= 9 && y <= 11)' },
+      { label: 'plains',   condition: 'default' }
+    ],
+    locations: {
+      "3,6":   { id: "town_1", name: "Fjordgard Kaufang",      type: "town", terrain: "plains"   },
+      "8,4":   { id: "town_2", name: "Heimdall Sogn",          type: "town", terrain: "plains"   },
+      "12,11": { id: "town_3", name: "Ullsgard Outpost",       type: "town", terrain: "plains"   },
+      "4,3":   { id: "raid_1", name: "St. Alban Monastery",    type: "raid", terrain: "forest",   locationType: "forest",       dangerLevel: 1 },
+      "3,9":   { id: "raid_2", name: "Lindisfarne Shore",      type: "raid", terrain: "plains",   locationType: "default",      dangerLevel: 2 },
+      "10,1":  { id: "raid_3", name: "Barrow Mound of Balder", type: "raid", terrain: "snow",     locationType: "burial_mound", dangerLevel: 3 },
+      "13,12": { id: "raid_4", name: "Jotunn Crag Cave",       type: "raid", terrain: "mountain", locationType: "mountain",     dangerLevel: 4 },
+      "8,12":  { id: "raid_5", name: "Thjazi Keep Ruins",      type: "raid", terrain: "forest",   locationType: "forest",       dangerLevel: 5 }
+    }
+  },
 
-  // Terrain zone rules (evaluated top-to-bottom, first match wins)
-  terrainZones: [
-    { label: 'snow',     condition: 'y <= 2' },
-    { label: 'mountain', condition: 'y >= 13 || x === 14 || (x === 0 && y >= 11)' },
-    { label: 'water',    condition: 'y === 7 || y === 8' },
-    { label: 'water',    condition: 'x <= 2' },
-    { label: 'river',    condition: 'x === 8 && y >= 3 && y <= 6' },
-    { label: 'river',    condition: 'x === 6 && y >= 9 && y <= 12' },
-    { label: 'forest',   condition: '(x >= 9 && x <= 12 && y >= 3 && y <= 6) || (x >= 3 && x <= 5 && y >= 9 && y <= 11)' },
-    { label: 'plains',   condition: 'default' }
-  ],
+  // ── MAP 2: Iron Coast ─────────────────────────────────────────────────────
+  {
+    id: 'iron_coast',
+    name: 'Iron Coast',
+    subtitle: "The Warrior's Shore",
+    description: 'A war-torn coastline where rival jarls and mercenary camps block the way inland. Expect heavy resistance and rich plunder. Combat-focused.',
+    difficulty: 2,
+    difficultyLabel: 'Hard',
+    emoji: '🗡️',
+    terrainHighlights: ['plains','water','mountain','forest'],
+    gridSize: 15,
+    partyStart: { x: 1, y: 7 },
+    terrainZones: [
+      { label: 'mountain', condition: 'x >= 12' },
+      { label: 'mountain', condition: 'y <= 1 || y >= 13' },
+      { label: 'water',    condition: 'x <= 2 && y >= 3 && y <= 11' },
+      { label: 'water',    condition: 'x === 6 && y >= 5 && y <= 9' },
+      { label: 'river',    condition: 'x === 3 && y >= 3 && y <= 11' },
+      { label: 'forest',   condition: '(x >= 7 && x <= 10 && y >= 2 && y <= 5) || (x >= 8 && x <= 11 && y >= 9 && y <= 12)' },
+      { label: 'snow',     condition: 'x >= 11 && y <= 4' },
+      { label: 'plains',   condition: 'default' }
+    ],
+    locations: {
+      "5,4":   { id: "town_1", name: "Ironhaven Port",          type: "town", terrain: "plains"   },
+      "5,10":  { id: "town_2", name: "Bloodfell Crossing",      type: "town", terrain: "plains"   },
+      "10,7":  { id: "town_3", name: "Skjoldr Bastion",         type: "town", terrain: "plains"   },
+      "4,6":   { id: "raid_1", name: "Jarl Haakon's Longhouse",  type: "raid", terrain: "plains",   locationType: "default",      dangerLevel: 1 },
+      "7,3":   { id: "raid_2", name: "Mercenary War Camp",      type: "raid", terrain: "forest",   locationType: "forest",       dangerLevel: 2 },
+      "4,12":  { id: "raid_3", name: "Tidal Watchtower",        type: "raid", terrain: "plains",   locationType: "default",      dangerLevel: 3 },
+      "11,6":  { id: "raid_4", name: "Warlord's Iron Keep",      type: "raid", terrain: "mountain", locationType: "mountain",     dangerLevel: 4 },
+      "9,11":  { id: "raid_5", name: "Hall of Fallen Berserkers",type: "raid", terrain: "forest",  locationType: "burial_mound", dangerLevel: 5 }
+    }
+  },
 
-  // Static named locations keyed by "x,y"
-  locations: {
-    "3,6":   { id: "town_1", name: "Fjordgard Kaufang",      type: "town", terrain: "plains"   },
-    "8,4":   { id: "town_2", name: "Heimdall Sogn",          type: "town", terrain: "plains"   },
-    "12,11": { id: "town_3", name: "Ullsgard Outpost",       type: "town", terrain: "plains"   },
-    "4,3":   { id: "raid_1", name: "St. Alban Monastery",    type: "raid", terrain: "forest",   locationType: "forest",   dangerLevel: 1 },
-    "3,9":   { id: "raid_2", name: "Lindisfarne Shore",      type: "raid", terrain: "plains",   locationType: "default",  dangerLevel: 2 },
-    "10,1":  { id: "raid_3", name: "Barrow Mound of Balder", type: "raid", terrain: "snow",     locationType: "burial_mound", dangerLevel: 3 },
-    "13,12": { id: "raid_4", name: "Jotunn Crag Cave",       type: "raid", terrain: "mountain", locationType: "mountain", dangerLevel: 4 },
-    "8,12":  { id: "raid_5", name: "Thjazi Keep Ruins",      type: "raid", terrain: "forest",   locationType: "forest",   dangerLevel: 5 }
+  // ── MAP 3: Frozen Wastes ──────────────────────────────────────────────────
+  {
+    id: 'frozen_wastes',
+    name: 'Frozen Wastes',
+    subtitle: 'The Realm of Jotunn',
+    description: 'A blizzard-wracked tundra ruled by frost giants and howling wolves. Few towns, scarce food, and relentless cold. For veteran chieftains only.',
+    difficulty: 4,
+    difficultyLabel: 'Brutal',
+    emoji: '❄️',
+    terrainHighlights: ['snow','mountain','forest'],
+    gridSize: 15,
+    partyStart: { x: 2, y: 13 },
+    terrainZones: [
+      { label: 'snow',     condition: 'y <= 8' },
+      { label: 'mountain', condition: 'y <= 3 || (x >= 11 && y <= 9)' },
+      { label: 'mountain', condition: 'x === 0 || x === 14' },
+      { label: 'river',    condition: 'x === 5 && y >= 5 && y <= 12' },
+      { label: 'river',    condition: 'x === 9 && y >= 4 && y <= 11' },
+      { label: 'forest',   condition: '(x >= 2 && x <= 4 && y >= 6 && y <= 9) || (x >= 6 && x <= 8 && y >= 10 && y <= 13)' },
+      { label: 'plains',   condition: 'default' }
+    ],
+    locations: {
+      "3,11":  { id: "town_1", name: "Frost-Beard's Mead Hall",   type: "town", terrain: "plains"   },
+      "10,12": { id: "town_2", name: "Nidavellir Forge",          type: "town", terrain: "plains"   },
+      "6,4":   { id: "raid_1", name: "Glacier Burial Vault",      type: "raid", terrain: "snow",     locationType: "burial_mound", dangerLevel: 1 },
+      "4,7":   { id: "raid_2", name: "Skoll's Wolf Den",           type: "raid", terrain: "forest",   locationType: "forest",       dangerLevel: 2 },
+      "10,5":  { id: "raid_3", name: "Frost Giant Citadel",       type: "raid", terrain: "mountain", locationType: "mountain",     dangerLevel: 3 },
+      "7,12":  { id: "raid_4", name: "Sunken Jotunn Temple",      type: "raid", terrain: "snow",     locationType: "burial_mound", dangerLevel: 4 },
+      "2,2":   { id: "raid_5", name: "Throne of Ymir",            type: "raid", terrain: "snow",     locationType: "mountain",     dangerLevel: 5 }
+    }
+  },
+
+  // ── MAP 4: Dark Archipelago ───────────────────────────────────────────────
+  {
+    id: 'dark_archipelago',
+    name: 'Dark Archipelago',
+    subtitle: 'The Drowned Isles',
+    description: 'A labyrinth of waterways and cursed island ruins. Seafaring is essential — your Drakkar is your lifeline. Magic objects abound.',
+    difficulty: 3,
+    difficultyLabel: 'Treacherous',
+    emoji: '🌊',
+    terrainHighlights: ['water','plains','forest','mountain'],
+    gridSize: 15,
+    partyStart: { x: 1, y: 7 },
+    terrainZones: [
+      { label: 'mountain', condition: 'x === 8 && (y === 7 || y === 8)' },
+      { label: 'mountain', condition: 'x >= 12 && y >= 11' },
+      { label: 'forest',   condition: '(x === 6 || x === 7) && (y === 3 || y === 4)' },
+      { label: 'forest',   condition: '(x >= 11 && x <= 12) && (y >= 5 && y <= 7)' },
+      { label: 'river',    condition: 'x === 4 && y >= 5 && y <= 9' },
+      { label: 'river',    condition: 'y === 6 && x >= 5 && x <= 9' },
+      { label: 'plains',   condition: '(x === 2 || x === 3) && (y >= 5 && y <= 9)' },
+      { label: 'plains',   condition: '(x >= 5 && x <= 8) && (y >= 2 && y <= 5)' },
+      { label: 'plains',   condition: '(x >= 6 && x <= 9) && (y >= 7 && y <= 10)' },
+      { label: 'plains',   condition: '(x >= 10 && x <= 13) && (y >= 4 && y <= 8)' },
+      { label: 'plains',   condition: '(x >= 11 && x <= 13) && (y >= 10 && y <= 13)' },
+      { label: 'water',    condition: 'default' }                        // base is ocean
+    ],
+    locations: {
+      "2,7":   { id: "town_1", name: "The Drowned Pier",          type: "town", terrain: "plains"   },
+      "11,6":  { id: "town_2", name: "Svartalheim Anchorage",     type: "town", terrain: "plains"   },
+      "12,12": { id: "town_3", name: "Serpent Isle Outpost",      type: "town", terrain: "plains"   },
+      "7,3":   { id: "raid_1", name: "Sunken Monastery of Mimir", type: "raid", terrain: "forest",   locationType: "forest",       dangerLevel: 1 },
+      "6,8":   { id: "raid_2", name: "Wraith Cove Ruins",         type: "raid", terrain: "plains",   locationType: "burial_mound", dangerLevel: 2 },
+      "8,7":   { id: "raid_3", name: "Naglfar Shipwreck",         type: "raid", terrain: "mountain", locationType: "mountain",     dangerLevel: 3 },
+      "10,4":  { id: "raid_4", name: "Isle of Skadi's Curse",      type: "raid", terrain: "plains",   locationType: "default",      dangerLevel: 4 },
+      "12,11": { id: "raid_5", name: "Dread Throne of Hel",       type: "raid", terrain: "mountain", locationType: "mountain",     dangerLevel: 5 }
+    }
   }
-};
+];
+
+// ─── DEFAULT / ACTIVE CONFIG (kept for backwards-compat with state.js) ───────
+export const WORLD_CONFIG = MAPS[0];

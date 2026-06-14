@@ -3,7 +3,7 @@
    ========================================================================== */
 
 import { STATE, subscribe, resetGame } from './state.js';
-import { initializeWorld } from './world.js';
+import { initializeWorld, setActiveMap } from './world.js';
 import { initUIBindings, render, handleStateNotification, logWorld } from './ui.js';
 
 // Setup application boots

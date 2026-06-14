@@ -3,13 +3,13 @@
    ========================================================================== */
 
 import { STATE, setScreen, adjustResource, recruitSoldier, sacrificeRelic, adjustFavor, triggerStarvationDamage, notify, executePlunderMound, executeSacrificeSheep, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, buyRecruit, getHealCost, healWarriors, getEffectiveStats } from './state.js';
-import { getAdjacentCoords } from './world.js';
+import { getAdjacentCoords, setActiveMap, getAvailableMaps, initializeWorld, getActiveMap } from './world.js';
 import { discoverTile, generateLocationMap } from './location.js';
 import { togglePause, deployUnit, undeployUnit, startCombat, fleeCombat, adjustCombatSpeed, sortPoolByPoints } from './combat.js';
 import { TOWN_CONFIG } from './config/town.js';
 import { MOVEMENT_CONFIG } from './config/movement.js';
 import { LOCATION_CONFIG } from './config/location.js';
-import { WORLD_CONFIG } from './config/world.js';
+
 import { GODS_CONFIG } from './config/gods.js';
 import { SOLDIERS_CONFIG } from './config/soldiers.js';
 
@@ -109,8 +109,108 @@ const MONSTER_EMOJIS = {
 // Initialize UI binding event listeners
 export function initUIBindings() {
 
+  // ── Map Selection ──────────────────────────────────────────────────────────
+  const maps = getAvailableMaps();
+  let selectedMapIndex = 0;
+
+  const elMapContainer = document.getElementById('map-cards-container');
+  const elDots = document.getElementById('map-carousel-dots');
+
+  const TERRAIN_ICONS = {
+    plains:   '🌿',
+    forest:   '🌲',
+    water:    '🌊',
+    snow:     '❄️',
+    mountain: '⛰️',
+    river:    '💧',
+    cave:     '🕳️'
+  };
+
+  const DIFFICULTY_COLORS = {
+    1: '#4ade80',  // green
+    2: '#facc15',  // yellow
+    3: '#f97316',  // orange
+    4: '#ef4444'   // red
+  };
+
+  function renderDifficultyStars(level) {
+    const color = DIFFICULTY_COLORS[level] || '#888';
+    return Array.from({ length: 4 }, (_, i) =>
+      `<span style="color:${i < level ? color : 'rgba(255,255,255,0.2)'};">◆</span>`
+    ).join('');
+  }
+
+  function renderMapCards() {
+    elMapContainer.innerHTML = '';
+    elDots.innerHTML = '';
+
+    maps.forEach((map, i) => {
+      // ── Card ────────────────────────────────────────────────────────────────
+      const card = document.createElement('div');
+      card.className = 'map-card' + (i === selectedMapIndex ? ' map-card--selected' : '');
+      card.dataset.mapIndex = i;
+
+      const uniqueTerrains = [...new Set(map.terrainHighlights)].slice(0, 4);
+      const terrainBadges = uniqueTerrains
+        .map(t => `<span class="terrain-badge">${TERRAIN_ICONS[t] || '🗺️'} ${t}</span>`)
+        .join('');
+
+      const raidCount  = Object.values(map.locations).filter(l => l.type === 'raid').length;
+      const townCount  = Object.values(map.locations).filter(l => l.type === 'town').length;
+
+      card.innerHTML = `
+        <div class="map-card-header">
+          <span class="map-card-emoji">${map.emoji}</span>
+          <div class="map-card-titles">
+            <div class="map-card-name">${map.name}</div>
+            <div class="map-card-subtitle">${map.subtitle}</div>
+          </div>
+        </div>
+        <p class="map-card-desc">${map.description}</p>
+        <div class="map-card-meta">
+          <div class="map-card-difficulty">
+            <span class="meta-label">Difficulty</span>
+            <span class="difficulty-stars">${renderDifficultyStars(map.difficulty)}</span>
+            <span class="difficulty-label" style="color:${DIFFICULTY_COLORS[map.difficulty]}">${map.difficultyLabel}</span>
+          </div>
+          <div class="map-card-stats">
+            <span class="meta-stat">🏰 ${townCount} Towns</span>
+            <span class="meta-stat">⚔️ ${raidCount} Raids</span>
+            <span class="meta-stat">📐 ${map.gridSize}×${map.gridSize}</span>
+          </div>
+        </div>
+        <div class="terrain-badges">${terrainBadges}</div>
+        <div class="map-card-select-indicator">${i === selectedMapIndex ? '✓ Selected' : 'Click to Select'}</div>
+      `;
+
+      card.addEventListener('click', () => {
+        selectedMapIndex = i;
+        renderMapCards();
+      });
+
+      elMapContainer.appendChild(card);
+
+      // ── Dot ─────────────────────────────────────────────────────────────────
+      const dot = document.createElement('button');
+      dot.className = 'map-dot' + (i === selectedMapIndex ? ' map-dot--active' : '');
+      dot.title = map.name;
+      dot.addEventListener('click', () => {
+        selectedMapIndex = i;
+        renderMapCards();
+        // Scroll the selected card into view
+        const cards = elMapContainer.querySelectorAll('.map-card');
+        if (cards[i]) cards[i].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      });
+      elDots.appendChild(dot);
+    });
+  }
+
+  renderMapCards();
+
   // Screen Router Events
   document.getElementById('btn-start-game').addEventListener('click', () => {
+    setActiveMap(maps[selectedMapIndex].id);
+    initializeWorld();   // Rebuild the grid for the chosen map
     setScreen('world');
   });
 
@@ -1489,6 +1589,13 @@ function renderWorldMap() {
   elWorldMap.innerHTML = '';
   elWorldCoords.innerText = `Longship Pos - X: ${STATE.party.worldX}, Y: ${STATE.party.worldY}`;
 
+  // Update the sidebar title dynamically to reflect the current active map
+  const activeMapTitleEl = document.getElementById('world-map-title');
+  if (activeMapTitleEl) {
+    const activeMap = getActiveMap();
+    activeMapTitleEl.innerText = activeMap ? activeMap.name : 'Fjord Expedition';
+  }
+
 
 
   const tiles = STATE.worldMap.tiles;
@@ -1860,7 +1967,7 @@ function renderTownScreen() {
   let snowCount = 0;
   let mountainCount = 0;
 
-  const locKey = Object.keys(WORLD_CONFIG.locations).find(k => WORLD_CONFIG.locations[k].id === locId);
+  const locKey = Object.keys(STATE.worldMap.locations).find(k => STATE.worldMap.locations[k].id === locId);
   if (locKey) {
     const [tx, ty] = locKey.split(',').map(Number);
     for (let dy = -1; dy <= 1; dy++) {
@@ -2106,6 +2213,7 @@ function renderTownScreen() {
   });
 
   // Great Hall recruitment labels
+  const unitIcons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
   ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'].forEach(t => {
     const labelEl = document.getElementById(`label-recruit-${t}`);
     if (labelEl) {
@@ -2116,7 +2224,8 @@ function renderTownScreen() {
         costStrings.push(`-${amt} ${resLabel}`);
       }
       const capName = t.charAt(0).toUpperCase() + t.slice(1);
-      labelEl.innerText = `Hire ${capName} (${costStrings.join(', ')})`;
+      const icon = unitIcons[t] || '';
+      labelEl.innerText = `${icon} Hire ${capName} (${costStrings.join(', ')})`;
     }
   });
 }

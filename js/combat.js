@@ -299,9 +299,11 @@ function combatTick() {
         const inMelee = currentTarget && Math.abs(currentTarget.col - unit.col) <= 1;
         if (!inMelee) {
           const effStats = getEffectiveStats(unit);
-          const healAmount = GC.modifiers.blessings.freya?.healAmount ?? 2;
-          unit.hp = Math.min(effStats.maxHp.total, unit.hp + healAmount);
-          notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_heal', unit: unit, amount: healAmount });
+          if (unit.hp < effStats.maxHp.total) {
+            const healAmount = GC.modifiers.blessings.freya?.healAmount ?? 2;
+            unit.hp = Math.min(effStats.maxHp.total, unit.hp + healAmount);
+            notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_heal', unit: unit, amount: healAmount });
+          }
         }
       }
     }
