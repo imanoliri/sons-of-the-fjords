@@ -3158,7 +3158,7 @@ function updateModalKeyboardNavigation() {
   }
 
   const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'))
-    .filter(btn => !btn.classList.contains('btn-close-x') && !btn.classList.contains('modal-close-btn'));
+    .filter(btn => !btn.classList.contains('btn-close-x') && !btn.classList.contains('modal-close-btn') && !btn.classList.contains('btn-no-shortcut'));
   if (buttons.length === 0) return;
 
   if (activeModalFocusIndex >= buttons.length) {
