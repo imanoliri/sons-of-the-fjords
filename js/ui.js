@@ -1388,23 +1388,22 @@ function renderResourceBar() {
     STATE.permanentlyActivatedBlessings.forEach(b => {
       if (b !== STATE.activeBlessing) {
         const lore = GOD_LORE[b];
-        tempBlessings.push(`<span data-god-tooltip="${b}" data-tooltip-section="champion" style="color: var(--color-${b}); cursor: pointer;">${lore.icon} ${b.toUpperCase()} (Perm)</span>`);
+        tempBlessings.push(`<span data-god-tooltip="${b}" data-tooltip-section="champion" style="color: var(--color-${b}); cursor: pointer;">${lore.icon} ${b.toUpperCase()}</span>`);
       }
     });
   }
 
   if (tempBlessings.length > 0) {
-    blessingHtml = `Buffs: ${tempBlessings.join(', ')}`;
+    blessingHtml = tempBlessings.join(', ');
   } else {
     blessingHtml = `<span>No Active Buff</span>`;
   }
 
   if (activeWraths.length > 0) {
     const wrathNames = activeWraths.map(g => {
-      const lore = GOD_LORE[g];
-      return `<span data-god-tooltip="${g}" data-tooltip-section="curse" style="color:var(--color-danger); font-weight:bold; cursor: pointer;">${g.toUpperCase()}'S WRATH ⚡</span>`;
-    }).join(', ');
-    elBlessing.innerHTML = `${blessingHtml} | <span style="font-size:0.85em;">Active Curses: ${wrathNames}</span>`;
+      return `<span data-god-tooltip="${g}" data-tooltip-section="curse" style="color:var(--color-danger); font-weight:bold; cursor: pointer;">${g.toUpperCase()}'S WRATH</span>`;
+    });
+    elBlessing.innerHTML = `${blessingHtml}<br>${wrathNames.join(' ⚡ ')}`;
   } else {
     elBlessing.innerHTML = blessingHtml;
   }
