@@ -440,30 +440,48 @@ function combatTick() {
           }
 
           if (rune === 'freya') {
-            // Score: total HP restored to allies in radius 1 around most-injured allied cluster
-            // Triggers only if there are injured allies
+            // Include ALL player units (including the runecaster itself) for healing targets
+            const allPlayerUnits = [];
+            for (let r = 0; r < sizeR; r++) {
+              for (let c = 0; c < sizeC; c++) {
+                const cell = grid[r][c];
+                if (cell && cell.alliance === 'player' && cell.hp > 0) {
+                  allPlayerUnits.push(cell);
+                }
+              }
+            }
+
             let bestHeal = null, bestHealScore = 0;
-            for (const ally of allAllies) {
-              const effMax = getEffectiveStats(ally).maxHp.total;
-              const missing = effMax - ally.hp;
-              if (missing <= 0) continue;
+            for (const ally of allPlayerUnits) {
               const neighbors = getRadius1Cells(ally.row, ally.col);
               const healSum = neighbors.reduce((sum, n) => {
                 const cell = grid[n.r]?.[n.c];
-                if (cell && cell.alliance === 'player' && cell.id !== unit.id) {
+                if (cell && cell.alliance === 'player') {
                   const m = getEffectiveStats(cell).maxHp.total - cell.hp;
                   return sum + Math.max(0, m);
                 }
                 return sum;
               }, 0);
-              // Only trigger if allies are in danger (below 50% HP)
-              const allyCritical = allAllies.some(a => a.hp < getEffectiveStats(a).maxHp.total * 0.5);
-              if (healSum > bestHealScore && allyCritical) { bestHealScore = healSum; bestHeal = ally; }
+              
+              // Only trigger if at least one ally in this cluster is in danger (below 50% HP)
+              const hasCriticalAlly = neighbors.some(n => {
+                const cell = grid[n.r]?.[n.c];
+                return cell && cell.alliance === 'player' && cell.hp < getEffectiveStats(cell).maxHp.total * 0.5;
+              });
+
+              if (healSum > bestHealScore && hasCriticalAlly) {
+                bestHealScore = healSum;
+                bestHeal = ally;
+              }
             }
+            
             if (bestHeal) {
               const already = getRadius1Cells(bestHeal.row, bestHeal.col)
                 .some(n => runeTargetedCells.has(cellKey(n.r, n.c)));
-              if (!already) { score = bestHealScore; runeTarget = bestHeal; }
+              if (!already) {
+                score = bestHealScore;
+                runeTarget = bestHeal;
+              }
             }
           }
 
