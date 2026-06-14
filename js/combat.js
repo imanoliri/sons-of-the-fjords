@@ -639,13 +639,6 @@ function combatTick() {
 
         let dmgTaken = getEffectiveStats(unit).dmg.total;
 
-        // 15% Critical hit chance for Berserkers, Jotunns, and Lindwurms (1.5x damage)
-        let isCrit = false;
-        if ((unit.type === 'berserker' || unit.type === 'Frost Giant (Jotunn)' || unit.type === 'Lindwurm') && Math.random() < 0.15) {
-          isCrit = true;
-          dmgTaken = Math.floor(dmgTaken * 1.5);
-          notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_crit', unit: unit, amount: dmgTaken });
-        }
 
         // Heavy armor: reduces incoming damage by 1
         if (currentTarget.type === 'huskarl') {

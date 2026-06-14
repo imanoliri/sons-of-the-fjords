@@ -3798,9 +3798,7 @@ export function handleStateNotification(event, data) {
     } else if (data.effect === 'unit_leap') {
       spawnFloatyText(data.unit.row, data.unit.col, '💨 LEAP!', 'var(--color-thor)');
       spawnCombatParticle(data.unit.row, data.unit.col, 'particle-leap-wind');
-    } else if (data.effect === 'unit_crit') {
-      spawnFloatyText(data.unit.row, data.unit.col, `💥 CRIT! ${data.amount}`, 'var(--color-danger)');
-      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-crit-hit');
+
     } else if (data.effect === 'unit_heal') {
       spawnFloatyText(data.unit.row, data.unit.col, `💚 +${data.amount} HP`, 'var(--color-success)');
       spawnCombatParticle(data.unit.row, data.unit.col, 'particle-heal-pulse');
