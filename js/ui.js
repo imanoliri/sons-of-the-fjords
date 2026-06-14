@@ -2720,18 +2720,36 @@ function renderCombatGrid() {
         // Undead, Charmed, or Confused states visual style hooks
         if (unit.isUndead) {
           elUnit.classList.add('undead-risen');
+          const badge = document.createElement('span');
+          badge.className = 'undead-skull-overlay';
+          badge.innerText = '💀';
+          elUnit.appendChild(badge);
         }
         if (unit.isCharmed) {
           elUnit.classList.add('charmed-state');
+          const badge = document.createElement('span');
+          badge.className = 'charm-heart-orbit';
+          badge.innerText = '💖';
+          elUnit.appendChild(badge);
         }
         if (unit.isConfused) {
           elUnit.classList.add('confused-state');
+          const badge = document.createElement('span');
+          badge.className = 'confuse-question-orbit';
+          badge.innerText = '🌀';
+          elUnit.appendChild(badge);
         }
 
         // Apply active player stances visual style classes to player units
         if (unit.alliance === 'player') {
           const stance = STATE.combat.stance || 'attack';
           elUnit.classList.add(`stance-${stance}`);
+          if (stance !== 'attack') {
+            const stanceBadge = document.createElement('span');
+            stanceBadge.className = 'stance-icon-badge';
+            stanceBadge.innerText = stance === 'defend' ? '🛡️' : stance === 'hold' ? '⚓' : '🏃';
+            elUnit.appendChild(stanceBadge);
+          }
         }
 
         // Attack dynamic animations
