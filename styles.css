@@ -955,6 +955,27 @@ body {
   transform: translate(-50%, -50%) scale(1.05);
 }
 
+.god-pentagram-node.permanently-active {
+  /* Fallback */
+  border-color: var(--node-color) !important;
+  box-shadow: 0 0 15px var(--node-color) !important;
+}
+
+.god-pentagram-node.deity-odin.permanently-active { border-color: var(--color-odin) !important; box-shadow: 0 0 18px var(--color-odin) !important; }
+.god-pentagram-node.deity-thor.permanently-active { border-color: var(--color-thor) !important; box-shadow: 0 0 18px var(--color-thor) !important; }
+.god-pentagram-node.deity-freya.permanently-active { border-color: var(--color-freya) !important; box-shadow: 0 0 18px var(--color-freya) !important; }
+.god-pentagram-node.deity-hel.permanently-active { border-color: var(--color-hel) !important; box-shadow: 0 0 18px var(--color-hel) !important; }
+.god-pentagram-node.deity-loki.permanently-active { border-color: var(--color-loki) !important; box-shadow: 0 0 18px var(--color-loki) !important; }
+
+.btn-always-active:disabled {
+  opacity: 1 !important;
+  pointer-events: none;
+  cursor: default;
+  color: var(--text-accent) !important;
+  border-color: var(--text-accent) !important;
+  background: rgba(0, 240, 255, 0.15) !important;
+}
+
 .god-pentagram-node .god-identity {
   display: flex;
   flex-direction: column;

@@ -2831,6 +2831,11 @@ function renderQuestsScreen() {
     const lore = GOD_LORE[gKey];
     const node = document.createElement('div');
     node.classList.add('god-pentagram-node', `deity-${gKey}`);
+    const isPermanent = STATE.permanentlyActivatedBlessings && STATE.permanentlyActivatedBlessings.includes(gKey);
+    const isActive = STATE.activeBlessing === gKey;
+    if (isPermanent || isActive) {
+      node.classList.add('permanently-active');
+    }
     node.style.top = coordinates[gKey].top;
     node.style.left = coordinates[gKey].left;
     
@@ -2904,7 +2909,7 @@ function renderQuestsScreen() {
       const isPermanent = STATE.permanentlyActivatedBlessings && STATE.permanentlyActivatedBlessings.includes(gKey);
       if (isPermanent) {
         btn.innerText = 'Always Active ✨';
-        btn.classList.add('btn-success');
+        btn.classList.add('btn-primary', 'btn-always-active');
         btn.disabled = true;
       } else if (STATE.activeBlessing === gKey) {
         btn.innerText = 'Active ✨';
