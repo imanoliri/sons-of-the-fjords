@@ -1454,12 +1454,13 @@ function renderWorldMap() {
             if (isStaticRaid) {
               const marker = document.createElement('span');
               const emojiMap = {
-                forest: '🌲',
-                mountain: '⛰️',
-                burial_mound: '🪦',
-                default: '⚔️'
+                raid_1: '⛪', // Monastery
+                raid_2: '🌊', // Shore
+                raid_3: '🪦', // Burial Mound
+                raid_4: '⛰️', // Cave (Mountain)
+                raid_5: '🏰'  // Ruins
               };
-              marker.innerText = emojiMap[loc.locationType] || '⚔️';
+              marker.innerText = emojiMap[loc.id] || '⚔️';
               marker.classList.add('raid-marker');
               elCell.appendChild(marker);
             } else {
