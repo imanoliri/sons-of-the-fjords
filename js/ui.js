@@ -188,6 +188,34 @@ export function initUIBindings() {
     logWorld(`Game saved as ${filename}`, 'gain-message');
   });
 
+  bindButton('btn-load-game', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (parsed && typeof parsed === 'object') {
+            Object.assign(STATE, parsed);
+            notify('STATE_UPDATED');
+            showToast('Game loaded successfully!', '📂');
+            logWorld('Game loaded from save file.', 'gain-message');
+          } else {
+            showToast('Invalid save file format.', '⚠️');
+          }
+        } catch (err) {
+          showToast('Failed to parse save file: ' + err.message, '⚠️');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  });
+
   bindButton('btn-toggle-console', () => {
     elConsoleTextarea.value = JSON.stringify(STATE, null, 2);
     showOverlay(elConsoleModal);

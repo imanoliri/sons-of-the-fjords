@@ -178,6 +178,23 @@ body {
   font-size: 0.85rem;
 }
 
+.btn-discrete {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+  line-height: 1;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+  opacity: 0.5;
+}
+
+.btn-discrete:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: none;
+  color: var(--text-primary);
+}
+
 /* Header & Resources */
 .game-header {
   display: flex;
