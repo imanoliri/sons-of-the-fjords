@@ -2029,36 +2029,36 @@ function renderTownScreen() {
     marketList.innerHTML = '';
     const trades = [
       {
-        id: 'btn-buy-food', label: `Buy ${dp.food.foodGained} Food (-${foodCost} Gold)`, btnText: 'Buy [F]', action: () => {
+        id: 'btn-buy-food', label: `Buy ${dp.food.foodGained} 🍖 (-${foodCost} 🪙)`, btnText: 'Buy [F]', action: () => {
           const res = buyFood(foodCost, dp.food.foodGained);
           logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
           renderTownScreen();
         }
       },
       {
-        id: 'btn-buy-wood', label: `Buy ${dp.woodBuy.woodGained} Wood (-${woodCost} Gold)`, btnText: 'Buy [W]', action: () => {
+        id: 'btn-buy-wood', label: `Buy ${dp.woodBuy.woodGained} 🪵 (-${woodCost} 🪙)`, btnText: 'Buy [W]', action: () => {
           const res = buyWood(woodCost, dp.woodBuy.woodGained);
           logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
           renderTownScreen();
         }
       },
       {
-        id: 'btn-sell-sheep', label: `Sell ${dp.sheepSell.sheepSold} Sheep (+${sheepSellGain} Gold)`, btnText: 'Sell [G]', action: () => {
-          const res = sellSheepDynamic(sheepSellGain, dp.sheepSell.sheepSold);
-          logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
-          renderTownScreen();
-        }
-      },
-      {
-        id: 'btn-sell-wood', label: `Sell ${dp.woodSell.woodSold} Wood (+${woodSellGain} Gold)`, btnText: 'Sell [H]', action: () => {
+        id: 'btn-sell-wood', label: `Sell ${dp.woodSell.woodSold} 🪵 (+${woodSellGain} 🪙)`, btnText: 'Sell [H]', action: () => {
           const res = sellWoodDynamic(woodSellGain, dp.woodSell.woodSold);
           logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
           renderTownScreen();
         }
       },
       {
-        id: 'btn-buy-sheep', label: `Buy ${dp.sheepBuy.sheepGained} Sheep (-${sheepBuyCost} Gold)`, btnText: 'Buy [S]', action: () => {
+        id: 'btn-buy-sheep', label: `Buy ${dp.sheepBuy.sheepGained} 🐑 (-${sheepBuyCost} 🪙)`, btnText: 'Buy [S]', action: () => {
           const res = buySheepDynamic(sheepBuyCost, dp.sheepBuy.sheepGained);
+          logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
+          renderTownScreen();
+        }
+      },
+      {
+        id: 'btn-sell-sheep', label: `Sell ${dp.sheepSell.sheepSold} 🐑 (+${sheepSellGain} 🪙)`, btnText: 'Sell [G]', action: () => {
+          const res = sellSheepDynamic(sheepSellGain, dp.sheepSell.sheepSold);
           logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
           renderTownScreen();
         }
@@ -2107,7 +2107,7 @@ function renderTownScreen() {
       const btn = document.createElement('button');
       btn.classList.add('btn', 'btn-sm', 'btn-primary');
       if (STATE.godFavor[god] >= 5) {
-        btn.innerText = `Sacrifice (+5 Gold)`;
+        btn.innerText = `Sacrifice (+5 🪙)`;
       } else {
         btn.innerText = `Appease ${mapName}`;
       }
@@ -2154,7 +2154,7 @@ function renderTownScreen() {
           const switchBtn = document.createElement('button');
           switchBtn.classList.add('btn', 'btn-sm', 'btn-primary');
           const cost = GODS_CONFIG.patronSwitchCost || 5;
-          switchBtn.innerText = `Switch (${cost}g)`;
+          switchBtn.innerText = `Switch (${cost} 🪙)`;
           switchBtn.addEventListener('click', () => {
             if (STATE.resources.gold < cost) {
               showToast('Not enough Gold to switch Divine Patron.', '💰');
@@ -2171,7 +2171,7 @@ function renderTownScreen() {
 
         const permBtn = document.createElement('button');
         permBtn.classList.add('btn', 'btn-sm', 'btn-warning');
-        permBtn.innerText = 'Perm Unlock (100g)';
+        permBtn.innerText = 'Perm Unlock (100 🪙)';
         permBtn.addEventListener('click', () => {
           if (STATE.resources.gold < 100) {
             showToast('Not enough Gold for permanent activation.', '💰');
@@ -2206,7 +2206,7 @@ function renderTownScreen() {
       elHealBtn.disabled = true;
       elHealBtn.classList.add('btn-disabled');
     } else {
-      elHealLabel.innerText = `Heal ${injuredCount} injured warrior${injuredCount > 1 ? 's' : ''} (-${cost} Gold)`;
+      elHealLabel.innerText = `Heal ${injuredCount} injured warrior${injuredCount > 1 ? 's' : ''} (-${cost} 🪙)`;
       if (STATE.resources.gold < cost) {
         elHealBtn.disabled = true;
         elHealBtn.classList.add('btn-disabled');
@@ -2229,14 +2229,15 @@ function renderTownScreen() {
 
   // Great Hall recruitment labels
   const unitIcons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
+  const resourceEmojis = { gold: '🪙', food: '🍖', wood: '🪵', sheep: '🐑' };
   ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'].forEach(t => {
     const labelEl = document.getElementById(`label-recruit-${t}`);
     if (labelEl) {
       const costs = TOWN_CONFIG.recruitCosts[t];
       const costStrings = [];
       for (const [res, amt] of Object.entries(costs)) {
-        const resLabel = res.charAt(0).toUpperCase() + res.slice(1);
-        costStrings.push(`-${amt} ${resLabel}`);
+        const emoji = resourceEmojis[res.toLowerCase()] || res;
+        costStrings.push(`-${amt} ${emoji}`);
       }
       const capName = t.charAt(0).toUpperCase() + t.slice(1);
       const icon = unitIcons[t] || '';
