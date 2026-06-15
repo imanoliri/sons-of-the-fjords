@@ -308,12 +308,15 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
 
   const locMeta = Object.values(WORLD_CONFIG.locations).find(loc => loc.id === locationId) || {};
   const locationType = state.isSubCave ? 'cave' : (locMeta.locationType || worldTileTerrain || 'default');
+  const raidType     = locMeta.raidType || null;
 
   // Calculate difficulty scaling
   const dangerLevel = locMeta.dangerLevel || 3;
   const difficulty = calculateDifficulty(locationId, dangerLevel);
 
   // Store in state for UI display
+  state.locationType = locationType;
+  state.raidType     = raidType;
   state.dangerLevel = dangerLevel;
   state.subCaveDepth = (locationId.match(/_sub_cave_/g) || []).length;
   state.difficulty = difficulty;
@@ -328,7 +331,7 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
     if (caveCoords.length > 0) {
       const chosenCaveKey = caveCoords[Math.floor(Math.random() * caveCoords.length)];
       const [cx, cy] = chosenCaveKey.split(',').map(Number);
-      const entranceEntity = buildEntityOfType(locationId, 'cave_entrance', 'cave', cx, cy, locationType, difficulty, locationId.startsWith('raid_'));
+      const entranceEntity = buildEntityOfType(locationId, 'cave_entrance', 'cave', cx, cy, locationType, raidType, difficulty, locationId.startsWith('raid_'));
       if (entranceEntity) {
         state.preGeneratedEntities[chosenCaveKey] = entranceEntity;
       }
@@ -354,7 +357,7 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
       const tileTable = (CFG.tileEntitySpawns || {})[terrain];
       let entity = null;
       if (tileTable) {
-        entity = buildEntityFromTileTable(locationId, terrain, x, y, tileTable, locationType, difficulty, isRaid);
+        entity = buildEntityFromTileTable(locationId, terrain, x, y, tileTable, locationType, raidType, difficulty, isRaid);
       }
 
       if (entity) {
@@ -370,7 +373,7 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
         const tileOk = effect.applyToTiles === '*' || effect.applyToTiles.includes(terrain);
         if (!tileOk) continue;
         if (Math.random() * 100 < effect.spawnChance) {
-          entity = buildEntityOfType(locationId, effect.entity, terrain, x, y, locationType, difficulty, isRaid);
+          entity = buildEntityOfType(locationId, effect.entity, terrain, x, y, locationType, raidType, difficulty, isRaid);
           if (entity) {
             state.preGeneratedEntities[coordKey] = entity;
             break;
@@ -410,7 +413,7 @@ export function discoverTile(locationId, x, y) {
 // Entity values in tileTable.entities are direct spawn % (0–100).
 // We sum them; roll [0, 100). If roll < total → weighted pick; else no spawn.
 // ---------------------------------------------------------------------------
-function buildEntityFromTileTable(locationId, terrain, x, y, tileTable, locationType, difficulty, isRaid) {
+function buildEntityFromTileTable(locationId, terrain, x, y, tileTable, locationType, raidType, difficulty, isRaid) {
   const entities = tileTable.entities || {};
   const entries = Object.entries(entities);
   if (entries.length === 0) return null;
@@ -438,14 +441,14 @@ function buildEntityFromTileTable(locationId, terrain, x, y, tileTable, location
 
   // Resolve monster pool: prefer tile-specific, fall back to biome pool
   const resolvedPool = tileTable.monsterPool || null;
-  return buildEntityOfType(locationId, type, terrain, x, y, locationType, difficulty, isRaid, resolvedPool);
+  return buildEntityOfType(locationId, type, terrain, x, y, locationType, raidType, difficulty, isRaid, resolvedPool);
 }
 
 // ---------------------------------------------------------------------------
 // Build an entity object for a given type string.
 // resolvedPool overrides the biome-level monster pool when provided.
 // ---------------------------------------------------------------------------
-function buildEntityOfType(locationId, type, terrain, x, y, locationType, difficulty, isRaid, resolvedPool = null) {
+function buildEntityOfType(locationId, type, terrain, x, y, locationType, raidType, difficulty, isRaid, resolvedPool = null) {
   // Cave entrance override: if terrain is 'cave', check portal logic first
   if (terrain === 'cave') {
     const locState = STATE.locations[locationId];
@@ -541,23 +544,32 @@ function buildEntityOfType(locationId, type, terrain, x, y, locationType, diffic
       pool = [...(pools.default || e.monsterPool)];
     }
 
-    // Map-specific monster pool adjustments
-    const activeMap = getActiveWorldMap();
-    if (activeMap) {
-      if (activeMap.id === 'frozen_wastes') {
-        // Swap or add Ice Wolves and Frost Giants
-        pool = pool.filter(m => m !== 'Fenrir Pack Wolf');
-        pool.push('Ice Wolf');
-      } else if (activeMap.id === 'iron_coast') {
-        // Swap or add Mercenary Guards and Shore Raiders
-        pool = pool.filter(m => m !== 'Giant Brood-Spider');
-        pool.push('Mercenary Guard', 'Shore Raider');
-      } else if (activeMap.id === 'dark_archipelago') {
-        // Swap or add Archipelago Wraiths and Shore Raiders
-        pool = pool.filter(m => m !== 'Draugr Warrior');
-        pool.push('Archipelago Wraith', 'Shore Raider');
+    // ---------------------------------------------------------------------------
+    // Apply map-specific monster pool overrides (four tiers, lowest priority first).
+    // Priority (highest → lowest): byLocationId > byRaidType > byBiomeType > global
+    // `prevent` is collected across all tiers and applied as a final hard-block.
+    // ---------------------------------------------------------------------------
+    function applyOverrideTier(pool, tier, preventSet) {
+      if (!tier) return pool;
+      if (tier.prevent?.length) tier.prevent.forEach(m => preventSet.add(m));
+      if (tier.remove?.length)  pool = pool.filter(m => !tier.remove.includes(m));
+      if (tier.add?.length)     pool = [...pool, ...tier.add];
+      return pool;
       }
+
+    function applyMapPoolOverrides(pool, overrides, biomeType, raidType, locationId) {
+      if (!overrides) return pool;
+      const preventSet = new Set();
+      pool = applyOverrideTier(pool, overrides.global,                      preventSet); // lowest priority
+      pool = applyOverrideTier(pool, overrides.byBiomeType?.[biomeType],    preventSet);
+      pool = applyOverrideTier(pool, overrides.byRaidType?.[raidType],      preventSet); // higher than biome
+      pool = applyOverrideTier(pool, overrides.byLocationId?.[locationId],  preventSet); // highest priority
+      if (preventSet.size) pool = pool.filter(m => !preventSet.has(m));     // final hard-block
+      return pool;
     }
+
+    const activeMap = getActiveWorldMap();
+    pool = applyMapPoolOverrides(pool, activeMap?.monsterPoolOverrides, locationType, raidType, locationId);
 
     const ds = CFG.difficultyScaling || {};
     if (difficulty >= (ds.bossThreshold || 1.40)) {

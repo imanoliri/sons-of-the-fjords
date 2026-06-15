@@ -27,10 +27,12 @@ export const COMBAT_CONFIG = {
 
   // Monster stat table
   monsters: {
+    // Standard Foes
     'Giant Brood-Spider':  { hp: 20,  dmg: 3,  speed: 2, range: 2 },
     'Fenrir Pack Wolf':    { hp: 25,  dmg: 4,  speed: 3, range: 1 },
     'Draugr Warrior':      { hp: 35,  dmg: 5,  speed: 1, range: 1 },
     'Cave Troll':          { hp: 70,  dmg: 8,  speed: 1, range: 1 },
+    // Bosses
     'Frost Giant (Jotunn)':{ hp: 120, dmg: 10, speed: 1, range: 1 },
     'Lindwurm':            { hp: 50,  dmg: 6,  speed: 2, range: 1 },
     // New Monsters & Foes for specific worlds

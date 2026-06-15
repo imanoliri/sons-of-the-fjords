@@ -33,11 +33,11 @@ export const MAPS = [
       "3,6":   { id: "town_1", name: "Fjordgard Kaufang",      type: "town", terrain: "plains"   },
       "8,4":   { id: "town_2", name: "Heimdall Sogn",          type: "town", terrain: "plains"   },
       "12,11": { id: "town_3", name: "Ullsgard Outpost",       type: "town", terrain: "plains"   },
-      "4,3":   { id: "raid_1", name: "St. Alban Monastery",    type: "raid", terrain: "forest",   locationType: "forest",       dangerLevel: 1 },
-      "3,9":   { id: "raid_2", name: "Lindisfarne Shore",      type: "raid", terrain: "plains",   locationType: "default",      dangerLevel: 2 },
-      "10,1":  { id: "raid_3", name: "Barrow Mound of Balder", type: "raid", terrain: "snow",     locationType: "burial_mound", dangerLevel: 3 },
-      "13,12": { id: "raid_4", name: "Jotunn Crag Cave",       type: "raid", terrain: "mountain", locationType: "mountain",     dangerLevel: 4 },
-      "8,12":  { id: "raid_5", name: "Thjazi Keep Ruins",      type: "raid", terrain: "forest",   locationType: "forest",       dangerLevel: 5 }
+      "4,3":   { id: "raid_1", name: "St. Alban Monastery",    type: "raid", terrain: "forest",   locationType: "forest",       raidType: "monastery",    dangerLevel: 1 },
+      "3,9":   { id: "raid_2", name: "Lindisfarne Shore",      type: "raid", terrain: "plains",   locationType: "default",      raidType: "settlement",   dangerLevel: 2 },
+      "10,1":  { id: "raid_3", name: "Barrow Mound of Balder", type: "raid", terrain: "snow",     locationType: "burial_mound", raidType: "burial_vault", dangerLevel: 3 },
+      "13,12": { id: "raid_4", name: "Jotunn Crag Cave",       type: "raid", terrain: "mountain", locationType: "mountain",     raidType: "cave",         dangerLevel: 4 },
+      "8,12":  { id: "raid_5", name: "Thjazi Keep Ruins",      type: "raid", terrain: "forest",   locationType: "forest",       raidType: "ruins",        dangerLevel: 5 }
     }
   },
 
@@ -67,11 +67,28 @@ export const MAPS = [
       "5,4":   { id: "town_1", name: "Ironhaven Port",          type: "town", terrain: "plains"   },
       "5,10":  { id: "town_2", name: "Bloodfell Crossing",      type: "town", terrain: "plains"   },
       "10,7":  { id: "town_3", name: "Skjoldr Bastion",         type: "town", terrain: "plains"   },
-      "4,6":   { id: "raid_1", name: "Jarl Haakon's Longhouse",  type: "raid", terrain: "plains",   locationType: "default",      dangerLevel: 1 },
-      "7,3":   { id: "raid_2", name: "Mercenary War Camp",      type: "raid", terrain: "forest",   locationType: "forest",       dangerLevel: 2 },
-      "4,12":  { id: "raid_3", name: "Tidal Watchtower",        type: "raid", terrain: "plains",   locationType: "default",      dangerLevel: 3 },
-      "11,6":  { id: "raid_4", name: "Warlord's Iron Keep",      type: "raid", terrain: "mountain", locationType: "mountain",     dangerLevel: 4 },
-      "9,11":  { id: "raid_5", name: "Hall of Fallen Berserkers",type: "raid", terrain: "forest",  locationType: "burial_mound", dangerLevel: 5 }
+      "4,6":   { id: "raid_1", name: "Jarl Haakon's Longhouse",  type: "raid", terrain: "plains",   locationType: "default",      raidType: "settlement",    dangerLevel: 1 },
+      "7,3":   { id: "raid_2", name: "Mercenary War Camp",       type: "raid", terrain: "forest",   locationType: "forest",       raidType: "mercenary_camp",dangerLevel: 2 },
+      "4,12":  { id: "raid_3", name: "Tidal Watchtower",         type: "raid", terrain: "plains",   locationType: "default",      raidType: "fortress",      dangerLevel: 3 },
+      "11,6":  { id: "raid_4", name: "Warlord's Iron Keep",      type: "raid", terrain: "mountain", locationType: "mountain",     raidType: "fortress",      dangerLevel: 4 },
+      "9,11":  { id: "raid_5", name: "Hall of Fallen Berserkers",type: "raid", terrain: "forest",   locationType: "burial_mound", raidType: "warband",       dangerLevel: 5 }
+    },
+    monsterPoolOverrides: {
+      // Brood-spiders have no place on this military coastline
+      global: {
+        remove: ['Giant Brood-Spider']
+      },
+      // Burial grounds stay with their undead — keep out living combatants
+      byBiomeType: {
+        burial_mound: { prevent: ['Shore Raider', 'Mercenary Guard'] }
+      },
+      // Thematic human enemies only appear in their matching raid sites
+      byRaidType: {
+        settlement:     { add: ['Shore Raider'] },
+        fortress:       { add: ['Mercenary Guard'] },
+        mercenary_camp: { add: ['Mercenary Guard', 'Shore Raider'] },
+        warband:        { add: ['Mercenary Guard', 'Shore Raider'] }
+      }
     }
   },
 
@@ -99,11 +116,28 @@ export const MAPS = [
     locations: {
       "3,11":  { id: "town_1", name: "Frost-Beard's Mead Hall",   type: "town", terrain: "plains"   },
       "10,12": { id: "town_2", name: "Nidavellir Forge",          type: "town", terrain: "plains"   },
-      "6,4":   { id: "raid_1", name: "Glacier Burial Vault",      type: "raid", terrain: "snow",     locationType: "burial_mound", dangerLevel: 1 },
-      "4,7":   { id: "raid_2", name: "Skoll's Wolf Den",           type: "raid", terrain: "forest",   locationType: "forest",       dangerLevel: 2 },
-      "10,5":  { id: "raid_3", name: "Frost Giant Citadel",       type: "raid", terrain: "mountain", locationType: "mountain",     dangerLevel: 3 },
-      "7,12":  { id: "raid_4", name: "Sunken Jotunn Temple",      type: "raid", terrain: "snow",     locationType: "burial_mound", dangerLevel: 4 },
-      "2,2":   { id: "raid_5", name: "Throne of Ymir",            type: "raid", terrain: "snow",     locationType: "mountain",     dangerLevel: 5 }
+      "6,4":   { id: "raid_1", name: "Glacier Burial Vault",     type: "raid", terrain: "snow",     locationType: "burial_mound", raidType: "burial_vault", dangerLevel: 1 },
+      "4,7":   { id: "raid_2", name: "Skoll's Wolf Den",          type: "raid", terrain: "forest",   locationType: "forest",       raidType: "wolf_den",     dangerLevel: 2 },
+      "10,5":  { id: "raid_3", name: "Frost Giant Citadel",      type: "raid", terrain: "mountain", locationType: "mountain",     raidType: "giant_lair",   dangerLevel: 3 },
+      "7,12":  { id: "raid_4", name: "Sunken Jotunn Temple",     type: "raid", terrain: "snow",     locationType: "burial_mound", raidType: "underworld",   dangerLevel: 4 },
+      "2,2":   { id: "raid_5", name: "Throne of Ymir",           type: "raid", terrain: "snow",     locationType: "mountain",     raidType: "giant_lair",   dangerLevel: 5 }
+    },
+    monsterPoolOverrides: {
+      // Ice Wolves replace pack wolves in frozen biomes (snow & mountain world tiles)
+      // Forest and plains pockets keep their standard fauna
+      byBiomeType: {
+        snow:         { remove: ['Fenrir Pack Wolf'], add: ['Ice Wolf'] },
+        mountain:     { remove: ['Fenrir Pack Wolf'], add: ['Ice Wolf'] },
+        // Burial vaults are silent — only the undead walk here
+        burial_mound: { prevent: ['Ice Wolf', 'Fenrir Pack Wolf'] }
+      },
+      byRaidType: {
+        // The wolf den is home to the real pack — Ice Wolves don't belong here
+        wolf_den:     { add: ['Fenrir Pack Wolf'], prevent: ['Ice Wolf'] },
+        // Burial vaults get Draugr explicitly; biome alone guarantees the pool
+        // but the raidType add is a belt-and-suspenders guarantee
+        burial_vault: { add: ['Draugr Warrior'] }
+      }
     }
   },
 
@@ -137,11 +171,25 @@ export const MAPS = [
       "2,7":   { id: "town_1", name: "The Drowned Pier",          type: "town", terrain: "plains"   },
       "11,6":  { id: "town_2", name: "Svartalheim Anchorage",     type: "town", terrain: "plains"   },
       "12,12": { id: "town_3", name: "Serpent Isle Outpost",      type: "town", terrain: "plains"   },
-      "7,3":   { id: "raid_1", name: "Sunken Monastery of Mimir", type: "raid", terrain: "forest",   locationType: "forest",       dangerLevel: 1 },
-      "6,8":   { id: "raid_2", name: "Wraith Cove Ruins",         type: "raid", terrain: "plains",   locationType: "burial_mound", dangerLevel: 2 },
-      "8,7":   { id: "raid_3", name: "Naglfar Shipwreck",         type: "raid", terrain: "mountain", locationType: "mountain",     dangerLevel: 3 },
-      "10,4":  { id: "raid_4", name: "Isle of Skadi's Curse",      type: "raid", terrain: "plains",   locationType: "default",      dangerLevel: 4 },
-      "12,11": { id: "raid_5", name: "Dread Throne of Hel",       type: "raid", terrain: "mountain", locationType: "mountain",     dangerLevel: 5 }
+      "7,3":   { id: "raid_1", name: "Sunken Monastery of Mimir", type: "raid", terrain: "forest",   locationType: "forest",       raidType: "monastery",   dangerLevel: 1 },
+      "6,8":   { id: "raid_2", name: "Wraith Cove Ruins",         type: "raid", terrain: "plains",   locationType: "burial_mound", raidType: "ruins",       dangerLevel: 2 },
+      "8,7":   { id: "raid_3", name: "Naglfar Shipwreck",         type: "raid", terrain: "mountain", locationType: "mountain",     raidType: "ruins",       dangerLevel: 3 },
+      "10,4":  { id: "raid_4", name: "Isle of Skadi's Curse",      type: "raid", terrain: "plains",   locationType: "default",      raidType: "cursed_isle", dangerLevel: 4 },
+      "12,11": { id: "raid_5", name: "Dread Throne of Hel",       type: "raid", terrain: "mountain", locationType: "mountain",     raidType: "underworld",  dangerLevel: 5 }
+    },
+    monsterPoolOverrides: {
+      // Burial grounds keep their Draugr pure — wraiths and raiders are sea threats, not tomb-dwellers
+      byBiomeType: {
+        burial_mound: { prevent: ['Archipelago Wraith', 'Shore Raider'] }
+      },
+      // Spectral and coastal enemies appear only where they thematically belong
+      byRaidType: {
+        ruins:       { add: ['Archipelago Wraith', 'Shore Raider'] },
+        cursed_isle: { add: ['Archipelago Wraith'] },
+        underworld:  { add: ['Archipelago Wraith'] },
+        // Monastery: spiritual undead (Draugr), not sea-wraiths
+        monastery:   { add: ['Draugr Warrior'], prevent: ['Archipelago Wraith'] }
+      }
     }
   }
 ];
