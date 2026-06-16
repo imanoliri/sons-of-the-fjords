@@ -34,6 +34,15 @@ export function render() {
     elHeader.classList.remove('hidden');
   }
 
+  const appContainer = document.querySelector('.app-container');
+  if (appContainer) {
+    if (STATE.activeScreen === 'combat') {
+      appContainer.classList.add('combat-active');
+    } else {
+      appContainer.classList.remove('combat-active');
+    }
+  }
+
   // Render sub sections
   renderResourceBar();
 

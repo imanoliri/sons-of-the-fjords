@@ -213,6 +213,10 @@ body {
   flex-shrink: 0;
 }
 
+.combat-active .game-header {
+  margin-bottom: 0.35rem;
+}
+
 .resource-bar {
   display: flex;
   gap: 1.5rem;
