@@ -2212,30 +2212,16 @@ body {
   margin-bottom: 1rem;
 }
 
-/* Scrollable row of cards */
+/* Mosaic grid of cards */
 .map-cards-container {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
-  overflow-x: auto;
   padding: 0.5rem 0.25rem 0.75rem;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-color) transparent;
-  -webkit-overflow-scrolling: touch;
-}
-
-.map-cards-container::-webkit-scrollbar {
-  height: 4px;
-}
-.map-cards-container::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 4px;
 }
 
 /* Individual card */
 .map-card {
-  flex: 0 0 200px;
-  scroll-snap-align: start;
   background: rgba(255, 255, 255, 0.04);
   border: 1.5px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
@@ -2408,10 +2394,7 @@ body {
 
 /* Dot navigation */
 .map-carousel-dots {
-  display: flex;
-  justify-content: center;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
+  display: none !important;
 }
 
 .map-dot {

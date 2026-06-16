@@ -417,6 +417,69 @@ export function initUIBindings() {
       return;
     }
 
+    // Menu Screen Saga Select Keyboard Navigation
+    if (STATE.activeScreen === 'menu') {
+      const cols = window.getComputedStyle(elMapContainer).getPropertyValue('grid-template-columns').split(' ').length || 1;
+      
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        selectedMapIndex = (selectedMapIndex + 1) % maps.length;
+        renderMapCards();
+        const cards = elMapContainer.querySelectorAll('.map-card');
+        if (cards[selectedMapIndex]) {
+          cards[selectedMapIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        selectedMapIndex = (selectedMapIndex - 1 + maps.length) % maps.length;
+        renderMapCards();
+        const cards = elMapContainer.querySelectorAll('.map-card');
+        if (cards[selectedMapIndex]) {
+          cards[selectedMapIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        let newIdx = selectedMapIndex + cols;
+        if (newIdx >= maps.length) {
+          newIdx = selectedMapIndex % cols;
+        }
+        selectedMapIndex = newIdx;
+        renderMapCards();
+        const cards = elMapContainer.querySelectorAll('.map-card');
+        if (cards[selectedMapIndex]) {
+          cards[selectedMapIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        let newIdx = selectedMapIndex - cols;
+        if (newIdx < 0) {
+          const lastRowStart = Math.floor((maps.length - 1) / cols) * cols;
+          newIdx = lastRowStart + (selectedMapIndex % cols);
+          if (newIdx >= maps.length) {
+            newIdx = maps.length - 1;
+          }
+        }
+        selectedMapIndex = newIdx;
+        renderMapCards();
+        const cards = elMapContainer.querySelectorAll('.map-card');
+        if (cards[selectedMapIndex]) {
+          cards[selectedMapIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('btn-start-game')?.click();
+        return;
+      }
+    }
+
     // Handle B to toggle Band, Q to toggle Quests (only if not in combat screen)
     if (STATE.activeScreen !== 'combat') {
       if (e.key === 'b' || e.key === 'B') {
