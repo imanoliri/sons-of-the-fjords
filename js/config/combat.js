@@ -39,7 +39,17 @@ export const COMBAT_CONFIG = {
     'Ice Wolf':            { hp: 30,  dmg: 5,  speed: 3, range: 1 }, // Tundra/Frozen Wastes
     'Mercenary Guard':     { hp: 45,  dmg: 6,  speed: 2, range: 1 }, // Iron Coast
     'Shore Raider':        { hp: 40,  dmg: 5,  speed: 2, range: 1 }, // Iron Coast / Dark Archipelago
-    'Archipelago Wraith':  { hp: 38,  dmg: 6,  speed: 1, range: 2 }  // Dark Archipelago ruins
+    'Archipelago Wraith':  { hp: 38,  dmg: 6,  speed: 1, range: 2 }, // Dark Archipelago ruins
+    // Muspelheim's Edge Monsters
+    'Fire Giant':          { hp: 130, dmg: 12, speed: 1, range: 1 },
+    'Lava Beetle':         { hp: 22,  dmg: 4,  speed: 3, range: 1 },
+    'Cinder Spinner':      { hp: 28,  dmg: 5,  speed: 2, range: 2 },
+    // Whispering Swamps Monsters
+    'Bog Mummy':           { hp: 42,  dmg: 5,  speed: 1, range: 1 },
+    'Swamp Hag':           { hp: 45,  dmg: 6,  speed: 2, range: 2 },
+    // Jotunheim Peaks Monsters
+    'Ymir Frost-Shaman':   { hp: 60,  dmg: 7,  speed: 1, range: 2 },
+    'Rime-Crag Gargoyle':  { hp: 50,  dmg: 8,  speed: 2, range: 1 }
   },
 
   // Fallback stats for unknown monsters

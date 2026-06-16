@@ -98,5 +98,12 @@ export const MONSTER_EMOJIS = {
   'Ice Wolf': '🐺',
   'Mercenary Guard': '🔱',
   'Shore Raider': '🏴‍☠️',
-  'Archipelago Wraith': '👻'
+  'Archipelago Wraith': '👻',
+  'Fire Giant': '🔥',
+  'Lava Beetle': '🦂',
+  'Cinder Spinner': '🕷️',
+  'Bog Mummy': '🧟',
+  'Swamp Hag': '🧙‍♀️',
+  'Ymir Frost-Shaman': '🧙',
+  'Rime-Crag Gargoyle': '🦇'
 };

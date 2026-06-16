@@ -191,6 +191,125 @@ export const MAPS = [
         monastery:   { add: ['Draugr Warrior'], prevent: ['Archipelago Wraith'] }
       }
     }
+  },
+
+  // ── MAP 5: Muspelheim's Edge ──────────────────────────────────────────────
+  {
+    id: 'muspelheim_edge',
+    name: "Muspelheim's Edge",
+    subtitle: 'The Obsidian Crater',
+    description: 'A scorching wasteland of volcanic ash, lava flows, and ancient fire giant ruins. High risk, scarce food, and burning enemies.',
+    difficulty: 4,
+    difficultyLabel: 'Apocalyptic',
+    emoji: '🌋',
+    terrainHighlights: ['mountain', 'forest', 'plains'],
+    gridSize: 15,
+    partyStart: { x: 1, y: 1 },
+    terrainZones: [
+      { label: 'mountain', condition: 'x >= 6 && x <= 8 && y >= 6 && y <= 8' },
+      { label: 'river',    condition: 'y === 5 || x === 10' },
+      { label: 'forest',   condition: '(x >= 2 && x <= 4 && y >= 8 && y <= 11)' },
+      { label: 'plains',   condition: 'default' }
+    ],
+    locations: {
+      "1,2":   { id: "town_1", name: "Surtr's Ash-Forge",         type: "town", terrain: "plains" },
+      "13,13": { id: "town_2", name: "Outpost of the Last Hearth", type: "town", terrain: "plains" },
+      "7,7":   { id: "raid_1", name: "Volcanic Core Vault",       type: "raid", terrain: "mountain", locationType: "mountain", raidType: "underworld", dangerLevel: 5 },
+      "3,10":  { id: "raid_2", name: "Cinder-Web Nest",           type: "raid", terrain: "forest",   locationType: "forest",   raidType: "spider_nest", dangerLevel: 2 },
+      "12,4":  { id: "raid_3", name: "Ashen Barrow Mound",        type: "raid", terrain: "plains",   locationType: "burial_mound", raidType: "burial_vault", dangerLevel: 3 }
+    },
+    monsterPoolOverrides: {
+      global: {
+        remove: ['Fenrir Pack Wolf', 'Frost Giant (Jotunn)']
+      },
+      byBiomeType: {
+        forest: { add: ['Cinder Spinner', 'Lava Beetle'] },
+        mountain: { add: ['Fire Giant'] },
+        burial_mound: { add: ['Draugr Warrior'] }
+      },
+      byRaidType: {
+        spider_nest: { add: ['Cinder Spinner', 'Lava Beetle'] },
+        underworld: { add: ['Fire Giant'] }
+      }
+    }
+  },
+
+  // ── MAP 6: Whispering Swamps ──────────────────────────────────────────────
+  {
+    id: 'whispering_swamps',
+    name: 'Whispering Swamps',
+    subtitle: 'Fens of Niflheim',
+    description: 'A dreary marshland where thick fog conceals bog-mummies, creeping horrors, and hidden altars. Navigation is slow and dangerous.',
+    difficulty: 3,
+    difficultyLabel: 'Haunting',
+    emoji: '💀',
+    terrainHighlights: ['water', 'forest', 'plains'],
+    gridSize: 15,
+    partyStart: { x: 7, y: 0 },
+    terrainZones: [
+      { label: 'water',    condition: 'x === 7 || y === 7 || (x === y)' },
+      { label: 'forest',   condition: 'x <= 4 || x >= 11 || y >= 11' },
+      { label: 'plains',   condition: 'default' }
+    ],
+    locations: {
+      "7,1":   { id: "town_1", name: "Bog-Wood Haven",           type: "town", terrain: "plains" },
+      "12,12": { id: "town_2", name: "Witch-Cottage Trading",    type: "town", terrain: "plains" },
+      "2,6":   { id: "raid_1", name: "Drowned Barrow Mound",     type: "raid", terrain: "forest", locationType: "burial_mound", raidType: "burial_vault", dangerLevel: 2 },
+      "10,4":  { id: "raid_2", name: "Lindwurm Feeding Pit",     type: "raid", terrain: "plains", locationType: "default",      raidType: "beast_lair",   dangerLevel: 3 },
+      "5,13":  { id: "raid_3", name: "Sanctuary of the Bog-God", type: "raid", terrain: "forest", locationType: "forest",       raidType: "ruins",        dangerLevel: 4 }
+    },
+    monsterPoolOverrides: {
+      global: {
+        remove: ['Fenrir Pack Wolf', 'Frost Giant (Jotunn)', 'Cave Troll']
+      },
+      byBiomeType: {
+        forest: { add: ['Bog Mummy', 'Swamp Hag'] },
+        water: { add: ['Bog Mummy'] }
+      },
+      byRaidType: {
+        burial_vault: { add: ['Bog Mummy'] },
+        ruins: { add: ['Swamp Hag'] }
+      }
+    }
+  },
+
+  // ── MAP 7: Jotunheim Peaks ────────────────────────────────────────────────
+  {
+    id: 'jotunheim_peaks',
+    name: 'Jotunheim Peaks',
+    subtitle: "The Giant's Ladder",
+    description: 'Ascend frozen peaks and high altitude tundra where ancient Jotunn guards stand between you and sacred shrines.',
+    difficulty: 4,
+    difficultyLabel: 'Extreme',
+    emoji: '🦅',
+    terrainHighlights: ['mountain', 'snow', 'plains'],
+    gridSize: 15,
+    partyStart: { x: 7, y: 14 },
+    terrainZones: [
+      { label: 'mountain', condition: 'y <= 6 || x <= 2 || x >= 12' },
+      { label: 'snow',     condition: 'y <= 10' },
+      { label: 'plains',   condition: 'default' }
+    ],
+    locations: {
+      "7,12": { id: "town_1", name: "Rime-Gate Settlement",     type: "town", terrain: "plains" },
+      "1,4":  { id: "town_2", name: "High-Peak Hermitage",       type: "town", terrain: "plains" },
+      "7,3":  { id: "raid_1", name: "Throne of the Frost Jarl",  type: "raid", terrain: "mountain", locationType: "mountain", raidType: "giant_lair", dangerLevel: 5 },
+      "4,8":  { id: "raid_2", name: "Ice-Wind Cave System",      type: "raid", terrain: "snow",     locationType: "mountain", raidType: "cave",       dangerLevel: 3 },
+      "10,9": { id: "raid_3", name: "Glacial Burial Cairn",      type: "raid", terrain: "snow",     locationType: "burial_mound", raidType: "burial_vault", dangerLevel: 4 }
+    },
+    monsterPoolOverrides: {
+      global: {
+        remove: ['Giant Brood-Spider', 'Fenrir Pack Wolf']
+      },
+      byBiomeType: {
+        snow: { add: ['Ymir Frost-Shaman', 'Ice Wolf'] },
+        mountain: { add: ['Rime-Crag Gargoyle', 'Frost Giant (Jotunn)'] }
+      },
+      byRaidType: {
+        giant_lair: { add: ['Frost Giant (Jotunn)'] },
+        cave: { add: ['Rime-Crag Gargoyle', 'Ymir Frost-Shaman'] }
+      }
+    }
   }
 ];
 
