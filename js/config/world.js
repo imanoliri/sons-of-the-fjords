@@ -71,7 +71,8 @@ export const MAPS = [
       "7,3":   { id: "raid_2", name: "Mercenary War Camp",       type: "raid", terrain: "forest",   locationType: "forest",       raidType: "mercenary_camp",dangerLevel: 2 },
       "4,12":  { id: "raid_3", name: "Tidal Watchtower",         type: "raid", terrain: "plains",   locationType: "default",      raidType: "fortress",      dangerLevel: 3 },
       "11,6":  { id: "raid_4", name: "Warlord's Iron Keep",      type: "raid", terrain: "mountain", locationType: "mountain",     raidType: "fortress",      dangerLevel: 4 },
-      "9,11":  { id: "raid_5", name: "Hall of Fallen Berserkers",type: "raid", terrain: "forest",   locationType: "burial_mound", raidType: "warband",       dangerLevel: 5 }
+      "9,11":  { id: "raid_5", name: "Hall of Fallen Berserkers",type: "raid", terrain: "forest",   locationType: "burial_mound", raidType: "warband",       dangerLevel: 5 },
+      "8,2":   { id: "raid_6", name: "Coastal Wolf Den",        type: "raid", terrain: "forest",   locationType: "forest",       raidType: "wolf_den",      dangerLevel: 2 }
     },
     monsterPoolOverrides: {
       // Brood-spiders have no place on this military coastline
@@ -222,7 +223,7 @@ export const MAPS = [
         remove: ['Fenrir Pack Wolf', 'Frost Giant (Jotunn)']
       },
       byBiomeType: {
-        forest: { add: ['Cinder Spinner', 'Lava Beetle'] },
+        forest: { add: ['Cinder Spinner', 'Lava Beetle', 'Ash Wolf'] },
         mountain: { add: ['Fire Giant'] },
         burial_mound: { add: ['Draugr Warrior'] }
       },
@@ -262,7 +263,7 @@ export const MAPS = [
         remove: ['Fenrir Pack Wolf', 'Frost Giant (Jotunn)', 'Cave Troll']
       },
       byBiomeType: {
-        forest: { add: ['Bog Mummy', 'Swamp Hag'] },
+        forest: { add: ['Bog Mummy', 'Swamp Hag', 'Swamp Wolf'] },
         water: { add: ['Bog Mummy'] }
       },
       byRaidType: {

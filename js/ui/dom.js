@@ -105,5 +105,7 @@ export const MONSTER_EMOJIS = {
   'Bog Mummy': '🧟',
   'Swamp Hag': '🧙‍♀️',
   'Ymir Frost-Shaman': '🧙',
-  'Rime-Crag Gargoyle': '🦇'
+  'Rime-Crag Gargoyle': '🦇',
+  'Ash Wolf': '🐺',
+  'Swamp Wolf': '🐺'
 };

@@ -49,7 +49,10 @@ export const COMBAT_CONFIG = {
     'Swamp Hag':           { hp: 45,  dmg: 6,  speed: 2, range: 2 },
     // Jotunheim Peaks Monsters
     'Ymir Frost-Shaman':   { hp: 60,  dmg: 7,  speed: 1, range: 2 },
-    'Rime-Crag Gargoyle':  { hp: 50,  dmg: 8,  speed: 2, range: 1 }
+    'Rime-Crag Gargoyle':  { hp: 50,  dmg: 8,  speed: 2, range: 1 },
+    // Ash Wolf and Swamp Wolf to enable Odin favor progression
+    'Ash Wolf':            { hp: 30,  dmg: 5,  speed: 3, range: 1 },
+    'Swamp Wolf':          { hp: 32,  dmg: 5,  speed: 3, range: 1 }
   },
 
   // Fallback stats for unknown monsters
