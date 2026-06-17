@@ -16,7 +16,7 @@ export const MAPS = [
     difficulty: 1,           // 1–4 (shown as ☆ indicators on the card)
     difficultyLabel: 'Balanced',
     emoji: '⚔️',
-    newEnemies: ['Fenrir Pack Wolf', 'Cave Troll', 'Frost Giant (Jotunn)', 'Draugr Warrior'],
+    newEnemies: [],
     terrainHighlights: ['plains','forest','water','snow','mountain'],
     gridSize: 15,
     partyStart: { x: 2, y: 7 },
