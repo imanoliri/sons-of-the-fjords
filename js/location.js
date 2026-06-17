@@ -4,7 +4,6 @@
 
 import { STATE } from './state.js';
 import { LOCATION_CONFIG as CFG } from './config/location.js';
-import { WORLD_CONFIG } from './config/world.js';
 import { GODS_CONFIG } from './config/gods.js';
 import { getActiveMap as getActiveWorldMap } from './world.js';
 
@@ -14,8 +13,8 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
   if (STATE.locations[locationId]) {
     const existingState = STATE.locations[locationId];
 
-    // Recalculate difficulty for current day
-    const locMeta = Object.values(WORLD_CONFIG.locations).find(loc => loc.id === locationId) || {};
+    const activeMap = getActiveWorldMap();
+    const locMeta = Object.values(activeMap?.locations || {}).find(loc => loc.id === locationId) || {};
     const dangerLevel = locMeta.dangerLevel || 3;
     const difficulty = calculateDifficulty(locationId, dangerLevel);
     existingState.difficulty = difficulty;
@@ -306,7 +305,8 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
 
   STATE.locations[locationId] = state;
 
-  const locMeta = Object.values(WORLD_CONFIG.locations).find(loc => loc.id === locationId) || {};
+  const activeMap = getActiveWorldMap();
+  const locMeta = Object.values(activeMap?.locations || {}).find(loc => loc.id === locationId) || {};
   const locationType = state.isSubCave ? 'cave' : (locMeta.locationType || worldTileTerrain || 'default');
   const raidType     = locMeta.raidType || null;
 

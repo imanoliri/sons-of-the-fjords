@@ -82,12 +82,11 @@ export const MAPS = [
       byBiomeType: {
         burial_mound: { prevent: ['Shore Raider', 'Mercenary Guard'] }
       },
-      // Thematic human enemies only appear in their matching raid sites
       byRaidType: {
-        settlement:     { add: ['Shore Raider'] },
-        fortress:       { add: ['Mercenary Guard'] },
-        mercenary_camp: { add: ['Mercenary Guard', 'Shore Raider'] },
-        warband:        { add: ['Mercenary Guard', 'Shore Raider'] }
+        settlement:     { add: ['Shore Raider'], prevent: ['Fenrir Pack Wolf'] },
+        fortress:       { add: ['Mercenary Guard'], prevent: ['Fenrir Pack Wolf'] },
+        mercenary_camp: { add: ['Mercenary Guard', 'Shore Raider'], prevent: ['Fenrir Pack Wolf'] },
+        warband:        { add: ['Mercenary Guard', 'Shore Raider'], prevent: ['Fenrir Pack Wolf'] }
       }
     }
   },
