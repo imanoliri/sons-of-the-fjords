@@ -223,8 +223,8 @@ export const MAPS = [
         remove: ['Fenrir Pack Wolf', 'Frost Giant (Jotunn)']
       },
       byBiomeType: {
-        forest: { add: ['Cinder Spinner', 'Lava Beetle', 'Ash Wolf'] },
-        mountain: { add: ['Fire Giant'] },
+        forest: { add: ['Cinder Spinner'] },
+        mountain: { add: ['Fire Giant', 'Ash Wolf', 'Lava Beetle'] },
         burial_mound: { add: ['Draugr Warrior'] }
       },
       byRaidType: {
