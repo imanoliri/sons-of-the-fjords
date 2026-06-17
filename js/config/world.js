@@ -268,7 +268,8 @@ export const MAPS = [
       },
       byRaidType: {
         burial_vault: { add: ['Bog Mummy'] },
-        ruins: { add: ['Swamp Hag'] }
+        ruins: { add: ['Swamp Hag'] },
+        beast_lair: { add: ['Lindwurm'] }
       }
     }
   },
