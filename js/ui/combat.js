@@ -156,7 +156,7 @@ export function renderCombatGrid() {
             'Frost Giant (Jotunn)': '❄️',
             'Lindwurm': '🐉',
             'Ice Wolf': '🐺',
-            'Mercenary Guard': '🔱',
+            'Mercenary Guard': '♆',
             'Shore Raider': '🏴‍☠️',
             'Archipelago Wraith': '👻',
             'Fire Giant': '🔥',

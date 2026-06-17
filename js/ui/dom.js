@@ -96,7 +96,7 @@ export const MONSTER_EMOJIS = {
   'Frost Giant (Jotunn)': '❄️',
   'Lindwurm': '🐉',
   'Ice Wolf': '🐺',
-  'Mercenary Guard': '🔱',
+  'Mercenary Guard': '♆',
   'Shore Raider': '🏴‍☠️',
   'Archipelago Wraith': '👻',
   'Fire Giant': '🔥',
