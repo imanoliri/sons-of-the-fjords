@@ -553,9 +553,12 @@ function buildEntityOfType(locationId, type, terrain, x, y, locationType, raidTy
       if (!tier) return pool;
       if (tier.prevent?.length) tier.prevent.forEach(m => preventSet.add(m));
       if (tier.remove?.length)  pool = pool.filter(m => !tier.remove.includes(m));
-      if (tier.add?.length)     pool = [...pool, ...tier.add];
-      return pool;
+      if (tier.add?.length) {
+        tier.add.forEach(m => preventSet.delete(m));
+        pool = [...pool, ...tier.add];
       }
+      return pool;
+    }
 
     function applyMapPoolOverrides(pool, overrides, biomeType, raidType, locationId) {
       if (!overrides) return pool;
