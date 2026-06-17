@@ -217,7 +217,7 @@ export function recordMonsterKill(monsterType) {
         notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: `slaying ${targets.odin.wolvesTarget} wolves` });
       }
     }
-  } else if (nameLower.includes('frost giant') || nameLower.includes('jotunn')) {
+  } else if (nameLower.includes('giant') || nameLower.includes('jotunn')) {
     STATE.odinGiantsKilled = (STATE.odinGiantsKilled || 0) + 1;
     if (STATE.odinGiantsKilled >= targets.odin.giantsTarget) {
       STATE.odinGiantsKilled = 0;
