@@ -119,13 +119,22 @@ export function renderWorldMap() {
             if (isStaticRaid) {
               const marker = document.createElement('span');
               const emojiMap = {
-                raid_1: '⛪', // Monastery
-                raid_2: '🌊', // Shore
-                raid_3: '🪦', // Burial Mound
-                raid_4: '⛰️', // Cave (Mountain)
-                raid_5: '🏰'  // Ruins
+                monastery: '⛪',
+                settlement: '🏡',
+                burial_vault: '🪦',
+                cave: '🕳️',
+                ruins: '🏰',
+                mercenary_camp: '⛺',
+                fortress: '🏰',
+                warband: '🛡️',
+                wolf_den: '🐺',
+                giant_lair: '👹',
+                underworld: '🌋',
+                cursed_isle: '🏝️',
+                spider_nest: '🕸️',
+                beast_lair: '🐉'
               };
-              marker.innerText = emojiMap[loc.id] || '⚔️';
+              marker.innerText = emojiMap[loc.raidType] || '⚔️';
               marker.classList.add('raid-marker');
               elCell.appendChild(marker);
             } else {
