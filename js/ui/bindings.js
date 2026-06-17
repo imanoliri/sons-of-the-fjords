@@ -49,6 +49,28 @@ export function initUIBindings() {
     cave:     '🕳️'
   };
 
+  const ENEMY_ICONS = {
+    'Fenrir Pack Wolf':    '🐺',
+    'Cave Troll':          '🧌',
+    'Frost Giant (Jotunn)':'❄️',
+    'Draugr Warrior':      '🧟',
+    'Mercenary Guard':     '🛡️',
+    'Shore Raider':        '🪓',
+    'Archipelago Wraith':  '👻',
+    'Fire Giant':          '🔥',
+    'Lava Beetle':         '🪲',
+    'Cinder Spinner':      '🕷️',
+    'Bog Mummy':           '🧟',
+    'Swamp Hag':           '🧙‍♀️',
+    'Ymir Frost-Shaman':   '🔮',
+    'Rime-Crag Gargoyle':  '🦇',
+    'Ash Wolf':            '🐺',
+    'Swamp Wolf':          '🐺',
+    'Ice Wolf':            '🐺',
+    'Giant Brood-Spider':  '🕷️',
+    'Lindwurm':            '🐉'
+  };
+
   const DIFFICULTY_COLORS = {
     1: '#4ade80',  // green
     2: '#facc15',  // yellow
@@ -80,7 +102,7 @@ export function initUIBindings() {
 
       const newEnemies = map.newEnemies || [];
       const enemyBadges = newEnemies
-        .map(e => `<span class="enemy-badge">👿 ${e}</span>`)
+        .map(e => `<span class="enemy-badge">${ENEMY_ICONS[e] || '👿'} ${e}</span>`)
         .join('');
 
       const raidCount  = Object.values(map.locations).filter(l => l.type === 'raid').length;
