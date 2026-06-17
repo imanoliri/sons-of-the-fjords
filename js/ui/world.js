@@ -103,6 +103,8 @@ export function renderWorldMap() {
           elCell.dataset.locationType = hasLocation.type;
           elCell.dataset.locationBiome = hasLocation.locationType || '';
           elCell.dataset.dangerLevel = hasLocation.dangerLevel || '';
+          elCell.dataset.locationId = hasLocation.id || '';
+          elCell.dataset.raidType = hasLocation.raidType || '';
         }
 
         if (hasLocation) {

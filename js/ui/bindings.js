@@ -3,7 +3,7 @@
    ========================================================================== */
 
 import { STATE, notify, setScreen, adjustResource } from '../state.js';
-import { getAvailableMaps, setActiveMap, initializeWorld } from '../world.js';
+import { getAvailableMaps, setActiveMap, initializeWorld, getActiveMap } from '../world.js';
 import { SOLDIERS_CONFIG } from '../config/soldiers.js';
 import { GODS_CONFIG } from '../config/gods.js';
 import { TOWN_CONFIG } from '../config/town.js';
@@ -997,6 +997,9 @@ function initTooltipEvents() {
       }
     }
 
+    const locationId = tile.dataset.locationId;
+    const raidType = tile.dataset.raidType;
+
     if (contents.length === 0) {
       if (terrain === 'deep_water') {
         contents.push('🌊 Deep Water. Extremely dangerous, non-traversable.');
@@ -1012,16 +1015,52 @@ function initTooltipEvents() {
     // Add concrete enemy description for any land/raid tiles on world map (excluding towns)
     if (locationType !== 'town' && (locationType === 'raid' || (terrain !== 'water' && terrain !== 'deep_water' && terrain !== 'river'))) {
       const biome = locationType === 'raid' ? (locationBiome || 'default') : terrain;
-      const poolMap = {
-        forest: 'spiders and wolves',
-        mountain: 'wolves and trolls',
-        snow: 'spiders and trolls',
-        plains: 'spiders and wolves',
-        burial_mound: 'draugr warriors',
-        default: 'spiders and wolves'
+      const biomePools = {
+        forest: ['Fenrir Pack Wolf', 'Giant Brood-Spider'],
+        mountain: ['Cave Troll', 'Fenrir Pack Wolf'],
+        cave: ['Cave Troll', 'Fenrir Pack Wolf'],
+        burial_mound: ['Draugr Warrior'],
+        snow: ['Frost Giant (Jotunn)', 'Fenrir Pack Wolf'],
+        water: ['Giant Brood-Spider'],
+        default: ['Giant Brood-Spider', 'Fenrir Pack Wolf']
       };
-      const list = poolMap[biome] || poolMap.default;
-      contents.push(`You will find ${list} here.`);
+
+      let pool = [...(biomePools[biome] || biomePools.default)];
+      const activeMap = getActiveMap();
+      if (activeMap && activeMap.monsterPoolOverrides) {
+        const overrides = activeMap.monsterPoolOverrides;
+        const preventSet = new Set();
+        
+        function applyOverrideTier(p, tier) {
+          if (!tier) return p;
+          if (tier.prevent?.length) tier.prevent.forEach(m => preventSet.add(m));
+          if (tier.remove?.length)  p = p.filter(m => !tier.remove.includes(m));
+          if (tier.add?.length)     p = [...p, ...tier.add];
+          return p;
+        }
+
+        pool = applyOverrideTier(pool, overrides.global);
+        pool = applyOverrideTier(pool, overrides.byBiomeType?.[biome]);
+        if (raidType) {
+          pool = applyOverrideTier(pool, overrides.byRaidType?.[raidType]);
+        }
+        if (locationId) {
+          pool = applyOverrideTier(pool, overrides.byLocationId?.[locationId]);
+        }
+        pool = [...new Set(pool)];
+        if (preventSet.size) {
+          pool = pool.filter(m => !preventSet.has(m));
+        }
+      }
+
+      if (pool.length > 0) {
+        const list = pool.map(enemy => {
+          if (enemy.endsWith('s') || enemy.toLowerCase().endsWith('shaman') || enemy.includes('(')) return enemy;
+          if (enemy.endsWith('Wolf')) return enemy.replace('Wolf', 'Wolves');
+          return enemy + 's';
+        }).join(', ');
+        contents.push(`⚔️ Spawns: <span style="color:var(--color-danger); font-weight:600;">${list}</span>`);
+      }
     }
 
     const contentsText = contents.join('<br>');
