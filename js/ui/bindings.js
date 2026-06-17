@@ -103,10 +103,21 @@ export function initUIBindings() {
           </div>
         </div>
         <div class="terrain-badges">${terrainBadges}</div>
-        <div class="map-card-select-indicator">${i === selectedMapIndex ? '✓ Selected' : 'Click to Select'}</div>
+        <div class="map-card-select-indicator">
+          ${i === selectedMapIndex 
+            ? `<button class="btn btn-primary btn-start-card-voyage" style="width: 100%; font-family: var(--font-logo); font-size: 0.78rem; padding: 0.35rem 0.5rem; margin: 0; line-height: 1.2;">⚓ Start Adventure</button>`
+            : 'Click to Select'
+          }
+        </div>
       `;
 
-      card.addEventListener('click', () => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-start-card-voyage')) {
+          setActiveMap(maps[selectedMapIndex].id);
+          initializeWorld();   // Rebuild the grid for the chosen map
+          setScreen('world');
+          return;
+        }
         selectedMapIndex = i;
         renderMapCards();
       });
@@ -129,13 +140,6 @@ export function initUIBindings() {
   }
 
   renderMapCards();
-
-  // Screen Router Events
-  document.getElementById('btn-start-game').addEventListener('click', () => {
-    setActiveMap(maps[selectedMapIndex].id);
-    initializeWorld();   // Rebuild the grid for the chosen map
-    setScreen('world');
-  });
 
   // Toggle Quest Screen
   document.getElementById('btn-toggle-quests').addEventListener('click', () => {
@@ -475,7 +479,9 @@ export function initUIBindings() {
       }
       if (e.key === 'Enter') {
         e.preventDefault();
-        document.getElementById('btn-start-game')?.click();
+        setActiveMap(maps[selectedMapIndex].id);
+        initializeWorld();   // Rebuild the grid for the chosen map
+        setScreen('world');
         return;
       }
     }
