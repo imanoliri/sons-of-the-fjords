@@ -92,51 +92,42 @@ export const MAPS = [
     }
   },
 
-  // ── MAP 3: Frozen Wastes ──────────────────────────────────────────────────
+  // ── MAP 3: Whispering Swamps ──────────────────────────────────────────────
   {
-    id: 'frozen_wastes',
-    name: 'Frozen Wastes',
-    subtitle: 'The Realm of Jotunn',
-    description: 'A blizzard-wracked tundra ruled by frost giants and howling wolves. Few towns, scarce food, and relentless cold. For veteran chieftains only.',
-    difficulty: 4,
-    difficultyLabel: 'Brutal',
-    emoji: '❄️',
-    terrainHighlights: ['snow','mountain','forest'],
+    id: 'whispering_swamps',
+    name: 'Whispering Swamps',
+    subtitle: 'Fens of Niflheim',
+    description: 'A dreary marshland where thick fog conceals bog-mummies, creeping horrors, and hidden altars. Navigation is slow and dangerous.',
+    difficulty: 3,
+    difficultyLabel: 'Haunting',
+    emoji: '💀',
+    terrainHighlights: ['water', 'forest', 'plains'],
     gridSize: 15,
-    partyStart: { x: 2, y: 13 },
+    partyStart: { x: 7, y: 0 },
     terrainZones: [
-      { label: 'snow',     condition: 'y <= 8' },
-      { label: 'mountain', condition: 'y <= 3 || (x >= 11 && y <= 9)' },
-      { label: 'mountain', condition: 'x === 0 || x === 14' },
-      { label: 'river',    condition: 'x === 5 && y >= 5 && y <= 12' },
-      { label: 'river',    condition: 'x === 9 && y >= 4 && y <= 11' },
-      { label: 'forest',   condition: '(x >= 2 && x <= 4 && y >= 6 && y <= 9) || (x >= 6 && x <= 8 && y >= 10 && y <= 13)' },
+      { label: 'water',    condition: 'x === 7 || y === 7 || (x === y)' },
+      { label: 'forest',   condition: 'x <= 4 || x >= 11 || y >= 11' },
       { label: 'plains',   condition: 'default' }
     ],
     locations: {
-      "3,11":  { id: "town_1", name: "Frost-Beard's Mead Hall",   type: "town", terrain: "plains"   },
-      "10,12": { id: "town_2", name: "Nidavellir Forge",          type: "town", terrain: "plains"   },
-      "6,4":   { id: "raid_1", name: "Glacier Burial Vault",     type: "raid", terrain: "snow",     locationType: "burial_mound", raidType: "burial_vault", dangerLevel: 1 },
-      "4,7":   { id: "raid_2", name: "Skoll's Wolf Den",          type: "raid", terrain: "forest",   locationType: "forest",       raidType: "wolf_den",     dangerLevel: 2 },
-      "10,5":  { id: "raid_3", name: "Frost Giant Citadel",      type: "raid", terrain: "mountain", locationType: "mountain",     raidType: "giant_lair",   dangerLevel: 3 },
-      "7,12":  { id: "raid_4", name: "Sunken Jotunn Temple",     type: "raid", terrain: "snow",     locationType: "burial_mound", raidType: "underworld",   dangerLevel: 4 },
-      "2,2":   { id: "raid_5", name: "Throne of Ymir",           type: "raid", terrain: "snow",     locationType: "mountain",     raidType: "giant_lair",   dangerLevel: 5 }
+      "7,1":   { id: "town_1", name: "Bog-Wood Haven",           type: "town", terrain: "plains" },
+      "12,12": { id: "town_2", name: "Witch-Cottage Trading",    type: "town", terrain: "plains" },
+      "2,6":   { id: "raid_1", name: "Drowned Barrow Mound",     type: "raid", terrain: "forest", locationType: "burial_mound", raidType: "burial_vault", dangerLevel: 2 },
+      "10,4":  { id: "raid_2", name: "Lindwurm Feeding Pit",     type: "raid", terrain: "plains", locationType: "default",      raidType: "beast_lair",   dangerLevel: 3 },
+      "5,13":  { id: "raid_3", name: "Sanctuary of the Bog-God", type: "raid", terrain: "forest", locationType: "forest",       raidType: "ruins",        dangerLevel: 4 }
     },
     monsterPoolOverrides: {
-      // Ice Wolves replace pack wolves in frozen biomes (snow & mountain world tiles)
-      // Forest and plains pockets keep their standard fauna
+      global: {
+        remove: ['Fenrir Pack Wolf', 'Frost Giant (Jotunn)', 'Cave Troll']
+      },
       byBiomeType: {
-        snow:         { remove: ['Fenrir Pack Wolf'], add: ['Ice Wolf'] },
-        mountain:     { remove: ['Fenrir Pack Wolf'], add: ['Ice Wolf'] },
-        // Burial vaults are silent — only the undead walk here
-        burial_mound: { prevent: ['Ice Wolf', 'Fenrir Pack Wolf'] }
+        forest: { add: ['Bog Mummy', 'Swamp Hag', 'Swamp Wolf'] },
+        water: { add: ['Bog Mummy'] }
       },
       byRaidType: {
-        // The wolf den is home to the real pack — Ice Wolves don't belong here
-        wolf_den:     { add: ['Fenrir Pack Wolf'], prevent: ['Ice Wolf'] },
-        // Burial vaults get Draugr explicitly; biome alone guarantees the pool
-        // but the raidType add is a belt-and-suspenders guarantee
-        burial_vault: { add: ['Draugr Warrior'] }
+        burial_vault: { add: ['Bog Mummy'] },
+        ruins: { add: ['Swamp Hag'] },
+        beast_lair: { add: ['Lindwurm'] }
       }
     }
   },
@@ -234,42 +225,51 @@ export const MAPS = [
     }
   },
 
-  // ── MAP 6: Whispering Swamps ──────────────────────────────────────────────
+  // ── MAP 6: Frozen Wastes ──────────────────────────────────────────────────
   {
-    id: 'whispering_swamps',
-    name: 'Whispering Swamps',
-    subtitle: 'Fens of Niflheim',
-    description: 'A dreary marshland where thick fog conceals bog-mummies, creeping horrors, and hidden altars. Navigation is slow and dangerous.',
-    difficulty: 3,
-    difficultyLabel: 'Haunting',
-    emoji: '💀',
-    terrainHighlights: ['water', 'forest', 'plains'],
+    id: 'frozen_wastes',
+    name: 'Frozen Wastes',
+    subtitle: 'The Realm of Jotunn',
+    description: 'A blizzard-wracked tundra ruled by frost giants and howling wolves. Few towns, scarce food, and relentless cold. For veteran chieftains only.',
+    difficulty: 4,
+    difficultyLabel: 'Brutal',
+    emoji: '❄️',
+    terrainHighlights: ['snow','mountain','forest'],
     gridSize: 15,
-    partyStart: { x: 7, y: 0 },
+    partyStart: { x: 2, y: 13 },
     terrainZones: [
-      { label: 'water',    condition: 'x === 7 || y === 7 || (x === y)' },
-      { label: 'forest',   condition: 'x <= 4 || x >= 11 || y >= 11' },
+      { label: 'snow',     condition: 'y <= 8' },
+      { label: 'mountain', condition: 'y <= 3 || (x >= 11 && y <= 9)' },
+      { label: 'mountain', condition: 'x === 0 || x === 14' },
+      { label: 'river',    condition: 'x === 5 && y >= 5 && y <= 12' },
+      { label: 'river',    condition: 'x === 9 && y >= 4 && y <= 11' },
+      { label: 'forest',   condition: '(x >= 2 && x <= 4 && y >= 6 && y <= 9) || (x >= 6 && x <= 8 && y >= 10 && y <= 13)' },
       { label: 'plains',   condition: 'default' }
     ],
     locations: {
-      "7,1":   { id: "town_1", name: "Bog-Wood Haven",           type: "town", terrain: "plains" },
-      "12,12": { id: "town_2", name: "Witch-Cottage Trading",    type: "town", terrain: "plains" },
-      "2,6":   { id: "raid_1", name: "Drowned Barrow Mound",     type: "raid", terrain: "forest", locationType: "burial_mound", raidType: "burial_vault", dangerLevel: 2 },
-      "10,4":  { id: "raid_2", name: "Lindwurm Feeding Pit",     type: "raid", terrain: "plains", locationType: "default",      raidType: "beast_lair",   dangerLevel: 3 },
-      "5,13":  { id: "raid_3", name: "Sanctuary of the Bog-God", type: "raid", terrain: "forest", locationType: "forest",       raidType: "ruins",        dangerLevel: 4 }
+      "3,11":  { id: "town_1", name: "Frost-Beard's Mead Hall",   type: "town", terrain: "plains"   },
+      "10,12": { id: "town_2", name: "Nidavellir Forge",          type: "town", terrain: "plains"   },
+      "6,4":   { id: "raid_1", name: "Glacier Burial Vault",     type: "raid", terrain: "snow",     locationType: "burial_mound", raidType: "burial_vault", dangerLevel: 1 },
+      "4,7":   { id: "raid_2", name: "Skoll's Wolf Den",          type: "raid", terrain: "forest",   locationType: "forest",       raidType: "wolf_den",     dangerLevel: 2 },
+      "10,5":  { id: "raid_3", name: "Frost Giant Citadel",      type: "raid", terrain: "mountain", locationType: "mountain",     raidType: "giant_lair",   dangerLevel: 3 },
+      "7,12":  { id: "raid_4", name: "Sunken Jotunn Temple",     type: "raid", terrain: "snow",     locationType: "burial_mound", raidType: "underworld",   dangerLevel: 4 },
+      "2,2":   { id: "raid_5", name: "Throne of Ymir",           type: "raid", terrain: "snow",     locationType: "mountain",     raidType: "giant_lair",   dangerLevel: 5 }
     },
     monsterPoolOverrides: {
-      global: {
-        remove: ['Fenrir Pack Wolf', 'Frost Giant (Jotunn)', 'Cave Troll']
-      },
+      // Ice Wolves replace pack wolves in frozen biomes (snow & mountain world tiles)
+      // Forest and plains pockets keep their standard fauna
       byBiomeType: {
-        forest: { add: ['Bog Mummy', 'Swamp Hag', 'Swamp Wolf'] },
-        water: { add: ['Bog Mummy'] }
+        snow:         { remove: ['Fenrir Pack Wolf'], add: ['Ice Wolf'] },
+        mountain:     { remove: ['Fenrir Pack Wolf'], add: ['Ice Wolf'] },
+        // Burial vaults are silent — only the undead walk here
+        burial_mound: { prevent: ['Ice Wolf', 'Fenrir Pack Wolf'] }
       },
       byRaidType: {
-        burial_vault: { add: ['Bog Mummy'] },
-        ruins: { add: ['Swamp Hag'] },
-        beast_lair: { add: ['Lindwurm'] }
+        // The wolf den is home to the real pack — Ice Wolves don't belong here
+        wolf_den:     { add: ['Fenrir Pack Wolf'], prevent: ['Ice Wolf'] },
+        // Burial vaults get Draugr explicitly; biome alone guarantees the pool
+        // but the raidType add is a belt-and-suspenders guarantee
+        burial_vault: { add: ['Draugr Warrior'] }
       }
     }
   },
