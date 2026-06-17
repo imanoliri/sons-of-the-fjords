@@ -2381,6 +2381,39 @@ body {
   white-space: nowrap;
 }
 
+/* Enemy badges */
+.enemy-badges-container {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.enemy-badges-label {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.enemy-badges {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.enemy-badge {
+  font-size: 0.6rem;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 4px;
+  padding: 0.08rem 0.35rem;
+  white-space: nowrap;
+}
+
 /* Selection indicator text */
 .map-card-select-indicator {
   margin-top: auto;
