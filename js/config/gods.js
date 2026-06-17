@@ -26,6 +26,18 @@ export const GODS_CONFIG = {
     freya: { sheepTarget: 2, woodTarget: 5 }
   },
 
+  // Monster name pattern match criteria for favor progression
+  favorMonsterPatterns: {
+    odin: {
+      wolves: ['wolf'],
+      giants: ['giant', 'jotunn']
+    },
+    thor: {
+      draugrs: ['draugr'],
+      lindwurms: ['lindwurm']
+    }
+  },
+
   // Relics & magic objects
   magicObjects: {
     odin: "Shard of Gungnir",

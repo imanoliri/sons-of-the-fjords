@@ -206,8 +206,14 @@ export function adjustFavor(godName, amt) {
 export function recordMonsterKill(monsterType) {
   const nameLower = monsterType.toLowerCase();
   const targets = GC.alternativeFavor;
+  const patterns = GC.favorMonsterPatterns;
 
-  if (nameLower.includes('wolf')) {
+  const isWolf = patterns.odin.wolves.some(p => nameLower.includes(p));
+  const isGiant = patterns.odin.giants.some(p => nameLower.includes(p));
+  const isDraugr = patterns.thor.draugrs.some(p => nameLower.includes(p));
+  const isLindwurm = patterns.thor.lindwurms.some(p => nameLower.includes(p));
+
+  if (isWolf) {
     STATE.odinWolvesKilled = (STATE.odinWolvesKilled || 0) + 1;
     if (STATE.odinWolvesKilled >= targets.odin.wolvesTarget) {
       STATE.odinWolvesKilled = 0;
@@ -217,7 +223,7 @@ export function recordMonsterKill(monsterType) {
         notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: `slaying ${targets.odin.wolvesTarget} wolves` });
       }
     }
-  } else if (nameLower.includes('giant') || nameLower.includes('jotunn')) {
+  } else if (isGiant) {
     STATE.odinGiantsKilled = (STATE.odinGiantsKilled || 0) + 1;
     if (STATE.odinGiantsKilled >= targets.odin.giantsTarget) {
       STATE.odinGiantsKilled = 0;
@@ -229,7 +235,7 @@ export function recordMonsterKill(monsterType) {
     }
   }
 
-  if (nameLower.includes('draugr')) {
+  if (isDraugr) {
     STATE.thorDraugrsKilled = (STATE.thorDraugrsKilled || 0) + 1;
     if (STATE.thorDraugrsKilled >= targets.thor.draugrsTarget) {
       STATE.thorDraugrsKilled = 0;
@@ -239,7 +245,7 @@ export function recordMonsterKill(monsterType) {
         notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: `slaying ${targets.thor.draugrsTarget} draugrs` });
       }
     }
-  } else if (nameLower.includes('lindwurm')) {
+  } else if (isLindwurm) {
     STATE.thorLindwurmsKilled = (STATE.thorLindwurmsKilled || 0) + 1;
     if (STATE.thorLindwurmsKilled >= targets.thor.lindwurmsTarget) {
       STATE.thorLindwurmsKilled = 0;
