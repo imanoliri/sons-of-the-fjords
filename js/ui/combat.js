@@ -1203,6 +1203,9 @@ export function initCombatSelection() {
   const btnPlanTitle = document.getElementById('btn-plan-title');
   if (btnPlanTitle) {
     btnPlanTitle.onclick = () => {
+      STATE.combat.movePlansMode = false;
+      STATE.combat.selectedPlans = [];
+
       if (STATE.combat.planningWizard && STATE.combat.planningWizard.active) {
         STATE.combat.planningWizard.active = false;
         STATE.combat.activePlanningType = null;
