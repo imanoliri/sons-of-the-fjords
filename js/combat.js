@@ -1185,9 +1185,14 @@ export function undeployUnit(row, col) {
   const unit = STATE.combat.grid[row][col];
   if (!unit || unit.alliance !== 'player' || unit.isCharmed || unit.isConfused || unit.isUndead) return;
 
-  // Clear plan at this cell if this unit was fulfilling it to prevent auto-redeploy
-  if (STATE.combat.plannedLayout && STATE.combat.plannedLayout[row] && STATE.combat.plannedLayout[row][col] === unit.type) {
-    STATE.combat.plannedLayout[row][col] = null;
+  // Clear one plan of this unit's type in the same lane to prevent immediate auto-redeploy
+  if (STATE.combat.plannedLayout) {
+    for (let checkC = 0; checkC < 10; checkC++) {
+      if (STATE.combat.plannedLayout[row][checkC] === unit.type) {
+        STATE.combat.plannedLayout[row][checkC] = null;
+        break;
+      }
+    }
   }
 
   STATE.combat.grid[row][col] = null;
