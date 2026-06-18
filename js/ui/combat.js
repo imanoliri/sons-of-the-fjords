@@ -151,12 +151,6 @@ export function renderCombatGrid() {
         });
 
         elCell.addEventListener('click', (e) => {
-          if (STATE.combat.paused && grid[r][c] && grid[r][c].alliance === 'player') {
-            e.stopPropagation();
-            undeployUnit(r, c);
-            return;
-          }
-
           let type = null;
           let wiz = null;
           if (STATE.combat.planningWizard && STATE.combat.planningWizard.active) {
@@ -307,15 +301,25 @@ export function renderCombatGrid() {
 
         // Left-click selection and right-click undeployment
         if (unit.alliance === 'player') {
-          // Left-click to undeploy if paused, or toggle selection if active
+          // Left-click selection (handles shift-click multi-select or single select)
           elUnit.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (STATE.combat.paused) {
-              undeployUnit(r, c);
-            } else {
-              unit.selected = !unit.selected;
-              notify('COMBAT_UPDATE');
+            if (!e.shiftKey) {
+              // Deselect all other player units
+              const grid = STATE.combat.grid;
+              if (grid) {
+                for (let row = 0; row < grid.length; row++) {
+                  for (let col = 0; col < grid[row].length; col++) {
+                    const u = grid[row][col];
+                    if (u && u.alliance === 'player' && u !== unit) {
+                      u.selected = false;
+                    }
+                  }
+                }
+              }
             }
+            unit.selected = !unit.selected;
+            notify('COMBAT_UPDATE');
           });
 
           // Right-click to undeploy (only when paused)
