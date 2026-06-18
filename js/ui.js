@@ -298,11 +298,19 @@ export function handleStateNotification(event, data) {
       notify('STATE_UPDATED');
       showToast(`${lore.icon} ${godName.charAt(0).toUpperCase() + godName.slice(1)}'s Blessing activated!`, lore.icon, true);
       hideOverlay(elModalAscension);
+      if (STATE.combat.active) {
+        STATE.combat.paused = false;
+        notify('COMBAT_UPDATE');
+      }
     });
 
     const btnContinue = document.getElementById('btn-ascend-continue');
     btnContinue.parentNode.insertBefore(btnBuff, btnContinue);
 
+    if (STATE.combat.active) {
+      STATE.combat.paused = true;
+      notify('COMBAT_UPDATE');
+    }
     showOverlay(elModalAscension);
   }
   else if (event === 'ASCENSION_TRIGGERED') {
@@ -319,6 +327,10 @@ export function handleStateNotification(event, data) {
     const prevBuff = document.getElementById('btn-ascend-buff');
     if (prevBuff) prevBuff.remove();
 
+    if (STATE.combat.active) {
+      STATE.combat.paused = true;
+      notify('COMBAT_UPDATE');
+    }
     showOverlay(elModalAscension);
   }
   else if (event === 'RAID_SITE_CLEARED') {

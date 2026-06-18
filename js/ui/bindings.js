@@ -490,6 +490,10 @@ export function initUIBindings() {
     if (activeVictoryGod) {
       STATE.godFavor[activeVictoryGod] = 5;
     }
+    if (STATE.combat.active) {
+      STATE.combat.paused = false;
+      notify('COMBAT_UPDATE');
+    }
   });
 
   bindButton('btn-raid-cleared-continue', () => {
