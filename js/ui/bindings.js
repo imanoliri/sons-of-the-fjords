@@ -7,6 +7,7 @@ import { getAvailableMaps, setActiveMap, initializeWorld, getActiveMap } from '.
 import { SOLDIERS_CONFIG } from '../config/soldiers.js';
 import { GODS_CONFIG } from '../config/gods.js';
 import { TOWN_CONFIG } from '../config/town.js';
+import { LOCATION_CONFIG } from '../config/location.js';
 import { togglePause, deployUnit, undeployUnit, fleeCombat, adjustCombatSpeed } from '../combat.js';
 import { showToast, logWorld, logLocation } from './notifications.js';
 import { showOverlay, hideOverlay, updateModalKeyboardNavigation } from './overlay.js';
@@ -85,6 +86,48 @@ export function initUIBindings() {
     ).join('');
   }
 
+  function getPossibleEnemiesForMap(map) {
+    const pool = new Set([
+      ...(LOCATION_CONFIG.enemyArmy?.monsterPool || []),
+      ...(LOCATION_CONFIG.difficultyScaling?.bosses || [])
+    ]);
+
+    const overrides = map.monsterPoolOverrides;
+    if (!overrides) return Array.from(pool);
+
+    if (overrides.global?.remove) {
+      overrides.global.remove.forEach(m => pool.delete(m));
+    }
+    if (overrides.global?.add) {
+      overrides.global.add.forEach(m => pool.add(m));
+    }
+    if (overrides.byBiomeType) {
+      for (const b in overrides.byBiomeType) {
+        if (overrides.byBiomeType[b].add) {
+          overrides.byBiomeType[b].add.forEach(m => pool.add(m));
+        }
+      }
+    }
+    if (overrides.byRaidType) {
+      for (const r in overrides.byRaidType) {
+        if (overrides.byRaidType[r].add) {
+          overrides.byRaidType[r].add.forEach(m => pool.add(m));
+        }
+      }
+    }
+    if (overrides.byLocationId) {
+      for (const loc in overrides.byLocationId) {
+        if (overrides.byLocationId[loc].add) {
+          overrides.byLocationId[loc].add.forEach(m => pool.add(m));
+        }
+      }
+    }
+    return Array.from(pool);
+  }
+
+  const fjordlandsMap = maps.find(m => m.id === 'fjordlands') || maps[0];
+  const baselineEnemies = new Set(getPossibleEnemiesForMap(fjordlandsMap));
+
   function renderMapCards() {
     elMapContainer.innerHTML = '';
     elDots.innerHTML = '';
@@ -100,7 +143,11 @@ export function initUIBindings() {
         .map(t => `<span class="terrain-badge">${TERRAIN_ICONS[t] || '🗺️'} ${t}</span>`)
         .join('');
 
-      const newEnemies = map.newEnemies || [];
+      const allMapEnemies = getPossibleEnemiesForMap(map);
+      const newEnemies = map.id === 'fjordlands'
+        ? []
+        : allMapEnemies.filter(m => !baselineEnemies.has(m));
+
       const enemyBadges = newEnemies
         .map(e => `<span class="enemy-badge">${ENEMY_ICONS[e] || '👿'} ${e}</span>`)
         .join('');
