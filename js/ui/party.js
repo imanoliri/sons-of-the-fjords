@@ -8,10 +8,11 @@ import { STATE, notify, getEffectiveStats } from '../state.js';
 import { GODS_CONFIG } from '../config/gods.js';
 import {
   elQuestsList, elPartyBandContent, elPartyInventoryContent,
-  elModalEvent, elModalEventTitle, elModalEventBody, elModalEventChoices, elModalEventCloseBtn
+  elModalEvent, elModalEventTitle, elModalEventBody, elModalEventChoices, elModalEventCloseBtn,
+  elPartyModal
 } from './dom.js';
 import { formatStat } from './dom.js';
-import { showOverlay, updateModalKeyboardNavigation } from './overlay.js';
+import { showOverlay, hideOverlay, updateModalKeyboardNavigation } from './overlay.js';
 
 // ── God lore reference ──────────────────────────────────────────────────────
 export const GOD_LORE = GODS_CONFIG.lore;
@@ -370,6 +371,25 @@ export function renderPartyPanel() {
 
       row.appendChild(label);
       row.appendChild(qty);
+
+      if (item === 'War Horn' && STATE.activeScreen === 'location') {
+        const btnUse = document.createElement('button');
+        btnUse.className = 'btn btn-sm btn-primary';
+        btnUse.style.marginLeft = '1rem';
+        btnUse.innerText = 'Use 📯';
+        btnUse.addEventListener('click', () => {
+          hideOverlay(elPartyModal);
+          const idx = STATE.inventory.indexOf('War Horn');
+          if (idx !== -1) {
+            STATE.inventory.splice(idx, 1);
+          }
+          import('./location.js').then(({ useWarHorn }) => {
+            useWarHorn();
+          });
+        });
+        row.appendChild(btnUse);
+      }
+
       elPartyInventoryContent.appendChild(row);
     });
   }

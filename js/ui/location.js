@@ -690,3 +690,67 @@ export function attemptLocalMove(targetX, targetY) {
     notify('STATE_UPDATED');
   }
 }
+
+export function useWarHorn() {
+  const locId = STATE.party.currentLocationId;
+  const locState = STATE.locations[locId];
+  if (!locState) return;
+
+  // 1. Discover all tiles in the current location (just the 10x10)
+  for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 10; x++) {
+      const coordKey = `${x},${y}`;
+      if (!locState.placedTiles[coordKey]) {
+        discoverTile(locId, x, y);
+      }
+    }
+  }
+
+  // Render the fully discovered map
+  renderLocationMap();
+  logLocation('Sounded the War Horn! The entire area is revealed, and defenders are summoned.');
+  showToast('War Horn Sounded! 📯', '📯', true);
+
+  // 2. Pause for 1 second, then begin the battle against all enemies in this level
+  setTimeout(() => {
+    const combinedMonsters = [];
+    const uniqueEnemies = new Set();
+    
+    // Check placed tiles
+    for (const tile of Object.values(locState.placedTiles)) {
+      if (tile.entity && tile.entity.type === 'enemy_army' && !tile.entity.isDefeated) {
+        uniqueEnemies.add(tile.entity);
+      }
+    }
+    // Check pre-generated entities
+    for (const entity of Object.values(locState.preGeneratedEntities)) {
+      if (entity && entity.type === 'enemy_army' && !entity.isDefeated) {
+        uniqueEnemies.add(entity);
+      }
+    }
+
+    if (uniqueEnemies.size === 0) {
+      logLocation('The horns echo, but no defenders remain to answer.');
+      showToast('No defenders remain!', '📯');
+      return;
+    }
+
+    for (const enemy of uniqueEnemies) {
+      combinedMonsters.push(...enemy.monsters);
+    }
+
+    // Start combat
+    import('../state.js').then(({ setScreen }) => {
+      setScreen('combat');
+      STATE.combat.isWarHornBattle = true;
+      import('../combat.js').then(({ startCombat }) => {
+        startCombat(locId, 'war_horn', {
+          type: 'enemy_army',
+          monsters: combinedMonsters,
+          isDefeated: false
+        });
+      });
+    });
+  }, 1000);
+}
+

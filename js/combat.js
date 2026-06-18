@@ -48,6 +48,10 @@ export function startCombat(locationId, coordKey, enemyData) {
   STATE.combat.stance = 'attack';
   STATE.combat.deployHistory = [];
   STATE.combat.activeDoTs = [];
+  
+  if (coordKey !== 'war_horn') {
+    STATE.combat.isWarHornBattle = false;
+  }
 
   // 1. Initialize grid
   const grid = [];
@@ -1152,9 +1156,24 @@ export function endCombat(isVictory) {
     const locId = STATE.combat.locationId;
     const coordKey = STATE.combat.entityCoordKey;
     const locState = STATE.locations[locId];
-    if (locState && locState.placedTiles[coordKey]) {
-      const tile = locState.placedTiles[coordKey];
-      if (tile.entity && tile.entity.type === 'enemy_army') tile.entity.isDefeated = true;
+    if (locState) {
+      if (STATE.combat.isWarHornBattle) {
+        for (const tile of Object.values(locState.placedTiles)) {
+          if (tile.entity && tile.entity.type === 'enemy_army') {
+            tile.entity.isDefeated = true;
+          }
+        }
+        for (const entity of Object.values(locState.preGeneratedEntities)) {
+          if (entity && entity.type === 'enemy_army') {
+            entity.isDefeated = true;
+          }
+        }
+      } else {
+        if (locState.placedTiles[coordKey]) {
+          const tile = locState.placedTiles[coordKey];
+          if (tile.entity && tile.entity.type === 'enemy_army') tile.entity.isDefeated = true;
+        }
+      }
     }
 
     const boardUnits = [];
