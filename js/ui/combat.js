@@ -802,22 +802,11 @@ export function renderOrdersPanel() {
   if (!container) return;
   container.innerHTML = '';
 
-  const btnPlanTitle = document.getElementById('btn-plan-title');
-  const btnWizardStep = document.getElementById('btn-plan-wizard-step');
-  if (btnPlanTitle && btnWizardStep) {
-    const wiz = STATE.combat.planningWizard;
-    if (wiz && wiz.active && wiz.types && wiz.types.length > 0 && wiz.typeIndex < wiz.types.length) {
-      btnPlanTitle.classList.add('hidden');
-      btnWizardStep.classList.remove('hidden');
-      const current = wiz.types[wiz.typeIndex];
-      const emoji = SOLDIER_EMOJIS[current.type] || '⚔️';
-      const left = current.totalCount - wiz.placedCount;
-      btnWizardStep.innerText = `Place ${emoji} (${left} left)`;
-    } else {
-      btnPlanTitle.classList.remove('hidden');
-      btnWizardStep.classList.add('hidden');
-      if (wiz) wiz.active = false;
-    }
+  const wiz = STATE.combat.planningWizard;
+  if (wiz && wiz.active && wiz.types && wiz.types.length > 0 && wiz.typeIndex < wiz.types.length) {
+    STATE.combat.activePlanningType = wiz.types[wiz.typeIndex].type;
+  } else {
+    if (wiz) wiz.active = false;
   }
 
   // Get unique unit types present in the spawning pool
@@ -897,6 +886,13 @@ export function initCombatSelection() {
   const btnPlanTitle = document.getElementById('btn-plan-title');
   if (btnPlanTitle) {
     btnPlanTitle.onclick = () => {
+      if (STATE.combat.planningWizard && STATE.combat.planningWizard.active) {
+        STATE.combat.planningWizard.active = false;
+        STATE.combat.activePlanningType = null;
+        notify('COMBAT_UPDATE');
+        return;
+      }
+
       STATE.combat.activePlanningType = null;
       let poolTypes = [];
       if (STATE.combat && STATE.combat.pool && STATE.combat.pool.length > 0) {
@@ -921,16 +917,6 @@ export function initCombatSelection() {
           typeIndex: 0,
           placedCount: 0
         };
-      }
-      notify('COMBAT_UPDATE');
-    };
-  }
-
-  const btnWizardStep = document.getElementById('btn-plan-wizard-step');
-  if (btnWizardStep) {
-    btnWizardStep.onclick = () => {
-      if (STATE.combat.planningWizard) {
-        STATE.combat.planningWizard.active = false;
       }
       notify('COMBAT_UPDATE');
     };
