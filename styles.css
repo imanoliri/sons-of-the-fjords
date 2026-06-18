@@ -530,6 +530,19 @@ body {
   filter: drop-shadow(0 0 5px var(--color-danger));
 }
 
+.raid-marker.cleared {
+  filter: drop-shadow(0 0 6px var(--color-success)) !important;
+}
+
+.raid-checkmark-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 0.8rem;
+  z-index: 5;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+}
+
 .world-tile.visited-wilderness {
   box-shadow: inset 0 0 0 2px rgba(0, 240, 255, 0.35);
   /* Subtle runic blue inner border */

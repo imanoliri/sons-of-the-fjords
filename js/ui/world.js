@@ -136,6 +136,13 @@ export function renderWorldMap() {
               };
               marker.innerText = emojiMap[loc.raidType] || '⚔️';
               marker.classList.add('raid-marker');
+              if (loc.isCleared) {
+                marker.classList.add('cleared');
+                const checkmark = document.createElement('span');
+                checkmark.innerText = '✅';
+                checkmark.className = 'raid-checkmark-badge';
+                elCell.appendChild(checkmark);
+              }
               elCell.appendChild(marker);
             } else {
               elCell.classList.add('visited-wilderness');

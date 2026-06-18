@@ -10,7 +10,8 @@ import { renderQuestsScreen, renderPartyPanel, GOD_LORE } from './ui/party.js';
 import { showOverlay, hideOverlay } from './ui/overlay.js';
 import {
   screens, elHeader, elModalAscension, elModalAscensionText, elModalGameOver,
-  elModalEventTitle, elModalEventBody
+  elModalEventTitle, elModalEventBody, elModalRaidCleared, elModalRaidClearedText,
+  elModalSagaVictory, elModalSagaVictoryText
 } from './ui/dom.js';
 
 // Re-export specific modules for external app.js or other systems
@@ -217,6 +218,9 @@ export function handleStateNotification(event, data) {
           const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
           setScreen((locData && locData.type === 'town') ? 'world' : 'location');
         }
+        import('./location.js').then(({ checkRaidCleared }) => {
+          checkRaidCleared(locId);
+        });
       });
     }, 1000);
   }
@@ -316,6 +320,16 @@ export function handleStateNotification(event, data) {
     if (prevBuff) prevBuff.remove();
 
     showOverlay(elModalAscension);
+  }
+  else if (event === 'RAID_SITE_CLEARED') {
+    elModalRaidClearedText.innerHTML = `You have plundered and cleared the raiding site <b>${data.name}</b>!<br><br>All hostiles have been defeated and the area is secured.`;
+    showOverlay(elModalRaidCleared);
+    showToast(`Raid Site Cleared: ${data.name}!`, '⚔️', true);
+  }
+  else if (event === 'SAGA_VICTORY_ACHIEVED') {
+    elModalSagaVictoryText.innerHTML = `All raiding sites in Midgard have been cleared of defenders!<br><br>Your saga is complete, and your name will echo forever in the halls of Valhalla!`;
+    showOverlay(elModalSagaVictory);
+    showToast(`Campaign Victory: Midgard Cleared!`, '👑', true);
   }
   else if (event === 'GAME_OVER') {
     showOverlay(elModalGameOver);

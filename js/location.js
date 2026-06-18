@@ -2,7 +2,7 @@
    LOCATION MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE } from './state.js';
+import { STATE, notify } from './state.js';
 import { LOCATION_CONFIG as CFG } from './config/location.js';
 import { GODS_CONFIG } from './config/gods.js';
 import { getActiveMap as getActiveWorldMap } from './world.js';
@@ -712,3 +712,69 @@ function calculateDifficulty(locationId, dangerLevel) {
   const maxCap = ds.maxTimeFactorCap !== undefined ? ds.maxTimeFactorCap : 2.5;
   return baseMulti + (subCaveDepth * ds.caveDepthFactor) + Math.min(maxCap, dayValue * ds.timeFactor);
 }
+
+// Check if a specific location (and all its generated sub-caves) is cleared of all enemy armies
+export function isLocationCleared(locationId) {
+  const locState = STATE.locations[locationId];
+  if (!locState) return false;
+
+  // Check placed tiles
+  for (const tile of Object.values(locState.placedTiles)) {
+    if (tile.entity && tile.entity.type === 'enemy_army' && !tile.entity.isDefeated) {
+      return false;
+    }
+  }
+
+  // Check pre-generated entities
+  for (const entity of Object.values(locState.preGeneratedEntities)) {
+    if (entity && entity.type === 'enemy_army' && !entity.isDefeated) {
+      return false;
+    }
+  }
+
+  // Check sub-caves recursively
+  for (const locKey in STATE.locations) {
+    if (locKey.startsWith(locationId + '_sub_cave_')) {
+      if (!isLocationCleared(locKey)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+// Mark raid locations as cleared if all their enemies are defeated, then trigger notifications
+export function checkRaidCleared(locId) {
+  if (!locId) return;
+  const mainLocationId = locId.split('_sub_cave_')[0];
+  if (!mainLocationId.startsWith('raid_')) return;
+
+  if (isLocationCleared(mainLocationId)) {
+    // Find the world location object
+    let foundLoc = null;
+    for (const loc of Object.values(STATE.worldMap.locations)) {
+      if (loc.id === mainLocationId) {
+        foundLoc = loc;
+        break;
+      }
+    }
+
+    if (foundLoc && !foundLoc.isCleared) {
+      foundLoc.isCleared = true;
+      if (STATE.locations[mainLocationId]) {
+        STATE.locations[mainLocationId].isCleared = true;
+      }
+
+      notify('RAID_SITE_CLEARED', { id: mainLocationId, name: foundLoc.name });
+
+      // Check if all raiding sites on the map are cleared
+      const totalRaids = Object.values(STATE.worldMap.locations).filter(l => l.type === 'raid');
+      const allCleared = totalRaids.every(l => l.isCleared);
+      if (allCleared) {
+        notify('SAGA_VICTORY_ACHIEVED');
+      }
+    }
+  }
+}
+

@@ -22,7 +22,7 @@ import { executePlunderMound, executeSacrificeSheep } from '../state.js';
 import {
   elPartyModal, elConsoleModal, elConsoleTextarea, elModalEvent, elModalEventCloseBtn, elTabPartyBand, elTabPartyInventory,
   elPartyBandContent, elPartyInventoryContent, elModalGameOver, elModalAscension, elPromptPanel, elTooltip,
-  MONSTER_EMOJIS
+  MONSTER_EMOJIS, elModalRaidCleared, elModalSagaVictory
 } from './dom.js';
 
 // Bind simple click callback if element exists
@@ -485,6 +485,15 @@ export function initUIBindings() {
     if (activeVictoryGod) {
       STATE.godFavor[activeVictoryGod] = 5;
     }
+  });
+
+  bindButton('btn-raid-cleared-continue', () => {
+    hideOverlay(elModalRaidCleared);
+  });
+
+  bindButton('btn-saga-victory-restart', () => {
+    hideOverlay(elModalSagaVictory);
+    location.reload();
   });
 
   // Keyboard Arrow Movement

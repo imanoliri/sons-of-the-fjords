@@ -82,6 +82,11 @@ export const elModalEventChoices = document.getElementById('modal-event-choices'
 export const elModalAscension = document.getElementById('modal-ascension');
 export const elModalAscensionText = document.getElementById('modal-ascension-text');
 
+export const elModalRaidCleared = document.getElementById('modal-raid-cleared');
+export const elModalRaidClearedText = document.getElementById('modal-raid-cleared-text');
+export const elModalSagaVictory = document.getElementById('modal-saga-victory');
+export const elModalSagaVictoryText = document.getElementById('modal-saga-victory-text');
+
 export const elModalGameOver = document.getElementById('modal-gameover');
 export const elConsoleModal = document.getElementById('modal-console');
 export const elConsoleTextarea = document.getElementById('console-state-textarea');
