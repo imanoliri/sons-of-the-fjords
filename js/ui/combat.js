@@ -987,11 +987,11 @@ export function initCombatSelection() {
     if (!isSelecting || !selectionBox) return;
     isSelecting = false;
     const isShowing = selectionBox.style.display === 'block';
+    
+    const boxRect = selectionBox.getBoundingClientRect();
     selectionBox.style.display = 'none';
 
     if (!isShowing) return;
-
-    const boxRect = selectionBox.getBoundingClientRect();
     if (boxRect.width < 5 || boxRect.height < 5) return;
 
     const grid = STATE.combat.grid;
