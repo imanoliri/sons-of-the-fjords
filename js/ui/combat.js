@@ -10,6 +10,7 @@ import {
   elTooltip, MONSTER_EMOJIS
 } from './dom.js';
 import { formatStat } from './dom.js';
+import { showToast } from './notifications.js';
 
 export function renderFormationElement() {
   const container = document.getElementById('formation-container');
@@ -880,6 +881,52 @@ export function initCombatSelection() {
       }
       checkAndAutoDeploy();
       notify('COMBAT_UPDATE');
+    };
+  }
+
+  const btnSave = document.getElementById('btn-save-plans');
+  if (btnSave) {
+    btnSave.onclick = () => {
+      const layout = STATE.combat.plannedLayout || Array.from({ length: 8 }, () => Array(10).fill(null));
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(layout));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "battle_plan.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('Battle plan saved/downloaded!');
+    };
+  }
+
+  const btnLoad = document.getElementById('btn-load-plans');
+  if (btnLoad) {
+    btnLoad.onclick = () => {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = '.json';
+      fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const layout = JSON.parse(evt.target.result);
+            if (Array.isArray(layout) && layout.length === 8 && layout.every(row => Array.isArray(row) && row.length === 10)) {
+              STATE.combat.plannedLayout = layout;
+              checkAndAutoDeploy();
+              notify('COMBAT_UPDATE');
+              showToast('Battle plan loaded successfully!');
+            } else {
+              showToast('Invalid battle plan layout format.');
+            }
+          } catch (err) {
+            showToast('Error parsing JSON battle plan.');
+          }
+        };
+        reader.readAsText(file);
+      };
+      fileInput.click();
     };
   }
 
