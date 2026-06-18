@@ -3,6 +3,7 @@
    ========================================================================== */
 
 import { STATE, notify, setScreen, adjustResource } from '../state.js';
+import { initCombatSelection } from './combat.js';
 import { getAvailableMaps, setActiveMap, initializeWorld, getActiveMap } from '../world.js';
 import { SOLDIERS_CONFIG } from '../config/soldiers.js';
 import { GODS_CONFIG } from '../config/gods.js';
@@ -447,24 +448,53 @@ export function initUIBindings() {
     fleeCombat();
   });
 
-  bindButton('btn-stance-retreat', () => {
-    STATE.combat.stance = 'retreat';
+  function applyStance(stance) {
+    const selectedUnits = [];
+    if (STATE.combat.grid) {
+      for (let r = 0; r < STATE.combat.grid.length; r++) {
+        for (let c = 0; c < STATE.combat.grid[r].length; c++) {
+          const cell = STATE.combat.grid[r][c];
+          if (cell && cell.alliance === 'player' && cell.selected) {
+            selectedUnits.push(cell);
+          }
+        }
+      }
+    }
+
+    if (selectedUnits.length > 0) {
+      selectedUnits.forEach(u => {
+        u.stance = stance;
+      });
+    } else {
+      STATE.combat.stance = stance;
+      if (STATE.combat.grid) {
+        for (let r = 0; r < STATE.combat.grid.length; r++) {
+          for (let c = 0; c < STATE.combat.grid[r].length; c++) {
+            const cell = STATE.combat.grid[r][c];
+            if (cell && cell.alliance === 'player') {
+              delete cell.stance;
+            }
+          }
+        }
+      }
+    }
     notify('COMBAT_UPDATE');
+  }
+
+  bindButton('btn-stance-retreat', () => {
+    applyStance('retreat');
   });
 
   bindButton('btn-stance-defend', () => {
-    STATE.combat.stance = 'defend';
-    notify('COMBAT_UPDATE');
+    applyStance('defend');
   });
 
   bindButton('btn-stance-hold', () => {
-    STATE.combat.stance = 'hold';
-    notify('COMBAT_UPDATE');
+    applyStance('hold');
   });
 
   bindButton('btn-stance-attack', () => {
-    STATE.combat.stance = 'attack';
-    notify('COMBAT_UPDATE');
+    applyStance('attack');
   });
 
   const speedSlider = document.getElementById('slider-combat-speed');
@@ -873,26 +903,22 @@ export function initUIBindings() {
 
       if (key === 'y') {
         e.preventDefault();
-        STATE.combat.stance = 'retreat';
-        notify('COMBAT_UPDATE');
+        applyStance('retreat');
         return;
       }
       if (key === 'x') {
         e.preventDefault();
-        STATE.combat.stance = 'defend';
-        notify('COMBAT_UPDATE');
+        applyStance('defend');
         return;
       }
       if (key === 'c') {
         e.preventDefault();
-        STATE.combat.stance = 'hold';
-        notify('COMBAT_UPDATE');
+        applyStance('hold');
         return;
       }
       if (key === 'v') {
         e.preventDefault();
-        STATE.combat.stance = 'attack';
-        notify('COMBAT_UPDATE');
+        applyStance('attack');
         return;
       }
 
@@ -955,6 +981,7 @@ export function initUIBindings() {
 
   // Start tooltip tracking
   initTooltipEvents();
+  initCombatSelection();
 }
 
 function initTooltipEvents() {

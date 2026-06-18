@@ -208,7 +208,7 @@ export function startCombat(locationId, coordKey, enemyData) {
   STATE.combat.grid = grid;
 
   // 2. Clone active band into deployment pool
-  STATE.combat.pool = STATE.band.map(u => ({ ...u, maxHp: u.maxHp, hp: u.hp, currentHp: u.hp, alliance: 'player' }));
+  STATE.combat.pool = STATE.band.map(u => ({ ...u, maxHp: u.maxHp, hp: u.hp, currentHp: u.hp, alliance: 'player', selected: false }));
   sortPoolByPoints();
 
   // Initialize group queues
@@ -257,6 +257,7 @@ export function startCombat(locationId, coordKey, enemyData) {
     spawnMonsterGroup(firstGroup, 0);
   }
 
+  checkAndAutoDeploy();
   notify('COMBAT_START');
   combatTimer = setInterval(combatTick, STATE.combat.combatIntervalMs || CFG.tickIntervalMs);
 }
@@ -786,7 +787,7 @@ function combatTick() {
       } else if (unit.isFleeing) {
         dir = -1;
       } else {
-        const stance = STATE.combat.stance || 'attack';
+        const stance = unit.stance || STATE.combat.stance || 'attack';
         if (stance === 'attack') dir = 1;
         else if (stance === 'retreat' || stance === 'defend') dir = -1;
         else shouldMove = false;
@@ -797,7 +798,7 @@ function combatTick() {
         const fullLeapVal = 1 + effectiveLeap;
         let leapVal = 1; // Default normal movement
 
-        const isRetreatingOrFleeing = unit.isFleeing || (unit.alliance === 'player' && STATE.combat.stance === 'retreat');
+        const isRetreatingOrFleeing = unit.isFleeing || (unit.alliance === 'player' && stance === 'retreat');
 
         if (!isRetreatingOrFleeing && effectiveLeap > 0) {
           let canLeap = false;
@@ -991,16 +992,27 @@ function combatTick() {
           if (isLeaping) {
             notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_leap', unit: unit, oldCol: oldCol });
           }
+
+          // ARRIVAL CHECK:
+          if (unit.alliance === 'player' && !unit.isCharmed && !unit.isConfused && !unit.isUndead) {
+            const r = unit.row;
+            const c = unit.col;
+            if (c <= 1 && STATE.combat.plannedLayout && STATE.combat.plannedLayout[r]?.[c] === unit.type) {
+              unit.stance = 'hold';
+            }
+          }
         }
 
         if (reachedBoundary) {
           const boundaryCol = unit.col + dir; // The column that crossed the boundary
-          if (unit.alliance === 'player' && STATE.combat.stance === 'defend' && boundaryCol < 0) {
+          const stance = unit.stance || STATE.combat.stance || 'attack';
+          if (unit.alliance === 'player' && stance === 'defend' && boundaryCol < 0) {
             // Hold at col 0
           } else {
             grid[unit.row][unit.col] = null;
-            if (unit.alliance === 'player' && (unit.isFleeing || STATE.combat.stance === 'retreat') && boundaryCol < 0) {
+            if (unit.alliance === 'player' && (unit.isFleeing || stance === 'retreat') && boundaryCol < 0) {
               const poolUnit = { ...unit, hp: unit.hp, row: undefined, col: undefined, isFleeing: false };
+              delete poolUnit.stance; // Clear individual stance when returning to pool
               STATE.combat.pool.push(poolUnit);
               sortPoolByPoints();
               notify('COMBAT_UPDATE');
@@ -1013,6 +1025,7 @@ function combatTick() {
     }
   }
 
+  checkAndAutoDeploy();
   notify('COMBAT_UPDATE');
   checkCombatEndConditions();
 }
@@ -1153,10 +1166,16 @@ export function deployUnit(poolIndex, row, col) {
   unit.row = row;
   unit.col = col;
   STATE.combat.grid[row][col] = unit;
+  
+  if (STATE.combat.plannedLayout && STATE.combat.plannedLayout[row] && STATE.combat.plannedLayout[row][col] === unit.type) {
+    unit.stance = 'hold';
+  }
+
   if (!STATE.combat.deployHistory) STATE.combat.deployHistory = [];
   STATE.combat.deployHistory.push(unit.id);
   STATE.combat.pool.splice(poolIndex, 1);
   STATE.combat.selectedPoolIndex = null;
+  checkAndAutoDeploy();
   notify('COMBAT_UPDATE');
 }
 
@@ -1168,11 +1187,13 @@ export function undeployUnit(row, col) {
   STATE.combat.grid[row][col] = null;
   unit.row = undefined;
   unit.col = undefined;
+  delete unit.stance; // Clear individual stance when returning to pool
   STATE.combat.pool.push(unit);
   if (STATE.combat.deployHistory) {
     STATE.combat.deployHistory = STATE.combat.deployHistory.filter(id => id !== unit.id);
   }
   sortPoolByPoints();
+  checkAndAutoDeploy();
   notify('COMBAT_UPDATE');
 }
 
@@ -1279,6 +1300,84 @@ function shuffleArray(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+export function checkAndAutoDeploy() {
+  if (!STATE.combat.active) return;
+  if (!STATE.combat.plannedLayout) {
+    STATE.combat.plannedLayout = Array.from({ length: CFG.gridRows }, () => Array(2).fill(null));
+  }
+
+  const grid = STATE.combat.grid;
+  const sizeR = CFG.gridRows;
+
+  for (let r = 0; r < sizeR; r++) {
+    // 1. Gather desired planned counts for this lane r
+    const desiredCounts = {};
+    for (let c = 0; c <= 1; c++) {
+      const type = STATE.combat.plannedLayout[r][c];
+      if (type) {
+        desiredCounts[type] = (desiredCounts[type] || 0) + 1;
+      }
+    }
+
+    if (Object.keys(desiredCounts).length === 0) continue;
+
+    // 2. Count currently deployed player units of each type in lane r
+    const deployedCounts = {};
+    for (let c = 0; c < CFG.gridCols; c++) {
+      const cell = grid[r][c];
+      if (cell && cell.alliance === 'player' && !cell.isCharmed && !cell.isConfused && !cell.isUndead) {
+        deployedCounts[cell.type] = (deployedCounts[cell.type] || 0) + 1;
+      }
+    }
+
+    // 3. For each planned type T, see if we need to auto-deploy from pool
+    for (const [type, reqCount] of Object.entries(desiredCounts)) {
+      const currentCount = deployedCounts[type] || 0;
+      let needed = reqCount - currentCount;
+      if (needed <= 0) continue;
+
+      while (needed > 0) {
+        // Find matching unit in pool
+        const poolIndex = STATE.combat.pool.findIndex(u => u.type === type);
+        if (poolIndex === -1) {
+          // No more available units of this type in pool
+          break;
+        }
+
+        // Find first vacant cell in columns 0 and 1 of lane r (check col 0 first, then col 1)
+        let targetCol = -1;
+        if (!grid[r][0]) {
+          targetCol = 0;
+        } else if (!grid[r][1]) {
+          targetCol = 1;
+        }
+
+        if (targetCol === -1) {
+          // No vacant deployable cell in this lane
+          break;
+        }
+
+        // Deploy it!
+        const unit = STATE.combat.pool[poolIndex];
+        unit.row = r;
+        unit.col = targetCol;
+        grid[r][targetCol] = unit;
+
+        // Set stance to hold if it matches the planned position at targetCol
+        if (STATE.combat.plannedLayout[r][targetCol] === unit.type) {
+          unit.stance = 'hold';
+        }
+
+        if (!STATE.combat.deployHistory) STATE.combat.deployHistory = [];
+        STATE.combat.deployHistory.push(unit.id);
+        STATE.combat.pool.splice(poolIndex, 1);
+
+        needed--;
+      }
+    }
   }
 }
 

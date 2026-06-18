@@ -3,7 +3,7 @@
    ========================================================================== */
 
 import { STATE, notify, getEffectiveStats } from '../state.js';
-import { togglePause, deployUnit, undeployUnit, sortPoolByPoints } from '../combat.js';
+import { togglePause, deployUnit, undeployUnit, sortPoolByPoints, checkAndAutoDeploy } from '../combat.js';
 import { SOLDIERS_CONFIG, SOLDIER_EMOJIS } from '../config/soldiers.js';
 import {
   elCombatGrid, elCombatPoolList, elCombatPauseBtn,
@@ -109,26 +109,55 @@ export function renderCombatGrid() {
       elCell.dataset.row = r;
       elCell.dataset.col = c;
 
-      // Make columns 0 and 1 highlighted deploy zones when paused
-      if (STATE.combat.paused && c <= 1 && !grid[r][c]) {
-        if (STATE.combat.selectedPoolIndex !== null) {
-          elCell.classList.add('deployable-zone');
-          elCell.addEventListener('click', () => {
-            deployUnit(STATE.combat.selectedPoolIndex, r, c);
-          });
-        }
+      // Make columns 0 and 1 plan/deploy drop zones
+      if (c <= 1) {
+        // Drag over / drop handlers for planning layout
+        elCell.addEventListener('dragover', (e) => {
+          e.preventDefault();
+        });
+        elCell.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const dragData = e.dataTransfer.getData('text/plain');
+          if (dragData && dragData.startsWith('plan:')) {
+            const type = dragData.replace('plan:', '');
+            if (!STATE.combat.plannedLayout) {
+              STATE.combat.plannedLayout = Array.from({ length: 8 }, () => Array(2).fill(null));
+            }
+            STATE.combat.plannedLayout[r][c] = type;
+            checkAndAutoDeploy();
+            notify('COMBAT_UPDATE');
+          }
+        });
 
-        // Render keyboard shortcut key hint in the cell (qweruiop for col 0, asdfjklö for col 1)
-        const hints = {
-          '0,0': 'Q', '1,0': 'W', '2,0': 'E', '3,0': 'R', '4,0': 'U', '5,0': 'I', '6,0': 'O', '7,0': 'P',
-          '0,1': 'A', '1,1': 'S', '2,1': 'D', '3,1': 'F', '4,1': 'J', '5,1': 'K', '6,1': 'L', '7,1': 'Ö'
-        };
-        const hintKey = `${r},${c}`;
-        if (hints[hintKey]) {
-          const elHint = document.createElement('span');
-          elHint.className = 'cell-key-hint';
-          elHint.innerText = hints[hintKey];
-          elCell.appendChild(elHint);
+        // Contextmenu (right-click) to clear planning
+        elCell.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          if (STATE.combat.plannedLayout && STATE.combat.plannedLayout[r][c]) {
+            STATE.combat.plannedLayout[r][c] = null;
+            notify('COMBAT_UPDATE');
+          }
+        });
+
+        if (STATE.combat.paused && !grid[r][c]) {
+          if (STATE.combat.selectedPoolIndex !== null) {
+            elCell.classList.add('deployable-zone');
+            elCell.addEventListener('click', () => {
+              deployUnit(STATE.combat.selectedPoolIndex, r, c);
+            });
+          }
+
+          // Render keyboard shortcut key hint in the cell (qweruiop for col 0, asdfjklö for col 1)
+          const hints = {
+            '0,0': 'Q', '1,0': 'W', '2,0': 'E', '3,0': 'R', '4,0': 'U', '5,0': 'I', '6,0': 'O', '7,0': 'P',
+            '0,1': 'A', '1,1': 'S', '2,1': 'D', '3,1': 'F', '4,1': 'J', '5,1': 'K', '6,1': 'L', '7,1': 'Ö'
+          };
+          const hintKey = `${r},${c}`;
+          if (hints[hintKey]) {
+            const elHint = document.createElement('span');
+            elHint.className = 'cell-key-hint';
+            elHint.innerText = hints[hintKey];
+            elCell.appendChild(elHint);
+          }
         }
       }
 
@@ -137,6 +166,11 @@ export function renderCombatGrid() {
       if (unit) {
         const elUnit = document.createElement('div');
         elUnit.classList.add('combat-unit', `alliance-${unit.alliance}`);
+
+        // Highlight selected units
+        if (unit.alliance === 'player' && unit.selected) {
+          elUnit.classList.add('selected-unit');
+        }
 
         // Emoji display based on soldier/monster class type or fleeing state
         if (unit.isFleeing) {
@@ -171,7 +205,7 @@ export function renderCombatGrid() {
 
         // Apply active player stances visual style classes to player units
         if (unit.alliance === 'player') {
-          const stance = STATE.combat.stance || 'attack';
+          const stance = unit.stance || STATE.combat.stance || 'attack';
           elUnit.classList.add(`stance-${stance}`);
           if (stance !== 'attack') {
             const stanceBadge = document.createElement('span');
@@ -216,20 +250,30 @@ export function renderCombatGrid() {
           elUnit.appendChild(burnIcon);
         }
 
-        // Allow removing unit from deployment grid if paused, OR fleeing if fleeMode is active
+        // Left-click selection and right-click undeployment
         if (unit.alliance === 'player') {
+          // Left-click to toggle selection
+          elUnit.addEventListener('click', (e) => {
+            e.stopPropagation();
+            unit.selected = !unit.selected;
+            notify('COMBAT_UPDATE');
+          });
+
+          // Right-click to undeploy (only when paused)
+          elUnit.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (STATE.combat.paused) {
+              undeployUnit(r, c);
+            }
+          });
+
           if (STATE.combat.fleeMode) {
             elUnit.classList.add('fleeing-target');
             elUnit.addEventListener('click', (e) => {
               e.stopPropagation();
               unit.isFleeing = true;
               notify('COMBAT_UPDATE');
-            });
-          } else if (STATE.combat.paused) {
-            elUnit.classList.add('removable-unit');
-            elUnit.addEventListener('click', (e) => {
-              e.stopPropagation();
-              undeployUnit(r, c);
             });
           }
         }
@@ -258,6 +302,47 @@ export function renderCombatGrid() {
         hbContainer.appendChild(hbFill);
         elUnit.appendChild(hbContainer);
         elCell.appendChild(elUnit);
+      } else if (c <= 1 && STATE.combat.plannedLayout && STATE.combat.plannedLayout[r][c]) {
+        // Draw ghost planned unit
+        const type = STATE.combat.plannedLayout[r][c];
+
+        // Determine ghost order state
+        let orderState = 'no soldier available';
+
+        // 1. Check if deployed in lane r
+        let isDeployedInLane = false;
+        for (let checkC = 0; checkC < 10; checkC++) {
+          const cell = grid[r][checkC];
+          if (cell && cell.alliance === 'player' && cell.type === type && !cell.isCharmed && !cell.isConfused && !cell.isUndead) {
+            isDeployedInLane = true;
+            break;
+          }
+        }
+
+        if (isDeployedInLane) {
+          orderState = 'soldier deployed';
+        } else {
+          // 2. Check if available in pool
+          const isAvailableInPool = STATE.combat.pool.some(u => u.type === type);
+          if (isAvailableInPool) {
+            orderState = 'soldier available';
+          }
+        }
+
+        const elGhost = document.createElement('div');
+        elGhost.classList.add('combat-unit', 'ghost-unit');
+        if (orderState === 'no soldier available') {
+          elGhost.classList.add('ghost-no-soldier');
+          elGhost.title = `Order: ${type} (No soldier available)`;
+        } else if (orderState === 'soldier available') {
+          elGhost.classList.add('ghost-soldier-available');
+          elGhost.title = `Order: ${type} (Available to deploy)`;
+        } else if (orderState === 'soldier deployed') {
+          elGhost.classList.add('ghost-soldier-deployed');
+          elGhost.title = `Order: ${type} (Deployed in lane)`;
+        }
+        elGhost.innerText = SOLDIER_EMOJIS[type] || '👾';
+        elCell.appendChild(elGhost);
       }
 
       elCombatGrid.appendChild(elCell);
@@ -428,6 +513,7 @@ export function renderCombatGrid() {
   });
 
   renderFormationElement();
+  renderOrdersPanel();
 }
 
 /* --- Visual Effects Helpers --- */
@@ -630,3 +716,157 @@ export function markRunecasterCasting(unit) {
   unit.isCastingRune = true;
   setTimeout(() => { unit.isCastingRune = false; }, 600);
 }
+
+/* --- Orders Panel & Drag-Selection Helpers --- */
+
+export function renderOrdersPanel() {
+  const container = document.getElementById('orders-unit-list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  // Get unique unit types present in STATE.band
+  let bandTypes = [];
+  if (STATE.band && STATE.band.length > 0) {
+    bandTypes = [...new Set(STATE.band.map(u => u.type))];
+  }
+  if (bandTypes.length === 0) {
+    // Fallback to pool if band is empty, or show basic types
+    if (STATE.combat && STATE.combat.pool && STATE.combat.pool.length > 0) {
+      bandTypes = [...new Set(STATE.combat.pool.map(u => u.type))];
+    } else {
+      bandTypes = ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'];
+    }
+  }
+
+  const uniqueTypes = [...new Set(bandTypes)];
+
+  uniqueTypes.forEach(type => {
+    const card = document.createElement('div');
+    card.classList.add('orders-card');
+    card.draggable = true;
+    
+    const emoji = SOLDIER_EMOJIS[type] || '⚔️';
+    card.title = type.charAt(0).toUpperCase() + type.slice(1);
+    card.innerHTML = `${emoji}`;
+
+    card.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', `plan:${type}`);
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+
+    container.appendChild(card);
+  });
+}
+
+let isSelecting = false;
+let startX = 0;
+let startY = 0;
+let selectionBox = null;
+
+export function initCombatSelection() {
+  const gridEl = document.getElementById('combat-grid');
+  if (!gridEl) return;
+
+  gridEl.addEventListener('mousedown', (e) => {
+    // Only select on left click
+    if (e.button !== 0) return;
+    
+    // Ignore if clicking on a unit or input/button/removable card
+    if (e.target.closest('.combat-unit') || e.target.closest('.orders-card') || e.target.closest('.pool-card') || e.target.closest('.btn') || e.target.closest('button')) {
+      return;
+    }
+
+    isSelecting = true;
+    startX = e.clientX;
+    startY = e.clientY;
+
+    if (!selectionBox) {
+      selectionBox = document.createElement('div');
+      selectionBox.className = 'selection-box';
+      document.body.appendChild(selectionBox);
+    }
+
+    selectionBox.style.left = `${startX}px`;
+    selectionBox.style.top = `${startY}px`;
+    selectionBox.style.width = '0px';
+    selectionBox.style.height = '0px';
+    selectionBox.style.display = 'block';
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isSelecting || !selectionBox) return;
+
+    const currentX = e.clientX;
+    const currentY = e.clientY;
+
+    const left = Math.min(startX, currentX);
+    const top = Math.min(startY, currentY);
+    const width = Math.abs(startX - currentX);
+    const height = Math.abs(startY - currentY);
+
+    selectionBox.style.left = `${left}px`;
+    selectionBox.style.top = `${top}px`;
+    selectionBox.style.width = `${width}px`;
+    selectionBox.style.height = `${height}px`;
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    if (!isSelecting || !selectionBox) return;
+    isSelecting = false;
+    selectionBox.style.display = 'none';
+
+    // Calculate bounds relative to viewport
+    const boxRect = selectionBox.getBoundingClientRect();
+    const grid = STATE.combat.grid;
+    if (!grid) return;
+
+    const addToSelection = e.shiftKey;
+
+    // Clear previous selection if not holding shift
+    if (!addToSelection) {
+      for (let r = 0; r < grid.length; r++) {
+        for (let c = 0; c < grid[r].length; c++) {
+          const u = grid[r][c];
+          if (u) u.selected = false;
+        }
+      }
+    }
+
+    let selectedAny = false;
+    for (let r = 0; r < grid.length; r++) {
+      for (let c = 0; c < grid[r].length; c++) {
+        const u = grid[r][c];
+        if (u && u.alliance === 'player') {
+          const cellEl = document.querySelector(`.combat-cell[data-row="${r}"][data-col="${c}"]`);
+          if (cellEl) {
+            const cellRect = cellEl.getBoundingClientRect();
+            // Check intersection
+            const intersect = !(
+              cellRect.left > boxRect.right ||
+              cellRect.right < boxRect.left ||
+              cellRect.top > boxRect.bottom ||
+              cellRect.bottom < boxRect.top
+            );
+            if (intersect) {
+              u.selected = true;
+              selectedAny = true;
+            }
+          }
+        }
+      }
+    }
+
+    // If click or very small drag on empty space, deselect all
+    if (!selectedAny && !addToSelection && boxRect.width < 6 && boxRect.height < 6) {
+      for (let r = 0; r < grid.length; r++) {
+        for (let c = 0; c < grid[r].length; c++) {
+          const u = grid[r][c];
+          if (u) u.selected = false;
+        }
+      }
+    }
+
+    notify('COMBAT_UPDATE');
+  });
+}
+

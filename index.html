@@ -274,10 +274,23 @@
               </div>
             </div>
 
-            <!-- 10x8 COMBAT ARENA -->
-            <div style="position: relative; width: max-content; margin: 0 auto;">
-              <div class="combat-grid" id="combat-grid"></div>
-              <div id="combat-effects-overlay" style="position: absolute; inset: 0; pointer-events: none; z-index: 99; overflow: visible;"></div>
+            <!-- 10x8 COMBAT ARENA AND ORDERS PALETTE -->
+            <div style="display: flex; gap: 1rem; align-items: flex-start; justify-content: center; width: 100%; margin: 0 auto;">
+              <div style="position: relative; width: max-content;">
+                <div class="combat-grid" id="combat-grid"></div>
+                <div id="combat-effects-overlay" style="position: absolute; inset: 0; pointer-events: none; z-index: 99; overflow: visible;"></div>
+              </div>
+              
+              <!-- DRAG-AND-DROP SOLDIER PLANNING ORDERS -->
+              <div class="orders-panel">
+                <h5 style="margin: 0; color: var(--text-accent); font-size: 0.8rem; border-bottom: 1px dotted rgba(255,255,255,0.25); padding-bottom: 0.25rem; text-align: center; cursor: help; width: 100%; display: block;" 
+                    title="Orders: Drag emojis to Col 1 & 2 to plan lane defense. Right-click cell to clear.">
+                  Orders ⓘ
+                </h5>
+                <div id="orders-unit-list" style="display: flex; flex-direction: column; gap: 0.4rem; width: 100%; align-items: center;">
+                  <!-- Draggable soldier types will be populated here -->
+                </div>
+              </div>
             </div>
 
             <!-- DEPLOYMENT HAND -->
