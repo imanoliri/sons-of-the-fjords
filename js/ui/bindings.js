@@ -878,6 +878,36 @@ export function initUIBindings() {
     }
     // Check if player is on Combat screen
     else if (STATE.activeScreen === 'combat') {
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        // 1. Delete selected player units
+        const grid = STATE.combat.grid;
+        if (grid) {
+          for (let r = 0; r < grid.length; r++) {
+            for (let c = 0; c < grid[r].length; c++) {
+              const u = grid[r][c];
+              if (u && u.alliance === 'player' && u.selected) {
+                undeployUnit(r, c);
+              }
+            }
+          }
+        }
+        // 2. Delete selected planned locations
+        if (STATE.combat.selectedPlans && STATE.combat.selectedPlans.length > 0) {
+          STATE.combat.selectedPlans.forEach(p => {
+            if (STATE.combat.plannedLayout) {
+              STATE.combat.plannedLayout[p.r][p.c] = null;
+            }
+            if (STATE.combat.plansDefinedThisTick) {
+              delete STATE.combat.plansDefinedThisTick[`${p.r},${p.c}`];
+            }
+          });
+          STATE.combat.selectedPlans = [];
+          checkAndAutoDeploy();
+          notify('COMBAT_UPDATE');
+        }
+        return;
+      }
       if (e.key === 'Enter') {
         e.preventDefault();
         if (STATE.combat.paused) {

@@ -272,6 +272,8 @@ export function adjustCombatSpeed(newSpeedMs) {
 
 function combatTick() {
   if (STATE.combat.paused || !STATE.combat.active) return;
+  STATE.combat.plansDefinedThisTick = {};
+  STATE.combat.selectedPlans = [];
 
   // Spawn next enemy group if any are pending
   if (STATE.combat.pendingSpawnGroups && STATE.combat.pendingSpawnGroups.length > 0) {
@@ -1190,6 +1192,9 @@ export function undeployUnit(row, col) {
     for (let checkC = 0; checkC < 10; checkC++) {
       if (STATE.combat.plannedLayout[row][checkC] === unit.type) {
         STATE.combat.plannedLayout[row][checkC] = null;
+        if (STATE.combat.selectedPlans) {
+          STATE.combat.selectedPlans = STATE.combat.selectedPlans.filter(p => !(p.r === row && p.c === checkC));
+        }
         break;
       }
     }
