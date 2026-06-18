@@ -494,6 +494,11 @@ export function initUIBindings() {
 
   bindButton('btn-raid-cleared-continue', () => {
     hideOverlay(elModalRaidCleared);
+    if (STATE.combat.isWarHornBattle) {
+      import('./location.js').then(({ gatherAndAnimateLoot }) => {
+        gatherAndAnimateLoot();
+      });
+    }
   });
 
   bindButton('btn-saga-victory-restart', () => {

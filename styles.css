@@ -362,6 +362,7 @@ body {
 
 /* 10x10 Location Map Grid */
 .location-map-grid {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(10, 60px);
   grid-template-rows: repeat(10, 60px);

@@ -763,3 +763,134 @@ export function useWarHorn() {
   }, 1000);
 }
 
+export function gatherAndAnimateLoot() {
+  const locId = STATE.party.currentLocationId;
+  const locState = STATE.locations[locId];
+  if (!locState) return;
+
+  const px = STATE.party.localX;
+  const py = STATE.party.localY;
+
+  const lootTasks = [];
+  
+  for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 10; x++) {
+      const coordKey = `${x},${y}`;
+      const tile = locState.placedTiles[coordKey];
+      if (tile && tile.entity) {
+        const ent = tile.entity;
+        let emoji = null;
+        let looted = false;
+
+        if (ent.type === 'treasure' && !ent.isLooted) {
+          emoji = '🪙';
+          let goldGained = ent.silver || 15;
+          if (STATE.godQuests.loki?.[0]) {
+            const m1Config = GODS_CONFIG.modifiers.milestones.loki.find(m => m.index === 0);
+            goldGained += m1Config?.chestGoldBonus ?? 1;
+          }
+          adjustResource('gold', goldGained);
+          ent.isLooted = true;
+          looted = true;
+        }
+        else if (ent.type === 'wood_source' && !ent.isLooted) {
+          emoji = '🪵';
+          adjustResource('wood', ent.wood || 10);
+          ent.isLooted = true;
+          looted = true;
+        }
+        else if (ent.type === 'sheep_source' && !ent.isLooted) {
+          emoji = '🐑';
+          adjustResource('sheep', ent.sheep || 1);
+          ent.isLooted = true;
+          looted = true;
+        }
+        else if (ent.type === 'ore_deposit' && !ent.isLooted) {
+          emoji = '🪨';
+          adjustResource('gold', ent.gold || 20);
+          ent.isLooted = true;
+          looted = true;
+        }
+        else if (ent.type === 'fishing_spot' && !ent.isLooted) {
+          emoji = '🎣';
+          adjustResource('food', ent.food || 5);
+          ent.isLooted = true;
+          looted = true;
+        }
+        else if (ent.type === 'berry_bush' && !ent.isLooted) {
+          emoji = '🍒';
+          adjustResource('food', ent.food || 5);
+          ent.isLooted = true;
+          looted = true;
+        }
+        else if (ent.type === 'dolmen' && !ent.isVisited) {
+          emoji = '🏆';
+          STATE.inventory.push(ent.magicObjectId);
+          ent.isVisited = true;
+          looted = true;
+        }
+        else if (ent.type === 'burial_mound' && !ent.isExplored) {
+          emoji = '🪦';
+          adjustResource('gold', 10);
+          ent.isExplored = true;
+          looted = true;
+        }
+
+        if (looted && emoji) {
+          lootTasks.push({ x, y, emoji });
+        }
+      }
+    }
+  }
+
+  if (lootTasks.length === 0) return;
+
+  notify('STATE_UPDATED');
+  renderLocationMap(); // Re-render first to remove static badges, so we only see flying ones
+
+  const mapRect = elLocMap.getBoundingClientRect();
+  const playerCell = elLocMap.querySelector(`.location-tile[data-x="${px}"][data-y="${py}"]`);
+  if (!playerCell) return;
+  const playerRect = playerCell.getBoundingClientRect();
+  const targetX = playerRect.left - mapRect.left + playerRect.width / 2;
+  const targetY = playerRect.top - mapRect.top + playerRect.height / 2;
+
+  lootTasks.forEach(task => {
+    const sourceCell = elLocMap.querySelector(`.location-tile[data-x="${task.x}"][data-y="${task.y}"]`);
+    if (!sourceCell) return;
+    const sourceRect = sourceCell.getBoundingClientRect();
+    const startX = sourceRect.left - mapRect.left + sourceRect.width / 2;
+    const startY = sourceRect.top - mapRect.top + sourceRect.height / 2;
+
+    const floater = document.createElement('span');
+    floater.innerText = task.emoji;
+    floater.style.position = 'absolute';
+    floater.style.left = `${startX}px`;
+    floater.style.top = `${startY}px`;
+    floater.style.fontSize = '1.5rem';
+    floater.style.zIndex = '1000';
+    floater.style.pointerEvents = 'none';
+    floater.style.transform = 'translate(-50%, -50%)';
+    floater.style.transition = 'all 1s cubic-bezier(0.25, 1, 0.5, 1)';
+    
+    elLocMap.appendChild(floater);
+
+    requestAnimationFrame(() => {
+      floater.style.left = `${targetX}px`;
+      floater.style.top = `${targetY}px`;
+      floater.style.opacity = '0';
+      floater.style.transform = 'translate(-50%, -50%) scale(0.5)';
+    });
+
+    setTimeout(() => {
+      floater.remove();
+    }, 1000);
+  });
+
+  setTimeout(() => {
+    renderLocationMap();
+    showToast('All resources gathered! 🎒', '🎒');
+  }, 1000);
+}
+
+
