@@ -125,6 +125,36 @@ export function initUIBindings() {
     return Array.from(pool);
   }
 
+  function getTerrainFrequencies(map) {
+    const size = map.gridSize || 15;
+    const counts = {};
+    const conditions = map.terrainZones.map(zone => {
+      if (zone.condition === 'default') {
+        return { label: zone.label, test: () => true };
+      }
+      try {
+        const fn = new Function('x', 'y', `return (${zone.condition});`);
+        return { label: zone.label, test: fn };
+      } catch (e) {
+        return { label: zone.label, test: () => false };
+      }
+    });
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        let terrain = 'plains';
+        for (const cond of conditions) {
+          if (cond.test(x, y)) {
+            terrain = cond.label;
+            break;
+          }
+        }
+        counts[terrain] = (counts[terrain] || 0) + 1;
+      }
+    }
+    return counts;
+  }
+
   function renderMapCards() {
     elMapContainer.innerHTML = '';
     elDots.innerHTML = '';
@@ -135,7 +165,8 @@ export function initUIBindings() {
       card.className = 'map-card' + (i === selectedMapIndex ? ' map-card--selected' : '');
       card.dataset.mapIndex = i;
 
-      const uniqueTerrains = [...new Set(map.terrainZones.map(z => z.label))];
+      const freqs = getTerrainFrequencies(map);
+      const uniqueTerrains = Object.keys(freqs).sort((a, b) => freqs[b] - freqs[a]);
       const terrainBadges = uniqueTerrains
         .map(t => `<span class="terrain-badge">${TERRAIN_ICONS[t] || '🗺️'} ${t}</span>`)
         .join('');
