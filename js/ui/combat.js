@@ -7,7 +7,7 @@ import { togglePause, deployUnit, undeployUnit, sortPoolByPoints } from '../comb
 import { SOLDIERS_CONFIG } from '../config/soldiers.js';
 import {
   elCombatGrid, elCombatPoolList, elCombatPauseBtn,
-  elTooltip
+  elTooltip, MONSTER_EMOJIS
 } from './dom.js';
 import { formatStat } from './dom.js';
 
@@ -148,28 +148,9 @@ export function renderCombatGrid() {
             berserker: '🪓',
             huntsman: '🏹',
             huskarl: '⚔️',
-            runecaster: '🔮',
-            'Giant Brood-Spider': '🕷️',
-            'Fenrir Pack Wolf': '🐺',
-            'Draugr Warrior': '🧟',
-            'Cave Troll': '👹',
-            'Frost Giant (Jotunn)': '❄️',
-            'Lindwurm': '🐉',
-            'Ice Wolf': '🐺',
-            'Mercenary Guard': '♆',
-            'Shore Raider': '🏴‍☠️',
-            'Archipelago Wraith': '👻',
-            'Fire Giant': '🔥',
-            'Lava Beetle': '🦂',
-            'Cinder Spinner': '🕷️',
-            'Bog Mummy': '🧟',
-            'Swamp Hag': '🧙‍♀️',
-            'Ymir Frost-Shaman': '🧙',
-            'Rime-Crag Gargoyle': '🦇',
-            'Ash Wolf': '🐺',
-            'Swamp Wolf': '🐺'
+            runecaster: '🔮'
           };
-          elUnit.innerText = avatars[unit.type] || '👾';
+          elUnit.innerText = avatars[unit.type] || MONSTER_EMOJIS[unit.type] || '👾';
         }
 
         // Undead, Charmed, or Confused states visual style hooks
