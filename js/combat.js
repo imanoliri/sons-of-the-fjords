@@ -1184,6 +1184,12 @@ export function undeployUnit(row, col) {
   col = Number(col);
   const unit = STATE.combat.grid[row][col];
   if (!unit || unit.alliance !== 'player' || unit.isCharmed || unit.isConfused || unit.isUndead) return;
+
+  // Clear plan at this cell if this unit was fulfilling it to prevent auto-redeploy
+  if (STATE.combat.plannedLayout && STATE.combat.plannedLayout[row] && STATE.combat.plannedLayout[row][col] === unit.type) {
+    STATE.combat.plannedLayout[row][col] = null;
+  }
+
   STATE.combat.grid[row][col] = null;
   unit.row = undefined;
   unit.col = undefined;
