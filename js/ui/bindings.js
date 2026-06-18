@@ -21,7 +21,8 @@ import { executePlunderMound, executeSacrificeSheep } from '../state.js';
 
 import {
   elPartyModal, elConsoleModal, elConsoleTextarea, elModalEvent, elModalEventCloseBtn, elTabPartyBand, elTabPartyInventory,
-  elPartyBandContent, elPartyInventoryContent, elModalGameOver, elModalAscension, elPromptPanel, elTooltip
+  elPartyBandContent, elPartyInventoryContent, elModalGameOver, elModalAscension, elPromptPanel, elTooltip,
+  MONSTER_EMOJIS
 } from './dom.js';
 
 // Bind simple click callback if element exists
@@ -48,28 +49,6 @@ export function initUIBindings() {
     mountain: '⛰️',
     river:    '💧',
     cave:     '🕳️'
-  };
-
-  const ENEMY_ICONS = {
-    'Fenrir Pack Wolf':    '🐺',
-    'Cave Troll':          '🧌',
-    'Frost Giant (Jotunn)':'❄️',
-    'Draugr Warrior':      '🧟',
-    'Mercenary Guard':     '🛡️',
-    'Shore Raider':        '🪓',
-    'Archipelago Wraith':  '👻',
-    'Fire Giant':          '🔥',
-    'Lava Beetle':         '🪲',
-    'Cinder Spinner':      '🕷️',
-    'Bog Mummy':           '🧟',
-    'Swamp Hag':           '🧙‍♀️',
-    'Ymir Frost-Shaman':   '🔮',
-    'Rime-Crag Gargoyle':  '🦇',
-    'Ash Wolf':            '🐺',
-    'Swamp Wolf':          '🐺',
-    'Ice Wolf':            '🐺',
-    'Giant Brood-Spider':  '🕷️',
-    'Lindwurm':            '🐉'
   };
 
   const DIFFICULTY_COLORS = {
@@ -173,7 +152,7 @@ export function initUIBindings() {
 
       const worldEnemies = getPossibleEnemiesForMap(map);
       const enemyBadges = worldEnemies
-        .map(e => `<span class="enemy-badge" title="${e}">${ENEMY_ICONS[e] || '👿'}</span>`)
+        .map(e => `<span class="enemy-badge" title="${e}">${MONSTER_EMOJIS[e] || '👿'}</span>`)
         .join('');
 
       const raidCount  = Object.values(map.locations).filter(l => l.type === 'raid').length;
