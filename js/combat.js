@@ -1154,6 +1154,14 @@ function handleUnitReachEnd(unit) {
 
 export function togglePause() {
   STATE.combat.paused = !STATE.combat.paused;
+  if (!STATE.combat.paused) {
+    STATE.combat.activePlanningType = null;
+    if (STATE.combat.planningWizard) {
+      STATE.combat.planningWizard.active = false;
+    }
+    STATE.combat.movePlansMode = false;
+    STATE.combat.selectedPlans = [];
+  }
   notify('COMBAT_PAUSED');
 }
 
