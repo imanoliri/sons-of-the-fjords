@@ -803,10 +803,19 @@ export function renderOrdersPanel() {
   if (!container) return;
   container.innerHTML = '';
 
+  const btnPlanTitle = document.getElementById('btn-plan-title');
   const wiz = STATE.combat.planningWizard;
   if (wiz && wiz.active && wiz.types && wiz.types.length > 0 && wiz.typeIndex < wiz.types.length) {
+    if (btnPlanTitle) {
+      btnPlanTitle.classList.add('btn-warning');
+      btnPlanTitle.classList.remove('btn-primary');
+    }
     STATE.combat.activePlanningType = wiz.types[wiz.typeIndex].type;
   } else {
+    if (btnPlanTitle) {
+      btnPlanTitle.classList.add('btn-primary');
+      btnPlanTitle.classList.remove('btn-warning');
+    }
     if (wiz) wiz.active = false;
   }
 
