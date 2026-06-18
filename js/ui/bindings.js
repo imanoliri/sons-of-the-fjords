@@ -170,7 +170,7 @@ export function initUIBindings() {
           </div>
         </div>
         <div class="terrain-badges">${terrainBadges}</div>
-        ${enemyBadges ? `<div class="enemy-badges-container"><span class="enemy-badges-label">Foes:</span> <div class="enemy-badges">${enemyBadges}</div></div>` : ''}
+        ${enemyBadges ? `<div class="enemy-badges-container"><div class="enemy-badges">${enemyBadges}</div></div>` : ''}
         <div class="map-card-select-indicator">
           ${i === selectedMapIndex 
             ? `<button class="btn btn-primary btn-start-card-voyage" style="width: 100%; font-family: var(--font-logo); font-size: 0.78rem; padding: 0.35rem 0.5rem; margin: 0; line-height: 1.2;">⚓ Start Adventure</button>`
