@@ -2,6 +2,8 @@
    UI/DOM.JS — Shared DOM Selectors, Constants, and Pure Utilities
    ========================================================================== */
 
+import { COMBAT_CONFIG } from '../config/combat.js';
+
 // ── Pure utility ────────────────────────────────────────────────────────────
 export function formatStat(statObj) {
   if (statObj.bonus === 0) {
@@ -88,24 +90,7 @@ export const elPatronCard = document.getElementById('town-patron-card');
 export const elPatronList = document.getElementById('town-patron-list');
 
 // ── Constants ────────────────────────────────────────────────────────────────
-export const MONSTER_EMOJIS = {
-  'Giant Brood-Spider': '🕷️',
-  'Fenrir Pack Wolf': '🐺',
-  'Draugr Warrior': '🧟',
-  'Cave Troll': '🧌',
-  'Frost Giant (Jotunn)': '❄️',
-  'Lindwurm': '🐉',
-  'Ice Wolf': '🐺',
-  'Mercenary Guard': '♆',
-  'Shore Raider': '🏴‍☠️',
-  'Archipelago Wraith': '👻',
-  'Fire Giant': '🔥',
-  'Lava Beetle': '🪲',
-  'Cinder Spinner': '🕷️',
-  'Bog Mummy': '🧟',
-  'Swamp Hag': '🧙‍♀️',
-  'Ymir Frost-Shaman': '🔮',
-  'Rime-Crag Gargoyle': '🦇',
-  'Ash Wolf': '🐺',
-  'Swamp Wolf': '🐺'
-};
+export const MONSTER_EMOJIS = Object.entries(COMBAT_CONFIG.monsters).reduce((acc, [name, cfg]) => {
+  if (cfg.emoji) acc[name] = cfg.emoji;
+  return acc;
+}, {});
