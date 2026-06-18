@@ -1358,12 +1358,21 @@ export function checkAndAutoDeploy() {
           break;
         }
 
-        // Find first vacant cell in columns 0 and 1 of lane r (check col 0 first, then col 1)
+        // Ranged units prefer column 0, melee units prefer column 1
+        const isRanged = ['huntsman', 'runecaster'].includes(type);
         let targetCol = -1;
-        if (!grid[r][0]) {
-          targetCol = 0;
-        } else if (!grid[r][1]) {
-          targetCol = 1;
+        if (isRanged) {
+          if (!grid[r][0]) {
+            targetCol = 0;
+          } else if (!grid[r][1]) {
+            targetCol = 1;
+          }
+        } else {
+          if (!grid[r][1]) {
+            targetCol = 1;
+          } else if (!grid[r][0]) {
+            targetCol = 0;
+          }
         }
 
         if (targetCol === -1) {

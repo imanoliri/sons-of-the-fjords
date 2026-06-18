@@ -143,6 +143,46 @@ export function renderCombatGrid() {
           }
         });
 
+        elCell.addEventListener('click', (e) => {
+          if (STATE.combat.planningWizard && STATE.combat.planningWizard.active) {
+            e.stopPropagation();
+            const wiz = STATE.combat.planningWizard;
+            const currentWizType = wiz.types[wiz.typeIndex];
+            if (!currentWizType) return;
+            
+            const type = currentWizType.type;
+            const isRanged = ['huntsman', 'runecaster'].includes(type);
+            const preferredCol = isRanged ? 0 : 1;
+            const backupCol = isRanged ? 1 : 0;
+            
+            let targetCol = preferredCol;
+            if (STATE.combat.plannedLayout && STATE.combat.plannedLayout[r] && STATE.combat.plannedLayout[r][preferredCol]) {
+              if (!STATE.combat.plannedLayout[r][backupCol]) {
+                targetCol = backupCol;
+              } else {
+                targetCol = c;
+              }
+            }
+            
+            if (!STATE.combat.plannedLayout) {
+              STATE.combat.plannedLayout = Array.from({ length: 8 }, () => Array(10).fill(null));
+            }
+            STATE.combat.plannedLayout[r][targetCol] = type;
+            
+            wiz.placedCount++;
+            if (wiz.placedCount >= currentWizType.totalCount) {
+              wiz.typeIndex++;
+              wiz.placedCount = 0;
+              if (wiz.typeIndex >= wiz.types.length) {
+                wiz.active = false;
+              }
+            }
+            
+            checkAndAutoDeploy();
+            notify('COMBAT_UPDATE');
+          }
+        });
+
         if (c <= 1 && STATE.combat.paused && !grid[r][c]) {
           if (STATE.combat.selectedPoolIndex !== null) {
             elCell.classList.add('deployable-zone');
@@ -744,6 +784,24 @@ export function renderOrdersPanel() {
   if (!container) return;
   container.innerHTML = '';
 
+  const btnPlanTitle = document.getElementById('btn-plan-title');
+  const btnWizardStep = document.getElementById('btn-plan-wizard-step');
+  if (btnPlanTitle && btnWizardStep) {
+    const wiz = STATE.combat.planningWizard;
+    if (wiz && wiz.active && wiz.types && wiz.types.length > 0 && wiz.typeIndex < wiz.types.length) {
+      btnPlanTitle.classList.add('hidden');
+      btnWizardStep.classList.remove('hidden');
+      const current = wiz.types[wiz.typeIndex];
+      const emoji = SOLDIER_EMOJIS[current.type] || '⚔️';
+      const left = current.totalCount - wiz.placedCount;
+      btnWizardStep.innerText = `Place ${emoji} (${left} left)`;
+    } else {
+      btnPlanTitle.classList.remove('hidden');
+      btnWizardStep.classList.add('hidden');
+      if (wiz) wiz.active = false;
+    }
+  }
+
   // Get unique unit types present in STATE.band
   let bandTypes = [];
   if (STATE.band && STATE.band.length > 0) {
@@ -788,6 +846,66 @@ export function initCombatSelection() {
   if (!gridEl) return;
 
   gridEl.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  const btnClear = document.getElementById('btn-clear-plans');
+  if (btnClear) {
+    btnClear.onclick = () => {
+      STATE.combat.plannedLayout = Array.from({ length: 8 }, () => Array(10).fill(null));
+      if (STATE.combat.planningWizard) {
+        STATE.combat.planningWizard.active = false;
+      }
+      checkAndAutoDeploy();
+      notify('COMBAT_UPDATE');
+    };
+  }
+
+  const btnPlanTitle = document.getElementById('btn-plan-title');
+  if (btnPlanTitle) {
+    btnPlanTitle.onclick = () => {
+      let bandTypes = [];
+      if (STATE.band && STATE.band.length > 0) {
+        bandTypes = [...new Set(STATE.band.map(u => u.type))];
+      }
+      if (bandTypes.length === 0) {
+        if (STATE.combat && STATE.combat.pool && STATE.combat.pool.length > 0) {
+          bandTypes = [...new Set(STATE.combat.pool.map(u => u.type))];
+        } else {
+          bandTypes = ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'];
+        }
+      }
+      const uniqueTypes = [...new Set(bandTypes)];
+
+      const wizardTypes = [];
+      uniqueTypes.forEach(type => {
+        const poolCount = STATE.combat.pool ? STATE.combat.pool.filter(u => u.type === type).length : 0;
+        const gridCount = (STATE.combat.grid || []).flat().filter(u => u && u.alliance === 'player' && !u.isCharmed && !u.isConfused && !u.isUndead && u.type === type).length;
+        const totalCount = poolCount + gridCount;
+        if (totalCount > 0) {
+          wizardTypes.push({ type, totalCount });
+        }
+      });
+
+      if (wizardTypes.length > 0) {
+        STATE.combat.planningWizard = {
+          active: true,
+          types: wizardTypes,
+          typeIndex: 0,
+          placedCount: 0
+        };
+      }
+      notify('COMBAT_UPDATE');
+    };
+  }
+
+  const btnWizardStep = document.getElementById('btn-plan-wizard-step');
+  if (btnWizardStep) {
+    btnWizardStep.onclick = () => {
+      if (STATE.combat.planningWizard) {
+        STATE.combat.planningWizard.active = false;
+      }
+      notify('COMBAT_UPDATE');
+    };
+  }
 
   gridEl.addEventListener('mousedown', (e) => {
     // Only select on left click

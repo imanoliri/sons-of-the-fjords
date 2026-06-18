@@ -283,11 +283,21 @@
               
               <!-- DRAG-AND-DROP SOLDIER PLANNING PLAN -->
               <div class="orders-panel">
-                <span style="font-size: 0.8rem; opacity: 0.8; cursor: help; text-align: center; width: 100%; display: block; border-bottom: 1px dotted rgba(255,255,255,0.25); padding-bottom: 0.25rem;" 
-                      title="Plan: Drag emojis to any column to plan lane defense. Right-click cell to clear.">
-                  Plan ⓘ
-                </span>
-                <div id="orders-unit-list" style="display: flex; flex-direction: column; gap: 0.4rem; width: 100%; align-items: center;">
+                <div id="plan-buttons-container" style="display: flex; flex-direction: column; width: 100%; gap: 0.25rem;">
+                  <button id="btn-clear-plans" class="btn btn-sm btn-danger" style="width: 100%; font-size: 0.7rem; padding: 0.2rem 0.4rem;"
+                          title="Clear Plan: Delete all planned orders/plans on the map.">
+                    Clear All ✕
+                  </button>
+                  <button id="btn-plan-title" class="btn btn-sm btn-primary" style="width: 100%; font-size: 0.8rem; padding: 0.25rem 0.5rem;"
+                          title="Plan: Drag emojis to any column to plan lane defense. Right-click cell to clear.">
+                    Plan ⓘ
+                  </button>
+                  <button id="btn-plan-wizard-step" class="btn btn-sm btn-warning hidden" style="width: 100%; font-size: 0.75rem; padding: 0.25rem 0.5rem;"
+                          title="Click grid lane to order. Click this button to cancel wizard.">
+                    Place 🏹 (3 left)
+                  </button>
+                </div>
+                <div id="orders-unit-list" style="display: flex; flex-direction: column; gap: 0.4rem; width: 100%; align-items: center; margin-top: 0.4rem;">
                   <!-- Draggable soldier types will be populated here -->
                 </div>
               </div>
