@@ -774,6 +774,7 @@ function combatTick() {
     } else {
       let dir = 0;
       let shouldMove = true;
+      const stance = unit.stance || STATE.combat.stance || 'attack';
       if (unit.alliance === 'enemy') {
         dir = -1;
         // Hel Milestone 4: Enemy movement speed reduced by 10%
@@ -787,7 +788,6 @@ function combatTick() {
       } else if (unit.isFleeing) {
         dir = -1;
       } else {
-        const stance = unit.stance || STATE.combat.stance || 'attack';
         if (stance === 'attack') dir = 1;
         else if (stance === 'retreat' || stance === 'defend') dir = -1;
         else shouldMove = false;
