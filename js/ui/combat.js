@@ -101,6 +101,13 @@ export function renderCombatGrid() {
   const grid = STATE.combat.grid;
   if (!grid || grid.length === 0) return;
 
+  const planningActive = !!((STATE.combat.planningWizard && STATE.combat.planningWizard.active) || STATE.combat.activePlanningType);
+  if (planningActive) {
+    elCombatGrid.classList.add('planning-active');
+  } else {
+    elCombatGrid.classList.remove('planning-active');
+  }
+
   // Build grid layout cells
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 10; c++) {
@@ -158,23 +165,11 @@ export function renderCombatGrid() {
 
           if (type) {
             e.stopPropagation();
-            const isRanged = ['huntsman', 'runecaster'].includes(type);
-            const preferredCol = isRanged ? 0 : 1;
-            const backupCol = isRanged ? 1 : 0;
-            
-            let targetCol = preferredCol;
-            if (STATE.combat.plannedLayout && STATE.combat.plannedLayout[r] && STATE.combat.plannedLayout[r][preferredCol]) {
-              if (!STATE.combat.plannedLayout[r][backupCol]) {
-                targetCol = backupCol;
-              } else {
-                targetCol = c;
-              }
-            }
             
             if (!STATE.combat.plannedLayout) {
               STATE.combat.plannedLayout = Array.from({ length: 8 }, () => Array(10).fill(null));
             }
-            STATE.combat.plannedLayout[r][targetCol] = type;
+            STATE.combat.plannedLayout[r][c] = type;
             
             if (wiz) {
               wiz.placedCount++;
@@ -957,7 +952,7 @@ export function initCombatSelection() {
     selectionBox.style.top = `${startY}px`;
     selectionBox.style.width = '0px';
     selectionBox.style.height = '0px';
-    selectionBox.style.display = 'block';
+    selectionBox.style.display = 'none'; // Keep hidden until drag starts
   });
 
   window.addEventListener('mousemove', (e) => {
@@ -966,24 +961,32 @@ export function initCombatSelection() {
     const currentX = e.clientX;
     const currentY = e.clientY;
 
-    const left = Math.min(startX, currentX);
-    const top = Math.min(startY, currentY);
     const width = Math.abs(startX - currentX);
     const height = Math.abs(startY - currentY);
 
-    selectionBox.style.left = `${left}px`;
-    selectionBox.style.top = `${top}px`;
-    selectionBox.style.width = `${width}px`;
-    selectionBox.style.height = `${height}px`;
+    if (width > 5 || height > 5) {
+      selectionBox.style.display = 'block';
+      const left = Math.min(startX, currentX);
+      const top = Math.min(startY, currentY);
+
+      selectionBox.style.left = `${left}px`;
+      selectionBox.style.top = `${top}px`;
+      selectionBox.style.width = `${width}px`;
+      selectionBox.style.height = `${height}px`;
+    }
   });
 
   window.addEventListener('mouseup', (e) => {
     if (!isSelecting || !selectionBox) return;
     isSelecting = false;
+    const isShowing = selectionBox.style.display === 'block';
     selectionBox.style.display = 'none';
 
-    // Calculate bounds relative to viewport
+    if (!isShowing) return;
+
     const boxRect = selectionBox.getBoundingClientRect();
+    if (boxRect.width < 5 || boxRect.height < 5) return;
+
     const grid = STATE.combat.grid;
     if (!grid) return;
 
