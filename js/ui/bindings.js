@@ -12,7 +12,7 @@ import { togglePause, deployUnit, undeployUnit, fleeCombat, adjustCombatSpeed } 
 import { showToast, logWorld, logLocation } from './notifications.js';
 import { showOverlay, hideOverlay, updateModalKeyboardNavigation } from './overlay.js';
 import { renderPartyPanel, GOD_LORE } from './party.js';
-import { triggerEnterCavePortal, triggerEncounterEvent, attemptLocalMove } from './location.js';
+import { triggerEnterCavePortal, triggerEncounterEvent, attemptLocalMove, useWarHorn } from './location.js';
 import { movePartyOnWorld, tryEnterCurrentLocation } from './world.js';
 import { getEffectiveStats } from '../state.js';
 import { formatStat } from './dom.js';
@@ -423,6 +423,11 @@ export function initUIBindings() {
     STATE.party.currentLocationId = null;
     setScreen('world');
     logWorld('Escaped from raid site back to the open sea.');
+  });
+
+  // Sound War Horn button in location sidebar
+  bindButton('btn-use-warhorn-sidebar', () => {
+    useWarHorn();
   });
 
   // Combat controls

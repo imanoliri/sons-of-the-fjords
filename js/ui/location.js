@@ -10,7 +10,8 @@ import { GODS_CONFIG } from '../config/gods.js';
 import {
   MONSTER_EMOJIS,
   elLocMap, elLocTitle, elLocThreat, elLocDeckCount, elLocationDifficultyStatus,
-  elPromptPanel, elModalEvent, elModalEventTitle, elModalEventBody, elModalEventChoices, elModalEventCloseBtn
+  elPromptPanel, elModalEvent, elModalEventTitle, elModalEventBody, elModalEventChoices, elModalEventCloseBtn,
+  elUseWarHornSidebar
 } from './dom.js';
 import { logLocation, showToast } from './notifications.js';
 import { showOverlay, hideOverlay } from './overlay.js';
@@ -34,6 +35,16 @@ export function renderLocationMap() {
   const locId = STATE.party.currentLocationId;
   const locState = STATE.locations[locId];
   if (!locState) return;
+
+  if (elUseWarHornSidebar) {
+    const hasWarHorn = STATE.inventory.includes('War Horn');
+    const isTown = locId && locId.startsWith('town_');
+    if (hasWarHorn && !isTown) {
+      elUseWarHornSidebar.classList.remove('hidden');
+    } else {
+      elUseWarHornSidebar.classList.add('hidden');
+    }
+  }
 
   const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
   const locName = locData ? locData.name : (locState.isSubCave ? 'Sub-Cave Chamber' : 'Exploring Site');

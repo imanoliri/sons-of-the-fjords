@@ -13,7 +13,6 @@ import {
 } from './dom.js';
 import { formatStat } from './dom.js';
 import { showOverlay, hideOverlay, updateModalKeyboardNavigation } from './overlay.js';
-import { useWarHorn } from './location.js';
 
 // ── God lore reference ──────────────────────────────────────────────────────
 export const GOD_LORE = GODS_CONFIG.lore;
@@ -373,22 +372,7 @@ export function renderPartyPanel() {
       row.appendChild(label);
       row.appendChild(qty);
 
-      if (item === 'War Horn' && STATE.activeScreen === 'location' && STATE.party.currentLocationId && !STATE.party.currentLocationId.startsWith('town_')) {
-        const btnUse = document.createElement('button');
-        btnUse.className = 'btn btn-sm btn-primary';
-        btnUse.style.marginLeft = '1rem';
-        btnUse.innerText = 'Use 📯';
-        btnUse.addEventListener('click', () => {
-          hideOverlay(elPartyModal);
-          const idx = STATE.inventory.indexOf('War Horn');
-          if (idx !== -1) {
-            STATE.inventory.splice(idx, 1);
-            notify('STATE_UPDATED');
-          }
-          useWarHorn();
-        });
-        row.appendChild(btnUse);
-      }
+
 
       elPartyInventoryContent.appendChild(row);
     });

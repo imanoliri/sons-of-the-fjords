@@ -62,6 +62,7 @@ export const elLocLog = document.getElementById('location-event-log');
 export const elPromptPanel = document.getElementById('portal-prompt-panel');
 export const elPromptText = document.getElementById('portal-prompt-text');
 export const elPromptBtn = document.getElementById('btn-use-portal');
+export const elUseWarHornSidebar = document.getElementById('btn-use-warhorn-sidebar');
 
 // Combat elements
 export const elCombatGrid = document.getElementById('combat-grid');
