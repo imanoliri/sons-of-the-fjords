@@ -953,6 +953,15 @@ export function initUIBindings() {
 
       if (key === 'm') {
         e.preventDefault();
+        const btnMove = document.getElementById('btn-move-plans');
+        if (btnMove && !btnMove.classList.contains('hidden')) {
+          btnMove.click();
+        }
+        return;
+      }
+
+      if (key === 'n') {
+        e.preventDefault();
         const btnPlan = document.getElementById('btn-plan-title');
         const btnWizardStep = document.getElementById('btn-plan-wizard-step');
         if (btnPlan && !btnPlan.classList.contains('hidden')) {
