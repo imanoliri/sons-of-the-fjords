@@ -841,6 +841,16 @@ export function initCombatSelection() {
   const btnClear = document.getElementById('btn-clear-plans');
   if (btnClear) {
     btnClear.onclick = () => {
+      if (STATE.combat.grid && STATE.combat.deployHistory) {
+        for (let r = 0; r < STATE.combat.grid.length; r++) {
+          for (let c = 0; c < STATE.combat.grid[r].length; c++) {
+            const unit = STATE.combat.grid[r][c];
+            if (unit && unit.alliance === 'player' && STATE.combat.deployHistory.includes(unit.id)) {
+              undeployUnit(r, c);
+            }
+          }
+        }
+      }
       STATE.combat.plannedLayout = Array.from({ length: 8 }, () => Array(10).fill(null));
       if (STATE.combat.planningWizard) {
         STATE.combat.planningWizard.active = false;
