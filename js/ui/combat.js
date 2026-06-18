@@ -802,21 +802,12 @@ export function renderOrdersPanel() {
     }
   }
 
-  // Get unique unit types present in STATE.band
-  let bandTypes = [];
-  if (STATE.band && STATE.band.length > 0) {
-    bandTypes = [...new Set(STATE.band.map(u => u.type))];
+  // Get unique unit types present in the spawning pool
+  let poolTypes = [];
+  if (STATE.combat && STATE.combat.pool && STATE.combat.pool.length > 0) {
+    poolTypes = [...new Set(STATE.combat.pool.map(u => u.type))];
   }
-  if (bandTypes.length === 0) {
-    // Fallback to pool if band is empty, or show basic types
-    if (STATE.combat && STATE.combat.pool && STATE.combat.pool.length > 0) {
-      bandTypes = [...new Set(STATE.combat.pool.map(u => u.type))];
-    } else {
-      bandTypes = ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'];
-    }
-  }
-
-  const uniqueTypes = [...new Set(bandTypes)];
+  const uniqueTypes = poolTypes;
 
   uniqueTypes.forEach(type => {
     const card = document.createElement('div');
