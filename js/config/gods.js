@@ -21,10 +21,16 @@ export const GODS_CONFIG = {
 
   // Alternative favor targets
   alternativeFavor: {
-    odin: { wolvesTarget: 2, giantsTarget: 1 },
-    thor: { draugrsTarget: 2, lindwurmsTarget: 1 },
     freya: { sheepTarget: 2, woodTarget: 5 }
   },
+
+  // Rules for gaining favor from monster kills
+  monsterKillFavorRules: [
+    { god: 'odin', stateKey: 'odinWolvesKilled', targetCount: 2, patterns: ['wolf'], message: 'slaying 2 wolves' },
+    { god: 'odin', stateKey: 'odinGiantsKilled', targetCount: 1, patterns: ['giant', 'jotunn'], message: 'slaying a giant' },
+    { god: 'thor', stateKey: 'thorDraugrsKilled', targetCount: 2, patterns: ['draugr'], message: 'slaying 2 draugrs' },
+    { god: 'thor', stateKey: 'thorLindwurmsKilled', targetCount: 1, patterns: ['lindwurm'], message: 'slaying a Lindwurm' }
+  ],
 
   // Relics & magic objects
   magicObjects: {

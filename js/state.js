@@ -204,49 +204,20 @@ export function adjustFavor(godName, amt) {
 
 // Record monster kills to award alternative favor
 export function recordMonsterKill(monsterType) {
+  if (!GC.monsterKillFavorRules) return;
   const nameLower = monsterType.toLowerCase();
-  const targets = GC.alternativeFavor;
 
-  if (nameLower.includes('wolf')) {
-    STATE.odinWolvesKilled = (STATE.odinWolvesKilled || 0) + 1;
-    if (STATE.odinWolvesKilled >= targets.odin.wolvesTarget) {
-      STATE.odinWolvesKilled = 0;
-      const isMaxed = STATE.godQuests['odin'] && STATE.godQuests['odin'].every(x => x === true);
-      adjustFavor('odin', 1);
-      if (!isMaxed) {
-        notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: `slaying ${targets.odin.wolvesTarget} wolves` });
-      }
-    }
-  } else if (nameLower.includes('frost giant') || nameLower.includes('jotunn')) {
-    STATE.odinGiantsKilled = (STATE.odinGiantsKilled || 0) + 1;
-    if (STATE.odinGiantsKilled >= targets.odin.giantsTarget) {
-      STATE.odinGiantsKilled = 0;
-      const isMaxed = STATE.godQuests['odin'] && STATE.godQuests['odin'].every(x => x === true);
-      adjustFavor('odin', 1);
-      if (!isMaxed) {
-        notify('FAVOR_GAIN_ACTION', { god: 'odin', reason: 'slaying a giant' });
-      }
-    }
-  }
-
-  if (nameLower.includes('draugr')) {
-    STATE.thorDraugrsKilled = (STATE.thorDraugrsKilled || 0) + 1;
-    if (STATE.thorDraugrsKilled >= targets.thor.draugrsTarget) {
-      STATE.thorDraugrsKilled = 0;
-      const isMaxed = STATE.godQuests['thor'] && STATE.godQuests['thor'].every(x => x === true);
-      adjustFavor('thor', 1);
-      if (!isMaxed) {
-        notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: `slaying ${targets.thor.draugrsTarget} draugrs` });
-      }
-    }
-  } else if (nameLower.includes('lindwurm')) {
-    STATE.thorLindwurmsKilled = (STATE.thorLindwurmsKilled || 0) + 1;
-    if (STATE.thorLindwurmsKilled >= targets.thor.lindwurmsTarget) {
-      STATE.thorLindwurmsKilled = 0;
-      const isMaxed = STATE.godQuests['thor'] && STATE.godQuests['thor'].every(x => x === true);
-      adjustFavor('thor', 1);
-      if (!isMaxed) {
-        notify('FAVOR_GAIN_ACTION', { god: 'thor', reason: 'slaying a Lindwurm' });
+  for (const rule of GC.monsterKillFavorRules) {
+    const matched = rule.patterns.some(p => nameLower.includes(p));
+    if (matched) {
+      STATE[rule.stateKey] = (STATE[rule.stateKey] || 0) + 1;
+      if (STATE[rule.stateKey] >= rule.targetCount) {
+        STATE[rule.stateKey] = 0;
+        const isMaxed = STATE.godQuests[rule.god] && STATE.godQuests[rule.god].every(x => x === true);
+        adjustFavor(rule.god, 1);
+        if (!isMaxed) {
+          notify('FAVOR_GAIN_ACTION', { god: rule.god, reason: rule.message });
+        }
       }
     }
   }

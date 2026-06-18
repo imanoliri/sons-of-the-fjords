@@ -22,11 +22,11 @@ export const SOLDIERS_CONFIG = {
 
   // Stats for newly recruited soldiers (by type)
   recruitStats: {
-    shieldmaiden: { hp: 60, maxHp: 60, dmg: 4, speed: 2, range: 1 },
-    berserker:    { hp: 45, maxHp: 45, dmg: 8, speed: 3, range: 1 },
-    huntsman:     { hp: 35, maxHp: 35, dmg: 6, speed: 2, range: 4 },
-    huskarl:      { hp: 85, maxHp: 85, dmg: 9, speed: 2, range: 1 },
-    runecaster:   { hp: 30, maxHp: 30, dmg: 2, speed: 2, range: 3 }
+    shieldmaiden: { hp: 60, maxHp: 60, dmg: 4, speed: 2, range: 1, emoji: '🛡️' },
+    berserker:    { hp: 45, maxHp: 45, dmg: 8, speed: 3, range: 1, emoji: '🪓' },
+    huntsman:     { hp: 35, maxHp: 35, dmg: 6, speed: 2, range: 4, emoji: '🏹' },
+    huskarl:      { hp: 85, maxHp: 85, dmg: 9, speed: 2, range: 1, emoji: '⚔️' },
+    runecaster:   { hp: 30, maxHp: 30, dmg: 2, speed: 2, range: 3, emoji: '🔮' }
   },
 
   // Random name pools per type
@@ -38,3 +38,9 @@ export const SOLDIERS_CONFIG = {
     runecaster:   ['Volva', 'Seithkona', 'Galdra', 'Runar']
   }
 };
+
+// Build SOLDIER_EMOJIS dynamically from soldier config
+export const SOLDIER_EMOJIS = Object.entries(SOLDIERS_CONFIG.recruitStats).reduce((acc, [type, cfg]) => {
+  if (cfg.emoji) acc[type] = cfg.emoji;
+  return acc;
+}, {});

@@ -213,6 +213,10 @@ body {
   flex-shrink: 0;
 }
 
+.combat-active .game-header {
+  margin-bottom: 0.35rem;
+}
+
 .resource-bar {
   display: flex;
   gap: 1.5rem;
@@ -240,14 +244,17 @@ body {
 /* Menu Screen */
 .screen-menu {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   height: 100%;
+  overflow-y: auto;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
 }
 
 .menu-box {
   width: 100%;
-  max-width: 650px;
+  max-width: 900px;
   padding: 3rem;
   text-align: center;
 }
@@ -477,6 +484,40 @@ body {
   100% {
     transform: translateY(0);
   }
+}
+
+/* Hazard Markers styling & animations */
+.hazard-marker {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.hazard-blizzard {
+  animation: blizzardPulse 2.5s infinite ease-in-out;
+  text-shadow: 0 0 8px #fff, 0 0 15px var(--tile-snow);
+}
+
+.hazard-maelstrom {
+  animation: maelstromSpin 4s infinite linear;
+  text-shadow: 0 0 8px #00f0ff, 0 0 15px var(--tile-water);
+}
+
+@keyframes blizzardPulse {
+  0% { transform: scale(0.9) rotate(-5deg); opacity: 0.8; }
+  50% { transform: scale(1.15) rotate(5deg); opacity: 1; }
+  100% { transform: scale(0.9) rotate(-5deg); opacity: 0.8; }
+}
+
+@keyframes maelstromSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .town-marker {
@@ -2157,5 +2198,284 @@ body {
 
 
 
+/* ==========================================================================
+   MAP SELECTION SCREEN
+   ========================================================================== */
 
+.map-selection-section {
+  margin: 1.5rem 0 1.25rem;
+}
+
+.map-selection-heading {
+  font-family: var(--font-logo);
+  font-size: 1.05rem;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+/* Mosaic grid of cards */
+.map-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 0.5rem 0.25rem 0.75rem;
+}
+
+/* Individual card */
+.map-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.map-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.map-card--selected {
+  border-color: var(--color-thor) !important;
+  background: rgba(250, 204, 21, 0.07) !important;
+  box-shadow: 0 0 0 1px var(--color-thor), 0 8px 30px rgba(250, 204, 21, 0.15) !important;
+  transform: translateY(-2px);
+}
+
+.map-card--selected::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-thor), transparent);
+}
+
+/* Card header */
+.map-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.map-card-emoji {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+.map-card-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.map-card-name {
+  font-family: var(--font-logo);
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+.map-card-subtitle {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.2;
+}
+
+/* Description */
+.map-card-desc {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0 0 0.75rem;
+}
+
+/* Meta row */
+.map-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+}
+
+.map-card-difficulty {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.meta-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.difficulty-stars {
+  display: flex;
+  gap: 2px;
+  font-size: 0.7rem;
+}
+
+.difficulty-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.map-card-stats {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.meta-stat {
+  font-size: 0.67rem;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.05);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Terrain badges */
+.terrain-badges {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.7rem;
+}
+
+.terrain-badge {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 100px;
+  padding: 0.1rem 0.4rem;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+/* Enemy badges */
+.enemy-badges-container {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.enemy-badges-label {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.enemy-badges {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.enemy-badge {
+  font-size: 0.8rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 4px;
+  padding: 0.15rem 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  line-height: 1;
+}
+
+/* Selection indicator text */
+.map-card-select-indicator {
+  margin-top: auto;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: center;
+  letter-spacing: 0.5px;
+  transition: color 0.2s ease;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.map-card--selected .map-card-select-indicator {
+  color: var(--color-thor);
+  font-weight: 600;
+}
+
+/* Dot navigation */
+.map-carousel-dots {
+  display: none !important;
+}
+
+.map-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.map-dot:hover {
+  background: rgba(255, 255, 255, 0.5);
+  transform: scale(1.3);
+}
+
+.map-dot--active {
+  background: var(--color-thor);
+  transform: scale(1.2);
+  box-shadow: 0 0 6px var(--color-thor);
+}
+
+/* Start button enhancement */
+.btn-start-voyage {
+  font-size: 1.1rem !important;
+  padding: 0.9rem 2.5rem !important;
+  letter-spacing: 2px !important;
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
+  50%       { box-shadow: 0 0 22px rgba(250, 204, 21, 0.5), 0 0 40px rgba(250, 204, 21, 0.15); }
+}
 
