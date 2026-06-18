@@ -829,12 +829,7 @@ export function gatherAndAnimateLoot() {
           ent.isVisited = true;
           looted = true;
         }
-        else if (ent.type === 'burial_mound' && !ent.isExplored) {
-          emoji = '🪦';
-          adjustResource('gold', 10);
-          ent.isExplored = true;
-          looted = true;
-        }
+
 
         if (looted && emoji) {
           lootTasks.push({ x, y, emoji });

@@ -387,12 +387,17 @@ function combatTick() {
 
     // ---- RUNECASTER: Divine Rune AI ----
     if (unit.type === 'runecaster' && unit.alliance === 'player' && !unit.isFleeing) {
-      if (!unit.runesCast) unit.runesCast = {};
+      if (!unit.runeCooldowns) unit.runeCooldowns = {};
+      for (const g of Object.keys(unit.runeCooldowns)) {
+        if (unit.runeCooldowns[g] > 0) {
+          unit.runeCooldowns[g]--;
+        }
+      }
 
-      // Gather available runes (god milestone 5 unlocked + not yet cast this battle)
+      // Gather available runes (god milestone 5 unlocked + not on cooldown)
       const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
       const availableRunes = godNames.filter(g =>
-        STATE.godQuests[g]?.[4] === true && !unit.runesCast[g]
+        STATE.godQuests[g]?.[4] === true && (!unit.runeCooldowns[g] || unit.runeCooldowns[g] <= 0)
       );
 
       let bestRune = null;
@@ -556,7 +561,7 @@ function combatTick() {
       if (bestRune && bestRune.target && STATE.resources.gold >= 1) {
         // Deduct gold & mark rune used
         adjustResource('gold', -1);
-        unit.runesCast[bestRune.name] = true;
+        unit.runeCooldowns[bestRune.name] = 10;
         const rt = bestRune.target;
         const rnName = bestRune.name;
 
@@ -1198,7 +1203,7 @@ export function endCombat(isVictory) {
     const coordKey = STATE.combat.entityCoordKey;
     const locState = STATE.locations[locId];
     if (locState) {
-      if (STATE.combat.isWarHornBattle) {
+      if (STATE.combat.isWarHornBattle || STATE.combat.entityCoordKey === 'war_horn') {
         for (const tile of Object.values(locState.placedTiles)) {
           if (tile.entity && tile.entity.type === 'enemy_army') {
             tile.entity.isDefeated = true;

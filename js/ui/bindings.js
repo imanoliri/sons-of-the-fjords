@@ -274,8 +274,10 @@ export function initUIBindings() {
     const compStr = Object.entries(compCounts).map(([type, count]) => `${count}${type}`).join('_');
     const composition = compStr || 'crewless';
 
-    // Filename: save_[timestamp]_[gods]_[composition].json
-    const filename = `save_${timestamp}_${godsStr}_${composition}.json`;
+    const worldName = STATE.worldMap && STATE.worldMap.name ? STATE.worldMap.name.toLowerCase().replace(/\s+/g, '_') : 'world';
+
+    // Filename: save__[world]__[timestamp]__[gods]__[composition].json
+    const filename = `save__${worldName}__${timestamp}__${godsStr}__${composition}.json`;
 
     // Download state
     const stateStr = JSON.stringify(STATE, null, 2);
@@ -306,6 +308,9 @@ export function initUIBindings() {
           const parsed = JSON.parse(evt.target.result);
           if (parsed && typeof parsed === 'object') {
             Object.assign(STATE, parsed);
+            if (STATE.worldMap && STATE.worldMap.id) {
+              setActiveMap(STATE.worldMap.id);
+            }
             notify('STATE_UPDATED');
             showToast('Game loaded successfully!', '📂');
             logWorld('Game loaded from save file.', 'gain-message');
@@ -339,6 +344,9 @@ export function initUIBindings() {
     try {
       const parsed = JSON.parse(elConsoleTextarea.value);
       Object.assign(STATE, parsed);
+      if (STATE.worldMap && STATE.worldMap.id) {
+        setActiveMap(STATE.worldMap.id);
+      }
       notify('STATE_UPDATED');
       hideOverlay(elConsoleModal);
       showToast('State updated successfully!', '🛠️');
@@ -498,7 +506,7 @@ export function initUIBindings() {
 
   bindButton('btn-raid-cleared-continue', () => {
     hideOverlay(elModalRaidCleared);
-    if (STATE.combat.isWarHornBattle) {
+    if (STATE.combat.isWarHornBattle || STATE.combat.entityCoordKey === 'war_horn') {
       import('./location.js').then(({ gatherAndAnimateLoot }) => {
         gatherAndAnimateLoot();
       });
@@ -1333,16 +1341,16 @@ function initTooltipEvents() {
             const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
             godNames.forEach(g => {
               const unlocked = STATE.godQuests[g]?.[4] === true;
-              const hasCast = unit.runesCast && unit.runesCast[g] === true;
+              const cooldown = unit.runeCooldowns && unit.runeCooldowns[g] ? unit.runeCooldowns[g] : 0;
               
               let statusSymbol = '🔒';
               let statusText = 'Locked';
               let statusColor = 'var(--text-muted)';
               
               if (unlocked) {
-                if (hasCast) {
-                  statusSymbol = '🔲';
-                  statusText = 'Depleted';
+                if (cooldown > 0) {
+                  statusSymbol = '⏳';
+                  statusText = `${cooldown} ticks`;
                   statusColor = 'var(--text-muted)';
                 } else {
                   statusSymbol = '✅';

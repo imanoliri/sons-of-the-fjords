@@ -33,6 +33,8 @@ export const STATE = {
 
   // World Map State
   worldMap: {
+    id: null,
+    name: null,
     tiles: [],
     revealed: [],
     locations: {}
@@ -88,6 +90,7 @@ export const STATE = {
     waveMonsters: [],
     stance: 'attack',
     combatIntervalMs: 600,
+    isWarHornBattle: false,
     formationOrder: ['shieldmaiden', 'huntsman', 'berserker', 'huskarl', 'runecaster']
   }
 };

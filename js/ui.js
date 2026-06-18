@@ -209,6 +209,7 @@ export function handleStateNotification(event, data) {
       delete STATE.party.pendingLocalY;
     }
 
+    const isWarHorn = STATE.combat.isWarHornBattle || STATE.combat.entityCoordKey === 'war_horn';
     setTimeout(() => {
       const locId = STATE.party.currentLocationId;
       import('./state.js').then(({ setScreen }) => {
@@ -220,6 +221,15 @@ export function handleStateNotification(event, data) {
         }
         import('./location.js').then(({ checkRaidCleared }) => {
           checkRaidCleared(locId);
+          if (isWarHorn) {
+            const modal = document.getElementById('modal-raid-cleared');
+            const modalShown = modal && !modal.classList.contains('hidden');
+            if (!modalShown) {
+              import('./ui/location.js').then(({ gatherAndAnimateLoot }) => {
+                gatherAndAnimateLoot();
+              });
+            }
+          }
         });
       });
     }, 1000);

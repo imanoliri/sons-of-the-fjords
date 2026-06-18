@@ -377,16 +377,16 @@ export function renderCombatGrid() {
         const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
         godNames.forEach(g => {
           const unlocked = STATE.godQuests[g]?.[4] === true;
-          const hasCast = unit.runesCast && unit.runesCast[g] === true;
+          const cooldown = unit.runeCooldowns && unit.runeCooldowns[g] ? unit.runeCooldowns[g] : 0;
           
           let statusSymbol = '🔒';
           let statusText = 'Locked';
           let statusColor = 'var(--text-muted)';
           
           if (unlocked) {
-            if (hasCast) {
-              statusSymbol = '🔲';
-              statusText = 'Depleted';
+            if (cooldown > 0) {
+              statusSymbol = '⏳';
+              statusText = `${cooldown} ticks`;
               statusColor = 'var(--text-muted)';
             } else {
               statusSymbol = '✅';
