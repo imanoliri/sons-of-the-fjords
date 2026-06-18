@@ -894,18 +894,11 @@ export function initCombatSelection() {
   if (btnPlanTitle) {
     btnPlanTitle.onclick = () => {
       STATE.combat.activePlanningType = null;
-      let bandTypes = [];
-      if (STATE.band && STATE.band.length > 0) {
-        bandTypes = [...new Set(STATE.band.map(u => u.type))];
+      let poolTypes = [];
+      if (STATE.combat && STATE.combat.pool && STATE.combat.pool.length > 0) {
+        poolTypes = [...new Set(STATE.combat.pool.map(u => u.type))];
       }
-      if (bandTypes.length === 0) {
-        if (STATE.combat && STATE.combat.pool && STATE.combat.pool.length > 0) {
-          bandTypes = [...new Set(STATE.combat.pool.map(u => u.type))];
-        } else {
-          bandTypes = ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'];
-        }
-      }
-      const uniqueTypes = [...new Set(bandTypes)];
+      const uniqueTypes = poolTypes;
 
       const wizardTypes = [];
       uniqueTypes.forEach(type => {
