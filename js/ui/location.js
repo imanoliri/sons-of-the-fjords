@@ -735,9 +735,7 @@ export function useWarHorn() {
       return;
     }
 
-    for (const enemy of uniqueEnemies) {
-      combinedMonsters.push(...enemy.monsters);
-    }
+    const monsterGroups = Array.from(uniqueEnemies).map(enemy => enemy.monsters);
 
     // Start combat
     import('../state.js').then(({ setScreen }) => {
@@ -746,7 +744,7 @@ export function useWarHorn() {
       import('../combat.js').then(({ startCombat }) => {
         startCombat(locId, 'war_horn', {
           type: 'enemy_army',
-          monsters: combinedMonsters,
+          monsterGroups: monsterGroups,
           isDefeated: false
         });
       });

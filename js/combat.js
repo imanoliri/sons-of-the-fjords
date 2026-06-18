@@ -35,41 +35,13 @@ export function sortPoolByPoints() {
 }
 
 // Initialize combat map grid & pool
-export function startCombat(locationId, coordKey, enemyData) {
-  if (combatTimer) {
-    clearInterval(combatTimer);
-    combatTimer = null;
-  }
-  STATE.combat.active = true;
-  STATE.combat.paused = true;
-  STATE.combat.locationId = locationId;
-  STATE.combat.entityCoordKey = coordKey;
-  STATE.combat.fleeMode = false;
-  STATE.combat.stance = 'attack';
-  STATE.combat.deployHistory = [];
-  STATE.combat.activeDoTs = [];
-  
-  if (coordKey !== 'war_horn') {
-    STATE.combat.isWarHornBattle = false;
-  }
-
-  // 1. Initialize grid
-  const grid = [];
-  for (let r = 0; r < CFG.gridRows; r++) {
-    const row = [];
-    for (let c = 0; c < CFG.gridCols; c++) row.push(null);
-    grid.push(row);
-  }
-  STATE.combat.grid = grid;
-
-  // 2. Clone active band into deployment pool
-  STATE.combat.pool = STATE.band.map(u => ({ ...u, maxHp: u.maxHp, hp: u.hp, currentHp: u.hp, alliance: 'player' }));
-  sortPoolByPoints();
-
-  // 3. Populate wave monsters on the far right
-  const monsters = [];
+function spawnMonsterGroup(group, groupIndex) {
+  const grid = STATE.combat.grid;
   const startLanes = Array.from({ length: CFG.gridRows }, (_, i) => i);
   shuffleArray(startLanes);
+
+  let spawnIndex = 0;
+  let charmedMonsterData = null;
 
   const activeBlessings = new Set();
   if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
@@ -77,55 +49,35 @@ export function startCombat(locationId, coordKey, enemyData) {
     STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
   }
   const hasLokiBlessing = activeBlessings.has('loki');
-
-  const totalMonstersCount = enemyData.monsters.reduce((sum, m) => sum + m.count, 0);
-
-  let confusedIndex = -1;
-  const lokiM3 = GC.modifiers.milestones.loki.find(m => m.index === 2);
-  const confuseChance = lokiM3?.confuseChance ?? 0.25;
-  if (STATE.godQuests.loki?.[2] && Math.random() < confuseChance) {
-    if (totalMonstersCount > 0) {
-      confusedIndex = Math.floor(Math.random() * totalMonstersCount);
-    }
-  }
-
-  // Loki Champion blessing: 25% chance overall to charm exactly one spawned monster in the combat wave
-  let charmedIndex = -1;
   const lokiBlessing = GC.modifiers.blessings.loki;
-  const charmChance = lokiBlessing?.charmChance ?? 0.25;
-  if (hasLokiBlessing && Math.random() < charmChance) {
-    if (totalMonstersCount > 0) {
-      charmedIndex = Math.floor(Math.random() * totalMonstersCount);
-    }
-  }
+  const lokiM3 = GC.modifiers.milestones.loki.find(m => m.index === 2);
 
-  let spawnIndex = 0;
-  let spawnedCount = 0;
-  let charmedMonsterData = null;
-
-  for (const m of enemyData.monsters) {
+  for (const m of group) {
     for (let i = 0; i < m.count; i++) {
-      const isCharmed = spawnedCount === charmedIndex;
-      const isConfused = !isCharmed && spawnedCount === confusedIndex;
+      const spawnedCount = STATE.combat.spawnedCount;
+      const isCharmed = spawnedCount === STATE.combat.charmedIndex;
+      const isConfused = !isCharmed && spawnedCount === STATE.combat.confusedIndex;
       const stats = getMonsterStats(m.monsterClass);
 
       if (isCharmed) {
-        // Delay placement of the charmed unit until we place the non-charmed enemies
         charmedMonsterData = {
           mClass: m.monsterClass,
           stats: stats,
           spawnedCount: spawnedCount
         };
-        spawnedCount++;
+        STATE.combat.spawnedCount++;
         continue;
       }
 
       const lane = startLanes[spawnIndex % CFG.gridRows];
       spawnIndex++;
 
-      let spawnCol = isConfused ? CFG.gridCols - 2 : CFG.gridCols - 1;
-      if (isConfused) {
-        for (let c = CFG.gridCols - 2; c >= 0; c--) {
+      let spawnCol = CFG.gridCols - 1;
+      if (grid[lane][CFG.gridCols - 1]) {
+        spawnCol = CFG.gridCols - 2;
+      }
+      if (grid[lane][spawnCol]) {
+        for (let c = CFG.gridCols - 1; c >= 0; c--) {
           if (!grid[lane][c]) {
             spawnCol = c;
             break;
@@ -154,17 +106,18 @@ export function startCombat(locationId, coordKey, enemyData) {
         row: lane,
         col: spawnCol
       };
-      monsters.push(mUnit);
+      
+      STATE.combat.waveMonsters.push(mUnit);
       grid[lane][spawnCol] = mUnit;
-      spawnedCount++;
+      STATE.combat.spawnedCount++;
+      notify('COMBAT_SPAWN', mUnit);
     }
   }
 
-  // Position and spawn the charmed unit in front of a random enemy
   if (charmedMonsterData) {
     notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_charm', unit: { name: charmedMonsterData.mClass } });
 
-    const enemies = monsters.filter(m => m.alliance === 'enemy');
+    const enemies = STATE.combat.waveMonsters.filter(m => m.alliance === 'enemy');
     let targetEnemy = null;
     if (enemies.length > 0) {
       targetEnemy = enemies[Math.floor(Math.random() * enemies.length)];
@@ -220,11 +173,90 @@ export function startCombat(locationId, coordKey, enemyData) {
       row: spawnLane,
       col: spawnCol
     };
-    monsters.push(mUnit);
+    STATE.combat.waveMonsters.push(mUnit);
     grid[spawnLane][spawnCol] = mUnit;
+    notify('COMBAT_SPAWN', mUnit);
+  }
+}
+
+// Initialize combat map grid & pool
+export function startCombat(locationId, coordKey, enemyData) {
+  if (combatTimer) {
+    clearInterval(combatTimer);
+    combatTimer = null;
+  }
+  STATE.combat.active = true;
+  STATE.combat.paused = true;
+  STATE.combat.locationId = locationId;
+  STATE.combat.entityCoordKey = coordKey;
+  STATE.combat.fleeMode = false;
+  STATE.combat.stance = 'attack';
+  STATE.combat.deployHistory = [];
+  STATE.combat.activeDoTs = [];
+  
+  if (coordKey !== 'war_horn') {
+    STATE.combat.isWarHornBattle = false;
   }
 
-  STATE.combat.waveMonsters = monsters;
+  // 1. Initialize grid
+  const grid = [];
+  for (let r = 0; r < CFG.gridRows; r++) {
+    const row = [];
+    for (let c = 0; c < CFG.gridCols; c++) row.push(null);
+    grid.push(row);
+  }
+  STATE.combat.grid = grid;
+
+  // 2. Clone active band into deployment pool
+  STATE.combat.pool = STATE.band.map(u => ({ ...u, maxHp: u.maxHp, hp: u.hp, currentHp: u.hp, alliance: 'player' }));
+  sortPoolByPoints();
+
+  // Initialize group queues
+  const groups = enemyData.monsterGroups || [enemyData.monsters];
+  STATE.combat.pendingSpawnGroups = [...groups];
+  STATE.combat.spawnedCount = 0;
+  STATE.combat.waveMonsters = [];
+
+  // Determine Loki favor effects for all monsters in the campaign/fight
+  let totalMonstersCount = 0;
+  for (const group of groups) {
+    totalMonstersCount += group.reduce((sum, m) => sum + m.count, 0);
+  }
+
+  const activeBlessings = new Set();
+  if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
+  if (STATE.permanentlyActivatedBlessings) {
+    STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
+  }
+  const hasLokiBlessing = activeBlessings.has('loki');
+
+  let confusedIndex = -1;
+  const lokiM3 = GC.modifiers.milestones.loki.find(m => m.index === 2);
+  const confuseChance = lokiM3?.confuseChance ?? 0.25;
+  if (STATE.godQuests.loki?.[2] && Math.random() < confuseChance) {
+    if (totalMonstersCount > 0) {
+      confusedIndex = Math.floor(Math.random() * totalMonstersCount);
+    }
+  }
+
+  let charmedIndex = -1;
+  const lokiBlessing = GC.modifiers.blessings.loki;
+  const charmChance = lokiBlessing?.charmChance ?? 0.25;
+  if (hasLokiBlessing && Math.random() < charmChance) {
+    if (totalMonstersCount > 0) {
+      charmedIndex = Math.floor(Math.random() * totalMonstersCount);
+    }
+  }
+
+  STATE.combat.confusedIndex = confusedIndex;
+  STATE.combat.charmedIndex = charmedIndex;
+
+  // Spawn the first group immediately
+  if (STATE.combat.pendingSpawnGroups.length > 0) {
+    const firstGroup = STATE.combat.pendingSpawnGroups.shift();
+    spawnMonsterGroup(firstGroup, 0);
+  }
+
   notify('COMBAT_START');
   combatTimer = setInterval(combatTick, STATE.combat.combatIntervalMs || CFG.tickIntervalMs);
 }
@@ -239,6 +271,13 @@ export function adjustCombatSpeed(newSpeedMs) {
 
 function combatTick() {
   if (STATE.combat.paused || !STATE.combat.active) return;
+
+  // Spawn next enemy group if any are pending
+  if (STATE.combat.pendingSpawnGroups && STATE.combat.pendingSpawnGroups.length > 0) {
+    const nextGroup = STATE.combat.pendingSpawnGroups.shift();
+    const groupIdx = STATE.combat.pendingSpawnGroups.length;
+    spawnMonsterGroup(nextGroup, groupIdx);
+  }
 
   const grid = STATE.combat.grid;
   const gridSnapshot = grid.map(row => [...row]);
@@ -1134,7 +1173,9 @@ export function undeployUnit(row, col) {
 
 function checkCombatEndConditions() {
   const activeEnemies = STATE.combat.waveMonsters.filter(m => m.alliance === 'enemy' || m.isCharmed || m.isConfused);
-  if (activeEnemies.length === 0) {
+  const allGroupsDeployed = (!STATE.combat.pendingSpawnGroups || STATE.combat.pendingSpawnGroups.length === 0);
+
+  if (activeEnemies.length === 0 && allGroupsDeployed) {
     endCombat(true);
   } else {
     const hasPlayerUnitsOnBoard = STATE.combat.grid.some(row =>
