@@ -16,7 +16,6 @@ export const MAPS = [
     difficulty: 1,           // 1–4 (shown as ☆ indicators on the card)
     difficultyLabel: 'Balanced',
     emoji: '⚔️',
-    terrainHighlights: ['plains','forest','water','snow','mountain'],
     gridSize: 15,
     partyStart: { x: 2, y: 7 },
     terrainZones: [
@@ -50,7 +49,6 @@ export const MAPS = [
     difficulty: 2,
     difficultyLabel: 'Hard',
     emoji: '🗡️',
-    terrainHighlights: ['plains','water','mountain','forest'],
     gridSize: 15,
     partyStart: { x: 1, y: 7 },
     terrainZones: [
@@ -101,7 +99,6 @@ export const MAPS = [
     difficulty: 3,
     difficultyLabel: 'Haunting',
     emoji: '💀',
-    terrainHighlights: ['water', 'forest', 'plains'],
     gridSize: 15,
     partyStart: { x: 7, y: 0 },
     terrainZones: [
@@ -141,7 +138,6 @@ export const MAPS = [
     difficulty: 3,
     difficultyLabel: 'Treacherous',
     emoji: '🌊',
-    terrainHighlights: ['water','plains','forest','mountain'],
     gridSize: 15,
     partyStart: { x: 1, y: 7 },
     terrainZones: [
@@ -193,7 +189,6 @@ export const MAPS = [
     difficulty: 4,
     difficultyLabel: 'Apocalyptic',
     emoji: '🌋',
-    terrainHighlights: ['mountain', 'forest', 'plains'],
     gridSize: 15,
     partyStart: { x: 1, y: 1 },
     terrainZones: [
@@ -234,7 +229,6 @@ export const MAPS = [
     difficulty: 4,
     difficultyLabel: 'Brutal',
     emoji: '❄️',
-    terrainHighlights: ['snow','mountain','forest'],
     gridSize: 15,
     partyStart: { x: 2, y: 13 },
     terrainZones: [
@@ -283,7 +277,6 @@ export const MAPS = [
     difficulty: 4,
     difficultyLabel: 'Extreme',
     emoji: '🦅',
-    terrainHighlights: ['mountain', 'snow', 'plains'],
     gridSize: 15,
     partyStart: { x: 7, y: 14 },
     terrainZones: [

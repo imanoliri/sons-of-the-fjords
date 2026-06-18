@@ -135,7 +135,7 @@ export function initUIBindings() {
       card.className = 'map-card' + (i === selectedMapIndex ? ' map-card--selected' : '');
       card.dataset.mapIndex = i;
 
-      const uniqueTerrains = [...new Set(map.terrainHighlights)].slice(0, 4);
+      const uniqueTerrains = [...new Set(map.terrainZones.map(z => z.label))];
       const terrainBadges = uniqueTerrains
         .map(t => `<span class="terrain-badge">${TERRAIN_ICONS[t] || '🗺️'} ${t}</span>`)
         .join('');
