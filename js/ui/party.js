@@ -2,6 +2,8 @@
    UI/PARTY.JS — Party roster and Gods quests screens
    ========================================================================== */
 
+import { SOLDIER_EMOJIS } from '../config/soldiers.js';
+
 import { STATE, notify, getEffectiveStats } from '../state.js';
 import { GODS_CONFIG } from '../config/gods.js';
 import {
@@ -273,7 +275,7 @@ export function renderPartyPanel() {
       const effStats = getEffectiveStats(unit);
 
       const name = document.createElement('span');
-      const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
+      const icons = SOLDIER_EMOJIS;
       name.innerHTML = `<b>${icons[unit.type] || '⚔️'} ${unit.name}</b> (${unit.type.toUpperCase()})`;
 
       const stats = document.createElement('span');

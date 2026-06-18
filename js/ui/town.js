@@ -2,6 +2,8 @@
    UI/TOWN.JS — Town screen rendering
    ========================================================================== */
 
+import { SOLDIER_EMOJIS } from '../config/soldiers.js';
+
 import { STATE, adjustResource, sacrificeRelic, notify, buyFood, buyWood, sellSheepDynamic, sellWoodDynamic, buySheepDynamic, getHealCost, healWarriors, getEffectiveStats } from '../state.js';
 import { TOWN_CONFIG } from '../config/town.js';
 import { GODS_CONFIG } from '../config/gods.js';
@@ -274,7 +276,7 @@ export function renderTownScreen() {
   });
 
   // Great Hall recruitment labels
-  const unitIcons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
+  const unitIcons = SOLDIER_EMOJIS;
   const resourceEmojis = { gold: '🪙', food: '🍖', wood: '🪵', sheep: '🐑' };
   ['shieldmaiden', 'berserker', 'huntsman', 'huskarl', 'runecaster'].forEach(t => {
     const labelEl = document.getElementById(`label-recruit-${t}`);

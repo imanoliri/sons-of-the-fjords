@@ -4,7 +4,7 @@
 
 import { STATE, notify, getEffectiveStats } from '../state.js';
 import { togglePause, deployUnit, undeployUnit, sortPoolByPoints } from '../combat.js';
-import { SOLDIERS_CONFIG } from '../config/soldiers.js';
+import { SOLDIERS_CONFIG, SOLDIER_EMOJIS } from '../config/soldiers.js';
 import {
   elCombatGrid, elCombatPoolList, elCombatPauseBtn,
   elTooltip, MONSTER_EMOJIS
@@ -26,7 +26,7 @@ export function renderFormationElement() {
   });
   STATE.combat.formationOrder = order;
 
-  const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
+  const icons = SOLDIER_EMOJIS;
 
   order.forEach((type, idx) => {
     // Separator arrow between icons
@@ -143,14 +143,7 @@ export function renderCombatGrid() {
           elUnit.classList.add('fleeing');
           elUnit.innerText = '🏃‍♂️';
         } else {
-          const avatars = {
-            shieldmaiden: '🛡️',
-            berserker: '🪓',
-            huntsman: '🏹',
-            huskarl: '⚔️',
-            runecaster: '🔮'
-          };
-          elUnit.innerText = avatars[unit.type] || MONSTER_EMOJIS[unit.type] || '👾';
+          elUnit.innerText = SOLDIER_EMOJIS[unit.type] || MONSTER_EMOJIS[unit.type] || '👾';
         }
 
         // Undead, Charmed, or Confused states visual style hooks
@@ -306,7 +299,7 @@ export function renderCombatGrid() {
       card.classList.add('selected');
     }
 
-    const icons = { shieldmaiden: '🛡️', berserker: '🪓', huntsman: '🏹', huskarl: '⚔️', runecaster: '🔮' };
+    const icons = SOLDIER_EMOJIS;
     const numHint = idx < SOLDIERS_CONFIG.maxBandSize ? `<span class="pool-number-hint">[${idx + 1}]</span> ` : '';
     const ratio = unit.hp / unit.maxHp;
     const hpPct = ratio * 100;
