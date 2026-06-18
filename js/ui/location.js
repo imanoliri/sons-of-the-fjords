@@ -12,7 +12,7 @@ import {
   elLocMap, elLocTitle, elLocThreat, elLocDeckCount, elLocationDifficultyStatus,
   elPromptPanel, elModalEvent, elModalEventTitle, elModalEventBody, elModalEventChoices, elModalEventCloseBtn
 } from './dom.js';
-import { logLocation } from './notifications.js';
+import { logLocation, showToast } from './notifications.js';
 import { showOverlay, hideOverlay } from './overlay.js';
 
 let activePortalTarget = null;
