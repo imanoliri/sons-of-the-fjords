@@ -9,7 +9,7 @@ import { SOLDIERS_CONFIG } from '../config/soldiers.js';
 import { GODS_CONFIG } from '../config/gods.js';
 import { TOWN_CONFIG } from '../config/town.js';
 import { LOCATION_CONFIG } from '../config/location.js';
-import { togglePause, deployUnit, undeployUnit, fleeCombat, adjustCombatSpeed } from '../combat.js';
+import { togglePause, deployUnit, undeployUnit, fleeCombat, adjustCombatSpeed, checkAndAutoDeploy } from '../combat.js';
 import { showToast, logWorld, logLocation } from './notifications.js';
 import { showOverlay, hideOverlay, updateModalKeyboardNavigation } from './overlay.js';
 import { renderPartyPanel, GOD_LORE } from './party.js';
@@ -461,6 +461,8 @@ export function initUIBindings() {
       }
     }
 
+    const unitsToChange = selectedUnits.length > 0 ? [...selectedUnits] : [];
+
     if (selectedUnits.length > 0) {
       selectedUnits.forEach(u => {
         u.stance = stance;
@@ -473,11 +475,29 @@ export function initUIBindings() {
             const cell = STATE.combat.grid[r][c];
             if (cell && cell.alliance === 'player') {
               delete cell.stance;
+              unitsToChange.push(cell);
             }
           }
         }
       }
     }
+
+    // Automatically remove plans/orders related to the units whose stance changed
+    if (STATE.combat.plannedLayout && unitsToChange.length > 0) {
+      unitsToChange.forEach(u => {
+        if (u.row !== undefined) {
+          const row = u.row;
+          for (let checkC = 0; checkC < 10; checkC++) {
+            if (STATE.combat.plannedLayout[row][checkC] === u.type) {
+              STATE.combat.plannedLayout[row][checkC] = null;
+              break;
+            }
+          }
+        }
+      });
+    }
+
+    checkAndAutoDeploy();
     notify('COMBAT_UPDATE');
   }
 
@@ -900,6 +920,18 @@ export function initUIBindings() {
       }
 
       const key = e.key.toLowerCase();
+
+      if (key === 'm') {
+        e.preventDefault();
+        const btnPlan = document.getElementById('btn-plan-title');
+        const btnWizardStep = document.getElementById('btn-plan-wizard-step');
+        if (btnPlan && !btnPlan.classList.contains('hidden')) {
+          btnPlan.click();
+        } else if (btnWizardStep && !btnWizardStep.classList.contains('hidden')) {
+          btnWizardStep.click();
+        }
+        return;
+      }
 
       if (key === 'y') {
         e.preventDefault();
