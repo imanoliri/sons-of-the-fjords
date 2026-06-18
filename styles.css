@@ -2405,13 +2405,16 @@ body {
 }
 
 .enemy-badge {
-  font-size: 0.6rem;
-  color: #f87171;
+  font-size: 0.8rem;
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: 4px;
-  padding: 0.08rem 0.35rem;
-  white-space: nowrap;
+  padding: 0.15rem 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  line-height: 1;
 }
 
 /* Selection indicator text */

@@ -173,7 +173,7 @@ export function initUIBindings() {
 
       const worldEnemies = getPossibleEnemiesForMap(map);
       const enemyBadges = worldEnemies
-        .map(e => `<span class="enemy-badge">${ENEMY_ICONS[e] || '👿'} ${e}</span>`)
+        .map(e => `<span class="enemy-badge" title="${e}">${ENEMY_ICONS[e] || '👿'}</span>`)
         .join('');
 
       const raidCount  = Object.values(map.locations).filter(l => l.type === 'raid').length;
