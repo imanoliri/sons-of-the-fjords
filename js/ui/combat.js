@@ -109,8 +109,8 @@ export function renderCombatGrid() {
       elCell.dataset.row = r;
       elCell.dataset.col = c;
 
-      // Make columns 0 and 1 plan/deploy drop zones
-      if (c <= 1) {
+      // Make columns plan/deploy drop zones
+      if (c < 10) {
         // Drag over / drop handlers for planning layout
         elCell.addEventListener('dragover', (e) => {
           e.preventDefault();
@@ -121,7 +121,7 @@ export function renderCombatGrid() {
           if (dragData && dragData.startsWith('plan:')) {
             const type = dragData.replace('plan:', '');
             if (!STATE.combat.plannedLayout) {
-              STATE.combat.plannedLayout = Array.from({ length: 8 }, () => Array(2).fill(null));
+              STATE.combat.plannedLayout = Array.from({ length: 8 }, () => Array(10).fill(null));
             }
             STATE.combat.plannedLayout[r][c] = type;
             checkAndAutoDeploy();
@@ -138,7 +138,7 @@ export function renderCombatGrid() {
           }
         });
 
-        if (STATE.combat.paused && !grid[r][c]) {
+        if (c <= 1 && STATE.combat.paused && !grid[r][c]) {
           if (STATE.combat.selectedPoolIndex !== null) {
             elCell.classList.add('deployable-zone');
             elCell.addEventListener('click', () => {
@@ -302,7 +302,7 @@ export function renderCombatGrid() {
         hbContainer.appendChild(hbFill);
         elUnit.appendChild(hbContainer);
         elCell.appendChild(elUnit);
-      } else if (c <= 1 && STATE.combat.plannedLayout && STATE.combat.plannedLayout[r][c]) {
+      } else if (c < 10 && STATE.combat.plannedLayout && STATE.combat.plannedLayout[r][c]) {
         // Draw ghost planned unit
         const type = STATE.combat.plannedLayout[r][c];
 

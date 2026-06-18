@@ -92,7 +92,7 @@ export const STATE = {
     combatIntervalMs: 600,
     isWarHornBattle: false,
     formationOrder: ['shieldmaiden', 'huntsman', 'berserker', 'huskarl', 'runecaster'],
-    plannedLayout: Array.from({ length: 8 }, () => Array(2).fill(null))
+    plannedLayout: Array.from({ length: 8 }, () => Array(10).fill(null))
   }
 };
 
@@ -308,7 +308,7 @@ export function resetGame() {
     ticker: null, selectedPoolIndex: null, spawnTimer: 0,
     locationId: null, entityCoordKey: null, waveMonsters: [],
     formationOrder: ['shieldmaiden', 'huntsman', 'berserker', 'huskarl', 'runecaster'],
-    plannedLayout: Array.from({ length: 8 }, () => Array(2).fill(null))
+    plannedLayout: Array.from({ length: 8 }, () => Array(10).fill(null))
   };
 }
 

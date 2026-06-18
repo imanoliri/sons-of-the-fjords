@@ -997,7 +997,7 @@ function combatTick() {
           if (unit.alliance === 'player' && !unit.isCharmed && !unit.isConfused && !unit.isUndead) {
             const r = unit.row;
             const c = unit.col;
-            if (c <= 1 && STATE.combat.plannedLayout && STATE.combat.plannedLayout[r]?.[c] === unit.type) {
+            if (c < 10 && STATE.combat.plannedLayout && STATE.combat.plannedLayout[r]?.[c] === unit.type) {
               unit.stance = 'hold';
             }
           }
@@ -1306,7 +1306,7 @@ function shuffleArray(arr) {
 export function checkAndAutoDeploy() {
   if (!STATE.combat.active) return;
   if (!STATE.combat.plannedLayout) {
-    STATE.combat.plannedLayout = Array.from({ length: CFG.gridRows }, () => Array(2).fill(null));
+    STATE.combat.plannedLayout = Array.from({ length: CFG.gridRows }, () => Array(CFG.gridCols).fill(null));
   }
 
   const grid = STATE.combat.grid;
@@ -1315,7 +1315,7 @@ export function checkAndAutoDeploy() {
   for (let r = 0; r < sizeR; r++) {
     // 1. Gather desired planned counts for this lane r
     const desiredCounts = {};
-    for (let c = 0; c <= 1; c++) {
+    for (let c = 0; c < CFG.gridCols; c++) {
       const type = STATE.combat.plannedLayout[r][c];
       if (type) {
         desiredCounts[type] = (desiredCounts[type] || 0) + 1;
