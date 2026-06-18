@@ -2598,4 +2598,10 @@ body {
   100% {
     box-shadow: 0 0 10px rgba(0, 240, 255, 0.4), inset 0 0 8px rgba(0, 240, 255, 0.2);
   }
+}
+
+.orders-card.selected-orders-card {
+  border-color: var(--text-accent, #00f0ff) !important;
+  background: rgba(0, 240, 255, 0.15) !important;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.4) !important;
 }

@@ -144,13 +144,20 @@ export function renderCombatGrid() {
         });
 
         elCell.addEventListener('click', (e) => {
+          let type = null;
+          let wiz = null;
           if (STATE.combat.planningWizard && STATE.combat.planningWizard.active) {
-            e.stopPropagation();
-            const wiz = STATE.combat.planningWizard;
+            wiz = STATE.combat.planningWizard;
             const currentWizType = wiz.types[wiz.typeIndex];
-            if (!currentWizType) return;
-            
-            const type = currentWizType.type;
+            if (currentWizType) {
+              type = currentWizType.type;
+            }
+          } else if (STATE.combat.activePlanningType) {
+            type = STATE.combat.activePlanningType;
+          }
+
+          if (type) {
+            e.stopPropagation();
             const isRanged = ['huntsman', 'runecaster'].includes(type);
             const preferredCol = isRanged ? 0 : 1;
             const backupCol = isRanged ? 1 : 0;
@@ -169,12 +176,14 @@ export function renderCombatGrid() {
             }
             STATE.combat.plannedLayout[r][targetCol] = type;
             
-            wiz.placedCount++;
-            if (wiz.placedCount >= currentWizType.totalCount) {
-              wiz.typeIndex++;
-              wiz.placedCount = 0;
-              if (wiz.typeIndex >= wiz.types.length) {
-                wiz.active = false;
+            if (wiz) {
+              wiz.placedCount++;
+              if (wiz.placedCount >= wiz.types[wiz.typeIndex].totalCount) {
+                wiz.typeIndex++;
+                wiz.placedCount = 0;
+                if (wiz.typeIndex >= wiz.types.length) {
+                  wiz.active = false;
+                }
               }
             }
             
@@ -812,11 +821,26 @@ export function renderOrdersPanel() {
   uniqueTypes.forEach(type => {
     const card = document.createElement('div');
     card.classList.add('orders-card');
+    if (STATE.combat.activePlanningType === type) {
+      card.classList.add('selected-orders-card');
+    }
     card.draggable = true;
     
     const emoji = SOLDIER_EMOJIS[type] || '⚔️';
-    card.title = type.charAt(0).toUpperCase() + type.slice(1);
+    card.title = `${type.charAt(0).toUpperCase() + type.slice(1)} - Click to plan on map`;
     card.innerHTML = `${emoji}`;
+
+    card.addEventListener('click', () => {
+      if (STATE.combat.activePlanningType === type) {
+        STATE.combat.activePlanningType = null;
+      } else {
+        STATE.combat.activePlanningType = type;
+        if (STATE.combat.planningWizard) {
+          STATE.combat.planningWizard.active = false;
+        }
+      }
+      notify('COMBAT_UPDATE');
+    });
 
     card.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/plain', `plan:${type}`);
@@ -852,6 +876,7 @@ export function initCombatSelection() {
         }
       }
       STATE.combat.plannedLayout = Array.from({ length: 8 }, () => Array(10).fill(null));
+      STATE.combat.activePlanningType = null;
       if (STATE.combat.planningWizard) {
         STATE.combat.planningWizard.active = false;
       }
@@ -863,6 +888,7 @@ export function initCombatSelection() {
   const btnPlanTitle = document.getElementById('btn-plan-title');
   if (btnPlanTitle) {
     btnPlanTitle.onclick = () => {
+      STATE.combat.activePlanningType = null;
       let bandTypes = [];
       if (STATE.band && STATE.band.length > 0) {
         bandTypes = [...new Set(STATE.band.map(u => u.type))];
