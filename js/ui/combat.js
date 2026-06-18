@@ -123,7 +123,11 @@ export function renderCombatGrid() {
             if (!STATE.combat.plannedLayout) {
               STATE.combat.plannedLayout = Array.from({ length: 8 }, () => Array(10).fill(null));
             }
-            STATE.combat.plannedLayout[r][c] = type;
+            if (type === 'clear') {
+              STATE.combat.plannedLayout[r][c] = null;
+            } else {
+              STATE.combat.plannedLayout[r][c] = type;
+            }
             checkAndAutoDeploy();
             notify('COMBAT_UPDATE');
           }
@@ -134,6 +138,7 @@ export function renderCombatGrid() {
           e.preventDefault();
           if (STATE.combat.plannedLayout && STATE.combat.plannedLayout[r][c]) {
             STATE.combat.plannedLayout[r][c] = null;
+            checkAndAutoDeploy();
             notify('COMBAT_UPDATE');
           }
         });
@@ -333,15 +338,30 @@ export function renderCombatGrid() {
         elGhost.classList.add('combat-unit', 'ghost-unit');
         if (orderState === 'no soldier available') {
           elGhost.classList.add('ghost-no-soldier');
-          elGhost.title = `Order: ${type} (No soldier available)`;
+          elGhost.title = `Order: ${type} (No soldier available) - Click to delete`;
         } else if (orderState === 'soldier available') {
           elGhost.classList.add('ghost-soldier-available');
-          elGhost.title = `Order: ${type} (Available to deploy)`;
+          elGhost.title = `Order: ${type} (Available to deploy) - Click to delete`;
         } else if (orderState === 'soldier deployed') {
           elGhost.classList.add('ghost-soldier-deployed');
-          elGhost.title = `Order: ${type} (Deployed in lane)`;
+          elGhost.title = `Order: ${type} (Deployed in lane) - Click to delete`;
         }
         elGhost.innerText = SOLDIER_EMOJIS[type] || '👾';
+
+        elGhost.addEventListener('click', (e) => {
+          e.stopPropagation();
+          STATE.combat.plannedLayout[r][c] = null;
+          checkAndAutoDeploy();
+          notify('COMBAT_UPDATE');
+        });
+        elGhost.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          STATE.combat.plannedLayout[r][c] = null;
+          checkAndAutoDeploy();
+          notify('COMBAT_UPDATE');
+        });
+
         elCell.appendChild(elGhost);
       }
 
@@ -766,6 +786,8 @@ let selectionBox = null;
 export function initCombatSelection() {
   const gridEl = document.getElementById('combat-grid');
   if (!gridEl) return;
+
+  gridEl.addEventListener('contextmenu', (e) => e.preventDefault());
 
   gridEl.addEventListener('mousedown', (e) => {
     // Only select on left click
