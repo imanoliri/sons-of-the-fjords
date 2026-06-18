@@ -72,16 +72,44 @@ function spawnMonsterGroup(group, groupIndex) {
       const lane = startLanes[spawnIndex % CFG.gridRows];
       spawnIndex++;
 
+      let spawnRow = lane;
       let spawnCol = CFG.gridCols - 1;
-      if (grid[lane][CFG.gridCols - 1]) {
+      if (grid[spawnRow][CFG.gridCols - 1]) {
         spawnCol = CFG.gridCols - 2;
       }
-      if (grid[lane][spawnCol]) {
+
+      if (grid[spawnRow][spawnCol]) {
+        let found = false;
+        // 1. Try to find a free cell in the same lane, searching from right to left
         for (let c = CFG.gridCols - 1; c >= 0; c--) {
-          if (!grid[lane][c]) {
+          if (!grid[spawnRow][c]) {
             spawnCol = c;
+            found = true;
             break;
           }
+        }
+        // 2. If the lane is full, search other lanes from right to left, preferring lanes closer to the target lane
+        if (!found) {
+          let bestDist = Infinity;
+          for (let r = 0; r < CFG.gridRows; r++) {
+            for (let c = CFG.gridCols - 1; c >= 0; c--) {
+              if (!grid[r][c]) {
+                const dist = Math.abs(r - lane);
+                if (dist < bestDist) {
+                  bestDist = dist;
+                  spawnRow = r;
+                  spawnCol = c;
+                  found = true;
+                }
+              }
+            }
+          }
+        }
+
+        // 3. If the entire board is full, we must skip spawning this unit to avoid bricking the game
+        if (!found) {
+          console.warn(`Could not spawn monster ${m.monsterClass}: grid is completely full.`);
+          continue;
         }
       }
 
@@ -103,12 +131,12 @@ function spawnMonsterGroup(group, groupIndex) {
         charmedTicksLeft: 0,
         isConfused: isConfused,
         confusedTicksLeft: isConfused ? (lokiM3?.confuseDurationTicks ?? 2) : 0,
-        row: lane,
+        row: spawnRow,
         col: spawnCol
       };
       
       STATE.combat.waveMonsters.push(mUnit);
-      grid[lane][spawnCol] = mUnit;
+      grid[spawnRow][spawnCol] = mUnit;
       STATE.combat.spawnedCount++;
       notify('COMBAT_SPAWN', mUnit);
     }
@@ -126,11 +154,11 @@ function spawnMonsterGroup(group, groupIndex) {
     let spawnLane = startLanes[spawnIndex % CFG.gridRows];
     spawnIndex++;
     let spawnCol = CFG.gridCols - 2;
+    let found = false;
 
     if (targetEnemy) {
       spawnLane = targetEnemy.row;
       let checkCol = targetEnemy.col - 1;
-      let found = false;
       for (let c = checkCol; c >= 0; c--) {
         if (!grid[spawnLane][c]) {
           spawnCol = c;
@@ -151,31 +179,55 @@ function spawnMonsterGroup(group, groupIndex) {
       for (let c = CFG.gridCols - 2; c >= 0; c--) {
         if (!grid[spawnLane][c]) {
           spawnCol = c;
+          found = true;
           break;
         }
       }
     }
 
-    const mUnit = {
-      id: Date.now() + "_" + charmedMonsterData.spawnedCount + "_" + Math.floor(Math.random() * 1000),
-      name: charmedMonsterData.mClass + ' 🌀',
-      type: charmedMonsterData.mClass,
-      hp: charmedMonsterData.stats.hp,
-      maxHp: charmedMonsterData.stats.hp,
-      dmg: charmedMonsterData.stats.dmg,
-      speed: charmedMonsterData.stats.speed,
-      range: charmedMonsterData.stats.range,
-      alliance: 'player',
-      isCharmed: true,
-      charmedTicksLeft: lokiBlessing?.charmDurationTicks ?? 2,
-      isConfused: false,
-      confusedTicksLeft: 0,
-      row: spawnLane,
-      col: spawnCol
-    };
-    STATE.combat.waveMonsters.push(mUnit);
-    grid[spawnLane][spawnCol] = mUnit;
-    notify('COMBAT_SPAWN', mUnit);
+    // Safety fallback: if target position is still occupied or we didn't find any place in target lane
+    if (!found || grid[spawnLane][spawnCol]) {
+      found = false;
+      let bestDist = Infinity;
+      for (let r = 0; r < CFG.gridRows; r++) {
+        for (let c = CFG.gridCols - 1; c >= 0; c--) {
+          if (!grid[r][c]) {
+            const dist = Math.abs(r - spawnLane);
+            if (dist < bestDist) {
+              bestDist = dist;
+              spawnLane = r;
+              spawnCol = c;
+              found = true;
+            }
+          }
+        }
+      }
+    }
+
+    if (found) {
+      const mUnit = {
+        id: Date.now() + "_" + charmedMonsterData.spawnedCount + "_" + Math.floor(Math.random() * 1000),
+        name: charmedMonsterData.mClass + ' 🌀',
+        type: charmedMonsterData.mClass,
+        hp: charmedMonsterData.stats.hp,
+        maxHp: charmedMonsterData.stats.hp,
+        dmg: charmedMonsterData.stats.dmg,
+        speed: charmedMonsterData.stats.speed,
+        range: charmedMonsterData.stats.range,
+        alliance: 'player',
+        isCharmed: true,
+        charmedTicksLeft: lokiBlessing?.charmDurationTicks ?? 2,
+        isConfused: false,
+        confusedTicksLeft: 0,
+        row: spawnLane,
+        col: spawnCol
+      };
+      STATE.combat.waveMonsters.push(mUnit);
+      grid[spawnLane][spawnCol] = mUnit;
+      notify('COMBAT_SPAWN', mUnit);
+    } else {
+      console.warn(`Could not spawn charmed monster ${charmedMonsterData.mClass}: grid is completely full.`);
+    }
   }
 }
 
@@ -1103,14 +1155,16 @@ function removeUnitFromRegistry(unit) {
 
 function handleUnitReachEnd(unit) {
   if (unit.alliance === 'player') {
-    if (unit.isCharmed) {
+    if (unit.isCharmed || unit.isConfused) {
       const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
       if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
       notify('COMBAT_UPDATE');
       checkCombatEndConditions();
       return;
     }
-    if (unit.isUndead || unit.isConfused) {
+    if (unit.isUndead) {
+      const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
+      if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
       notify('COMBAT_UPDATE');
       return;
     }

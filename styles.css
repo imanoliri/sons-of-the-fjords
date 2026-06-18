@@ -239,6 +239,8 @@ body {
   font-family: var(--font-runes);
   color: var(--text-muted);
   font-size: 1.1rem;
+  margin-left: 2rem;
+  margin-right: 1.5rem;
 }
 
 /* Menu Screen */

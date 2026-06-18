@@ -753,10 +753,21 @@ export function initUIBindings() {
 
     // Check if player is on World Map screen
     if (STATE.activeScreen === 'world') {
+      if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        document.getElementById('btn-load-game')?.click();
+        return;
+      }
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        document.getElementById('btn-save-game')?.click();
+        return;
+      }
+
       let dx = 0;
       let dy = 0;
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') dy = -1;
-      else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') dy = 1;
+      else if (e.key === 'ArrowDown') dy = 1;
       else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') dx = -1;
       else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') dx = 1;
       else if (e.key === 'Enter') {
@@ -779,6 +790,15 @@ export function initUIBindings() {
     }
     // Check if player is on Location map screen
     else if (STATE.activeScreen === 'location') {
+      if (e.key === 'w' || e.key === 'W') {
+        const warhornBtn = document.getElementById('btn-use-warhorn-sidebar');
+        if (warhornBtn && !warhornBtn.classList.contains('hidden')) {
+          e.preventDefault();
+          warhornBtn.click();
+          return;
+        }
+      }
+
       let dx = 0;
       let dy = 0;
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') dy = -1;
