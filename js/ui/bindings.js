@@ -125,9 +125,6 @@ export function initUIBindings() {
     return Array.from(pool);
   }
 
-  const fjordlandsMap = maps.find(m => m.id === 'fjordlands') || maps[0];
-  const baselineEnemies = new Set(getPossibleEnemiesForMap(fjordlandsMap));
-
   function renderMapCards() {
     elMapContainer.innerHTML = '';
     elDots.innerHTML = '';
@@ -143,12 +140,8 @@ export function initUIBindings() {
         .map(t => `<span class="terrain-badge">${TERRAIN_ICONS[t] || '🗺️'} ${t}</span>`)
         .join('');
 
-      const allMapEnemies = getPossibleEnemiesForMap(map);
-      const newEnemies = map.id === 'fjordlands'
-        ? []
-        : allMapEnemies.filter(m => !baselineEnemies.has(m));
-
-      const enemyBadges = newEnemies
+      const worldEnemies = getPossibleEnemiesForMap(map);
+      const enemyBadges = worldEnemies
         .map(e => `<span class="enemy-badge">${ENEMY_ICONS[e] || '👿'} ${e}</span>`)
         .join('');
 
