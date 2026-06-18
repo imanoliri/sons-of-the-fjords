@@ -112,7 +112,7 @@ export function renderTownScreen() {
         }
       },
       {
-        id: 'btn-buy-warhorn', label: `Buy War Horn 📯 (-60 🪙)`, btnText: 'Buy [H]', action: () => {
+        id: 'btn-buy-warhorn', label: `Buy War Horn 📯 (-60 🪙)`, btnText: 'Buy [O]', action: () => {
           if (STATE.inventory.includes('War Horn')) {
             logWorld('You already have a War Horn in your cargo!', 'warn-message');
             showToast('Already own War Horn!', '📯');

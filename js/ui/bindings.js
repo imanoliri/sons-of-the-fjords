@@ -777,6 +777,10 @@ export function initUIBindings() {
         e.preventDefault();
         document.getElementById('btn-buy-sheep')?.click();
       }
+      else if (key === 'o') {
+        e.preventDefault();
+        document.getElementById('btn-buy-warhorn')?.click();
+      }
 
       // Soldiers recruitment shortcuts: 1 (Shieldmaiden), 2 (Berserker), 3 (Huntsman)
       else if (key === '1') {

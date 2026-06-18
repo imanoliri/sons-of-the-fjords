@@ -383,6 +383,7 @@ export function renderPartyPanel() {
           const idx = STATE.inventory.indexOf('War Horn');
           if (idx !== -1) {
             STATE.inventory.splice(idx, 1);
+            notify('STATE_UPDATED');
           }
           useWarHorn();
         });
