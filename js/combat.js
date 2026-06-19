@@ -1328,7 +1328,11 @@ function checkCombatEndConditions() {
   const activeEnemies = STATE.combat.waveMonsters.filter(m => m.alliance === 'enemy' || m.isCharmed || m.isConfused);
   const allGroupsDeployed = (!STATE.combat.pendingSpawnGroups || STATE.combat.pendingSpawnGroups.length === 0);
 
-  if (activeEnemies.length === 0 && allGroupsDeployed) {
+  const hasEnemyUnitsOnBoard = STATE.combat.grid.some(row =>
+    row.some(cell => cell && (cell.alliance === 'enemy' || cell.isCharmed || cell.isConfused))
+  );
+
+  if ((activeEnemies.length === 0 || !hasEnemyUnitsOnBoard) && allGroupsDeployed) {
     endCombat(true);
   } else {
     const hasPlayerUnitsOnBoard = STATE.combat.grid.some(row =>

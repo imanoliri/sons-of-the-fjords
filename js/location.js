@@ -756,10 +756,14 @@ export function isLocationCleared(locationId) {
   }
 
   // Check sub-caves recursively that might be in STATE.locations
+  const targetDepth = (locationId.match(/_sub_cave_/g) || []).length + 1;
   for (const locKey in STATE.locations) {
     if (locKey.startsWith(locationId + '_sub_cave_')) {
-      if (!isLocationCleared(locKey)) {
-        return false;
+      const locDepth = (locKey.match(/_sub_cave_/g) || []).length;
+      if (locDepth === targetDepth) {
+        if (!isLocationCleared(locKey)) {
+          return false;
+        }
       }
     }
   }
