@@ -319,7 +319,7 @@ export function initUIBindings() {
             import('../location.js').then(({ isLocationCleared }) => {
               if (STATE.worldMap && STATE.worldMap.locations) {
                 let allCleared = true;
-                const totalRaids = Object.values(STATE.worldMap.locations).filter(l => l.type === 'raid');
+                const totalRaids = Object.values(STATE.worldMap.locations).filter(l => l.type === 'raid' && l.id.startsWith('raid_'));
                 for (const l of totalRaids) {
                   if (isLocationCleared(l.id)) {
                     l.isCleared = true;
@@ -330,7 +330,7 @@ export function initUIBindings() {
                     allCleared = false;
                   }
                 }
-                if (totalRaids.length > 0 && allCleared && !STATE.campaignWon) {
+                if (totalRaids.length > 0 && allCleared) {
                   STATE.campaignWon = true;
                   import('../ui.js').then(({ notify: uiNotify }) => {
                     uiNotify('SAGA_VICTORY_ACHIEVED');

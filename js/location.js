@@ -771,10 +771,63 @@ export function isLocationCleared(locationId) {
   return true;
 }
 
+// Detailed status check of a raid location for debugging
+export function explainRaidStatus(locationId) {
+  const locState = STATE.locations[locationId];
+  if (!locState) {
+    return "Not visited/no state initialized yet.";
+  }
+
+  const unclearedTiles = [];
+  for (const tile of Object.values(locState.placedTiles)) {
+    if (tile.entity && tile.entity.type === 'enemy_army' && !tile.entity.isDefeated) {
+      unclearedTiles.push(`placedTile at ${tile.entity.coordKey || 'unknown'} (${tile.entity.name || 'unnamed'})`);
+    }
+  }
+
+  const unclearedPreGenerated = [];
+  for (const entity of Object.values(locState.preGeneratedEntities)) {
+    if (entity && entity.type === 'enemy_army' && !entity.isDefeated) {
+      unclearedPreGenerated.push(`preGeneratedEntity at ${entity.coordKey || 'unknown'} (${entity.name || 'unnamed'})`);
+    }
+  }
+
+  const unclearedSubCaves = [];
+  for (const entity of Object.values(locState.preGeneratedEntities)) {
+    if (entity && entity.type === 'cave_entrance' && !entity.isExit) {
+      const subCaveId = entity.targetLocationId;
+      if (!STATE.locations[subCaveId]) {
+        unclearedSubCaves.push(`sub-cave ${subCaveId} (unvisited)`);
+      } else if (!isLocationCleared(subCaveId)) {
+        unclearedSubCaves.push(`sub-cave ${subCaveId} (visited but uncleared: ${explainRaidStatus(subCaveId)})`);
+      }
+    }
+  }
+
+  const targetDepth = (locationId.match(/_sub_cave_/g) || []).length + 1;
+  for (const locKey in STATE.locations) {
+    if (locKey.startsWith(locationId + '_sub_cave_')) {
+      const locDepth = (locKey.match(/_sub_cave_/g) || []).length;
+      if (locDepth === targetDepth) {
+        if (!isLocationCleared(locKey)) {
+          unclearedSubCaves.push(`sub-cave-key ${locKey} (uncleared)`);
+        }
+      }
+    }
+  }
+
+  if (unclearedTiles.length === 0 && unclearedPreGenerated.length === 0 && unclearedSubCaves.length === 0) {
+    return "CLEARED";
+  }
+
+  return `Uncleared elements: [Tiles: ${unclearedTiles.join(', ')}] [PreGenerated: ${unclearedPreGenerated.join(', ')}] [SubCaves: ${unclearedSubCaves.join(', ')}]`;
+}
+
 // Mark raid locations as cleared if all their enemies are defeated, then trigger notifications
 export function checkRaidCleared(locId) {
   if (!locId) return;
   const mainLocationId = locId.split('_sub_cave_')[0];
+
   if (!mainLocationId.startsWith('raid_')) return;
 
   if (isLocationCleared(mainLocationId)) {
@@ -796,10 +849,10 @@ export function checkRaidCleared(locId) {
         notify('RAID_SITE_CLEARED', { id: mainLocationId, name: foundLoc.name });
       }
 
-      // Check if all raiding sites on the map are cleared
-      const totalRaids = Object.values(STATE.worldMap.locations).filter(l => l.type === 'raid');
+      // Check if all raiding sites on the map are cleared (filtering out dynamic wilderness raids)
+      const totalRaids = Object.values(STATE.worldMap.locations).filter(l => l.type === 'raid' && l.id.startsWith('raid_'));
       const allCleared = totalRaids.every(l => l.isCleared);
-      if (allCleared && !STATE.campaignWon) {
+      if (allCleared) {
         STATE.campaignWon = true;
         notify('SAGA_VICTORY_ACHIEVED');
       }
