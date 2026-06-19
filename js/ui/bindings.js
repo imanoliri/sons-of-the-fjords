@@ -267,18 +267,13 @@ export function initUIBindings() {
     }
     const godsStr = godsMilestone5.length > 0 ? godsMilestone5.join('_') : 'atheist';
 
-    // Composition of party
-    const compCounts = {};
-    for (const unit of STATE.band) {
-      compCounts[unit.type] = (compCounts[unit.type] || 0) + 1;
-    }
-    const compStr = Object.entries(compCounts).map(([type, count]) => `${count}${type}`).join('_');
-    const composition = compStr || 'crewless';
+    // Gold amount
+    const goldStr = `${STATE.resources.gold}_gold`;
 
     const worldName = STATE.worldMap && STATE.worldMap.name ? STATE.worldMap.name.toLowerCase().replace(/\s+/g, '_') : 'world';
 
-    // Filename: save__[world]__[timestamp]__[gods]__[composition].json
-    const filename = `save__${worldName}__${timestamp}__${godsStr}__${composition}.json`;
+    // Filename: save__[world]__[timestamp]__[gods]__[goldStr].json
+    const filename = `save__${worldName}__${timestamp}__${godsStr}__${goldStr}.json`;
 
     // Download state
     const stateStr = JSON.stringify(STATE, null, 2);
