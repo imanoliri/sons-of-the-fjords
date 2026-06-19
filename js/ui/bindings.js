@@ -591,6 +591,10 @@ export function initUIBindings() {
     location.reload();
   });
 
+  bindButton('btn-saga-victory-continue', () => {
+    hideOverlay(elModalSagaVictory);
+  });
+
   // Keyboard Arrow Movement
   window.addEventListener('keydown', (e) => {
     if (document.activeElement && (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT')) {
