@@ -345,6 +345,10 @@ export function initUIBindings() {
     input.click();
   });
 
+  bindButton('btn-menu-load-game', () => {
+    document.getElementById('btn-load-game')?.click();
+  });
+
   bindButton('btn-toggle-console', () => {
     elConsoleTextarea.value = JSON.stringify(STATE, null, 2);
     showOverlay(elConsoleModal);
@@ -773,13 +777,17 @@ export function initUIBindings() {
       return; // Block other navigation while modal is active
     }
 
-    // Check if player is on World Map screen
-    if (STATE.activeScreen === 'world') {
-      if (e.key === 'l' || e.key === 'L') {
+    // Check if player wants to load game on World Map or Menu screen
+    if (e.key === 'l' || e.key === 'L') {
+      if (STATE.activeScreen === 'world' || STATE.activeScreen === 'menu') {
         e.preventDefault();
         document.getElementById('btn-load-game')?.click();
         return;
       }
+    }
+
+    // Check if player is on World Map screen
+    if (STATE.activeScreen === 'world') {
       if (e.key === 's' || e.key === 'S') {
         e.preventDefault();
         document.getElementById('btn-save-game')?.click();
