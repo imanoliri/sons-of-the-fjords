@@ -724,19 +724,28 @@ export function useWarHorn() {
 
   // 2. Pause for 1 second, then begin the battle against all enemies in this level
   setTimeout(() => {
-    const combinedMonsters = [];
-    const uniqueEnemies = new Set();
+    const uniqueEnemies = new Map();
     
-    // Check placed tiles
-    for (const tile of Object.values(locState.placedTiles)) {
-      if (tile.entity && tile.entity.type === 'enemy_army' && !tile.entity.isDefeated) {
-        uniqueEnemies.add(tile.entity);
-      }
-    }
-    // Check pre-generated entities
-    for (const entity of Object.values(locState.preGeneratedEntities)) {
-      if (entity && entity.type === 'enemy_army' && !entity.isDefeated) {
-        uniqueEnemies.add(entity);
+    for (let y = 0; y < 10; y++) {
+      for (let x = 0; x < 10; x++) {
+        const coordKey = `${x},${y}`;
+        const preEnt = locState.preGeneratedEntities[coordKey];
+        const tile = locState.placedTiles[coordKey];
+        const entity = (tile && tile.entity) || preEnt;
+        
+        if (entity && entity.type === 'enemy_army') {
+          // Sync isDefeated status if duplicated
+          if (preEnt && tile && tile.entity) {
+            if (preEnt.isDefeated || tile.entity.isDefeated) {
+              preEnt.isDefeated = true;
+              tile.entity.isDefeated = true;
+            }
+          }
+          
+          if (!entity.isDefeated) {
+            uniqueEnemies.set(coordKey, entity);
+          }
+        }
       }
     }
 
@@ -746,7 +755,7 @@ export function useWarHorn() {
       return;
     }
 
-    const monsterGroups = Array.from(uniqueEnemies).map(enemy => {
+    const monsterGroups = Array.from(uniqueEnemies.values()).map(enemy => {
       const monstersArr = [...enemy.monsters];
       monstersArr.enemyRef = enemy;
       return monstersArr;
