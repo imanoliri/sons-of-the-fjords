@@ -1155,16 +1155,27 @@ function checkGroupDefeated(unit) {
       const locId = STATE.combat.locationId;
       const locState = STATE.locations[locId];
       if (locState) {
-        for (const tile of Object.values(locState.placedTiles)) {
+        let matchedCoordKey = null;
+        for (const [coordKey, tile] of Object.entries(locState.placedTiles)) {
           if (tile.entity === unit.enemyRef) {
-            tile.entity.isDefeated = true;
+            matchedCoordKey = coordKey;
             break;
           }
         }
-        for (const coordKey in locState.preGeneratedEntities) {
-          if (locState.preGeneratedEntities[coordKey] === unit.enemyRef) {
-            locState.preGeneratedEntities[coordKey].isDefeated = true;
-            break;
+        if (!matchedCoordKey) {
+          for (const [coordKey, entity] of Object.entries(locState.preGeneratedEntities)) {
+            if (entity === unit.enemyRef) {
+              matchedCoordKey = coordKey;
+              break;
+            }
+          }
+        }
+        if (matchedCoordKey) {
+          if (locState.placedTiles[matchedCoordKey] && locState.placedTiles[matchedCoordKey].entity) {
+            locState.placedTiles[matchedCoordKey].entity.isDefeated = true;
+          }
+          if (locState.preGeneratedEntities[matchedCoordKey]) {
+            locState.preGeneratedEntities[matchedCoordKey].isDefeated = true;
           }
         }
       }

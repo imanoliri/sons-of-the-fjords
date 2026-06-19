@@ -722,40 +722,50 @@ export function useWarHorn() {
   logLocation('Sounded the War Horn! The entire area is revealed, and defenders are summoned.');
   showToast('War Horn Sounded! 📯', '📯', true);
 
-  // 2. Pause for 1 second, then begin the battle against all enemies in this level
   setTimeout(() => {
-    const uniqueEnemies = new Map();
-    
-    for (let y = 0; y < 10; y++) {
-      for (let x = 0; x < 10; x++) {
-        const coordKey = `${x},${y}`;
-        const preEnt = locState.preGeneratedEntities[coordKey];
+    // 1. Synchronize defeat statuses first between placedTiles and preGeneratedEntities
+    for (const [coordKey, entity] of Object.entries(locState.preGeneratedEntities)) {
+      if (entity && entity.type === 'enemy_army') {
         const tile = locState.placedTiles[coordKey];
-        const entity = (tile && tile.entity) || preEnt;
-        
-        if (entity && entity.type === 'enemy_army') {
-          // Sync isDefeated status if duplicated
-          if (preEnt && tile && tile.entity) {
-            if (preEnt.isDefeated || tile.entity.isDefeated) {
-              preEnt.isDefeated = true;
-              tile.entity.isDefeated = true;
-            }
-          }
-          
-          if (!entity.isDefeated) {
-            uniqueEnemies.set(coordKey, entity);
+        if (tile && tile.entity) {
+          if (entity.isDefeated === true || tile.entity.isDefeated === true) {
+            entity.isDefeated = true;
+            tile.entity.isDefeated = true;
           }
         }
       }
     }
 
-    if (uniqueEnemies.size === 0) {
+    const uniqueEnemies = [];
+    const seenCoords = new Set();
+    
+    // 2. Gather from preGeneratedEntities (since it represents all generated spawns on this level)
+    for (const [coordKey, entity] of Object.entries(locState.preGeneratedEntities)) {
+      if (entity && entity.type === 'enemy_army' && entity.isDefeated !== true) {
+        seenCoords.add(coordKey);
+        uniqueEnemies.push(entity);
+      }
+    }
+
+    // 3. Fallback/Safety: Gather from placedTiles if any coordinates were somehow missed or dynamically added
+    for (const [coordKey, tile] of Object.entries(locState.placedTiles)) {
+      if (tile.entity && tile.entity.type === 'enemy_army' && tile.entity.isDefeated !== true) {
+        if (!seenCoords.has(coordKey)) {
+          seenCoords.add(coordKey);
+          uniqueEnemies.push(tile.entity);
+        }
+      }
+    }
+
+    console.log("War Horn gathered unique enemies:", uniqueEnemies.length, Array.from(seenCoords));
+
+    if (uniqueEnemies.length === 0) {
       logLocation('The horns echo, but no defenders remain to answer.');
       showToast('No defenders remain!', '📯');
       return;
     }
 
-    const monsterGroups = Array.from(uniqueEnemies.values()).map(enemy => {
+    const monsterGroups = uniqueEnemies.map(enemy => {
       const monstersArr = [...enemy.monsters];
       monstersArr.enemyRef = enemy;
       return monstersArr;

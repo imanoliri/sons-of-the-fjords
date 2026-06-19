@@ -330,7 +330,8 @@ export function initUIBindings() {
                     allCleared = false;
                   }
                 }
-                if (totalRaids.length > 0 && allCleared) {
+                if (totalRaids.length > 0 && allCleared && !STATE.campaignWon) {
+                  STATE.campaignWon = true;
                   import('../ui.js').then(({ notify: uiNotify }) => {
                     uiNotify('SAGA_VICTORY_ACHIEVED');
                   });

@@ -724,7 +724,7 @@ export function isLocationCleared(locationId) {
     const preEnt = locState.preGeneratedEntities[coordKey];
     const placedTile = locState.placedTiles[coordKey];
     if (preEnt && placedTile && placedTile.entity) {
-      if (preEnt.isDefeated || placedTile.entity.isDefeated) {
+      if (preEnt.isDefeated === true || placedTile.entity.isDefeated === true) {
         preEnt.isDefeated = true;
         placedTile.entity.isDefeated = true;
       }
@@ -783,18 +783,20 @@ export function checkRaidCleared(locId) {
       }
     }
 
-    if (foundLoc && !foundLoc.isCleared) {
-      foundLoc.isCleared = true;
-      if (STATE.locations[mainLocationId]) {
-        STATE.locations[mainLocationId].isCleared = true;
+    if (foundLoc) {
+      if (!foundLoc.isCleared) {
+        foundLoc.isCleared = true;
+        if (STATE.locations[mainLocationId]) {
+          STATE.locations[mainLocationId].isCleared = true;
+        }
+        notify('RAID_SITE_CLEARED', { id: mainLocationId, name: foundLoc.name });
       }
-
-      notify('RAID_SITE_CLEARED', { id: mainLocationId, name: foundLoc.name });
 
       // Check if all raiding sites on the map are cleared
       const totalRaids = Object.values(STATE.worldMap.locations).filter(l => l.type === 'raid');
       const allCleared = totalRaids.every(l => l.isCleared);
-      if (allCleared) {
+      if (allCleared && !STATE.campaignWon) {
+        STATE.campaignWon = true;
         notify('SAGA_VICTORY_ACHIEVED');
       }
     }

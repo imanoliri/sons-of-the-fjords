@@ -58,6 +58,9 @@ export const STATE = {
   // Deity Quest Milestones (5 steps per god)
   godQuests: makeGodQuests(),
 
+  // Campaign win state
+  campaignWon: false,
+
   // Order in which gods reached milestone 5
   milestone5Order: [],
 
