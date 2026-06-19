@@ -63,13 +63,12 @@
       <section class="screen screen-menu active" id="screen-menu">
         <div class="menu-box glass-panel animate-glow">
           <h1 class="logo-text">Sons of the Fjords</h1>
-          <div class="menu-actions" style="margin-bottom: 1.5rem; display: flex; justify-content: center;">
-            <button class="btn btn-primary" id="btn-menu-load-game">Load Game [L]</button>
-          </div>
-
           <!-- MAP SELECTION -->
           <div class="map-selection-section">
-            <h3 class="map-selection-heading">Choose Your Saga</h3>
+            <div class="map-selection-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <h3 class="map-selection-heading" style="margin: 0;">Choose Your Saga</h3>
+              <button class="btn btn-primary" id="btn-menu-load-game">Load Game [L]</button>
+            </div>
 
             <div class="map-cards-container" id="map-cards-container">
               <!-- Populated dynamically by ui.js -->
