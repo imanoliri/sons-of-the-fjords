@@ -204,6 +204,12 @@ export function handleStateNotification(event, data) {
         if (tile && tile.entity && tile.entity.type === 'enemy_army') {
           tile.entity.isDefeated = true;
         }
+        if (locState.preGeneratedEntities[coordKey]) {
+          const entity = locState.preGeneratedEntities[coordKey];
+          if (entity && entity.type === 'enemy_army') {
+            entity.isDefeated = true;
+          }
+        }
       }
       delete STATE.party.pendingLocalX;
       delete STATE.party.pendingLocalY;

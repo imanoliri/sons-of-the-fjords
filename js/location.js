@@ -718,6 +718,19 @@ export function isLocationCleared(locationId) {
   const locState = STATE.locations[locationId];
   if (!locState) return false;
 
+  // Synchronize isDefeated between preGeneratedEntities and placedTiles
+  // (in case JSON serialization duplicated the objects on save/load)
+  for (const coordKey in locState.preGeneratedEntities) {
+    const preEnt = locState.preGeneratedEntities[coordKey];
+    const placedTile = locState.placedTiles[coordKey];
+    if (preEnt && placedTile && placedTile.entity) {
+      if (preEnt.isDefeated || placedTile.entity.isDefeated) {
+        preEnt.isDefeated = true;
+        placedTile.entity.isDefeated = true;
+      }
+    }
+  }
+
   // Check placed tiles
   for (const tile of Object.values(locState.placedTiles)) {
     if (tile.entity && tile.entity.type === 'enemy_army' && !tile.entity.isDefeated) {
@@ -732,7 +745,17 @@ export function isLocationCleared(locationId) {
     }
   }
 
-  // Check sub-caves recursively
+  // Check sub-caves via cave entrances (even if not yet generated/visited)
+  for (const entity of Object.values(locState.preGeneratedEntities)) {
+    if (entity && entity.type === 'cave_entrance' && !entity.isExit) {
+      const subCaveId = entity.targetLocationId;
+      if (!STATE.locations[subCaveId] || !isLocationCleared(subCaveId)) {
+        return false;
+      }
+    }
+  }
+
+  // Check sub-caves recursively that might be in STATE.locations
   for (const locKey in STATE.locations) {
     if (locKey.startsWith(locationId + '_sub_cave_')) {
       if (!isLocationCleared(locKey)) {

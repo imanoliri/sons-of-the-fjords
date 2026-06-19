@@ -746,7 +746,11 @@ export function useWarHorn() {
       return;
     }
 
-    const monsterGroups = Array.from(uniqueEnemies).map(enemy => enemy.monsters);
+    const monsterGroups = Array.from(uniqueEnemies).map(enemy => {
+      const monstersArr = [...enemy.monsters];
+      monstersArr.enemyRef = enemy;
+      return monstersArr;
+    });
 
     // Start combat
     import('../state.js').then(({ setScreen }) => {

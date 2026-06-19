@@ -315,6 +315,28 @@ export function initUIBindings() {
             notify('STATE_UPDATED');
             showToast('Game loaded successfully!', '📂');
             logWorld('Game loaded from save file.', 'gain-message');
+
+            import('../location.js').then(({ isLocationCleared }) => {
+              if (STATE.worldMap && STATE.worldMap.locations) {
+                let allCleared = true;
+                const totalRaids = Object.values(STATE.worldMap.locations).filter(l => l.type === 'raid');
+                for (const l of totalRaids) {
+                  if (isLocationCleared(l.id)) {
+                    l.isCleared = true;
+                    if (STATE.locations[l.id]) {
+                      STATE.locations[l.id].isCleared = true;
+                    }
+                  } else {
+                    allCleared = false;
+                  }
+                }
+                if (totalRaids.length > 0 && allCleared) {
+                  import('../ui.js').then(({ notify: uiNotify }) => {
+                    uiNotify('SAGA_VICTORY_ACHIEVED');
+                  });
+                }
+              }
+            });
           } else {
             showToast('Invalid save file format.', '⚠️');
           }

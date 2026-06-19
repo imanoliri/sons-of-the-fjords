@@ -37,6 +37,7 @@ export function sortPoolByPoints() {
 // Initialize combat map grid & pool
 function spawnMonsterGroup(group, groupIndex) {
   const grid = STATE.combat.grid;
+  const enemyRef = group.enemyRef || null;
   const startLanes = Array.from({ length: CFG.gridRows }, (_, i) => i);
   shuffleArray(startLanes);
 
@@ -132,7 +133,8 @@ function spawnMonsterGroup(group, groupIndex) {
         isConfused: isConfused,
         confusedTicksLeft: isConfused ? (lokiM3?.confuseDurationTicks ?? 2) : 0,
         row: spawnRow,
-        col: spawnCol
+        col: spawnCol,
+        enemyRef: enemyRef
       };
       
       STATE.combat.waveMonsters.push(mUnit);
@@ -1143,13 +1145,46 @@ function findTargetInLane(unit, grid = STATE.combat.grid) {
   return null;
 }
 
+function checkGroupDefeated(unit) {
+  if (STATE.combat.isWarHornBattle && unit.enemyRef) {
+    const remainingEnemiesOfGroup = STATE.combat.waveMonsters.some(
+      m => m.enemyRef === unit.enemyRef && m.hp > 0 && m.alliance === 'enemy'
+    );
+    if (!remainingEnemiesOfGroup) {
+      unit.enemyRef.isDefeated = true;
+      const locId = STATE.combat.locationId;
+      const locState = STATE.locations[locId];
+      if (locState) {
+        for (const tile of Object.values(locState.placedTiles)) {
+          if (tile.entity === unit.enemyRef) {
+            tile.entity.isDefeated = true;
+            break;
+          }
+        }
+        for (const coordKey in locState.preGeneratedEntities) {
+          if (locState.preGeneratedEntities[coordKey] === unit.enemyRef) {
+            locState.preGeneratedEntities[coordKey].isDefeated = true;
+            break;
+          }
+        }
+      }
+      import('./location.js').then(({ checkRaidCleared }) => {
+        checkRaidCleared(locId);
+      });
+    }
+  }
+}
+
 function removeUnitFromRegistry(unit) {
   if (unit.alliance === 'player' && !unit.isCharmed && !unit.isUndead && !unit.isConfused) {
     const idx = STATE.band.findIndex(u => u.id === unit.id);
     if (idx !== -1) STATE.band.splice(idx, 1);
   } else {
     const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
-    if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
+    if (idx !== -1) {
+      STATE.combat.waveMonsters.splice(idx, 1);
+      checkGroupDefeated(unit);
+    }
   }
 }
 
@@ -1201,7 +1236,10 @@ function handleUnitReachEnd(unit) {
 
     if (!relocated) {
       const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
-      if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
+      if (idx !== -1) {
+        STATE.combat.waveMonsters.splice(idx, 1);
+        checkGroupDefeated(unit);
+      }
     }
   }
 }
@@ -1317,6 +1355,10 @@ export function endCombat(isVictory) {
         if (locState.placedTiles[coordKey]) {
           const tile = locState.placedTiles[coordKey];
           if (tile.entity && tile.entity.type === 'enemy_army') tile.entity.isDefeated = true;
+        }
+        if (locState.preGeneratedEntities[coordKey]) {
+          const entity = locState.preGeneratedEntities[coordKey];
+          if (entity && entity.type === 'enemy_army') entity.isDefeated = true;
         }
       }
     }
