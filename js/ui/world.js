@@ -180,8 +180,8 @@ export function renderWorldMap() {
         });
       }
 
-      // Allow entering town/raid if clicked on player's current coordinate (and not water)
-      if (x === STATE.party.worldX && y === STATE.party.worldY && tiles[y][x] !== 'water') {
+      // Allow entering town/raid if clicked on player's current coordinate (and not water, unless there is a location)
+      if (x === STATE.party.worldX && y === STATE.party.worldY && (tiles[y][x] !== 'water' || hasLocation)) {
         elCell.addEventListener('click', () => {
           tryEnterCurrentLocation();
         });
@@ -396,7 +396,7 @@ export function tryEnterCurrentLocation() {
   let locData = STATE.worldMap.locations[locKey];
   const terrain = STATE.worldMap.tiles[py][px];
 
-  if (terrain === 'water') {
+  if (terrain === 'water' && !locData) {
     logWorld('Cannot enter the deep sea.');
     return;
   }
