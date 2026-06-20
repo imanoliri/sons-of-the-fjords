@@ -111,6 +111,7 @@ export const MAPS = [
       "12,12": { id: "town_2", name: "Witch-Cottage Trading",    type: "town", terrain: "plains" },
       "2,6":   { id: "raid_1", name: "Drowned Barrow Mound",     type: "raid", terrain: "forest", locationType: "burial_mound", raidType: "burial_vault", dangerLevel: 2 },
       "10,4":  { id: "raid_2", name: "Lindwurm Feeding Pit",     type: "raid", terrain: "plains", locationType: "default",      raidType: "beast_lair",   dangerLevel: 3 },
+      "13,3":  { id: "raid_4", name: "Swamp Hag's Coven",        type: "raid", terrain: "forest", locationType: "forest",       raidType: "ruins",        dangerLevel: 3 },
       "5,13":  { id: "raid_3", name: "Sanctuary of the Bog-God", type: "raid", terrain: "forest", locationType: "forest",       raidType: "ruins",        dangerLevel: 4 }
     },
     monsterPoolOverrides: {
