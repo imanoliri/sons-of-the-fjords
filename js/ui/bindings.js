@@ -574,6 +574,14 @@ export function initUIBindings() {
       STATE.combat.paused = false;
       notify('COMBAT_UPDATE');
     }
+
+    // If all gods completed and we just closed a single-god champion popup
+    const allGodsCompleted = Object.values(STATE.godQuests).every(t => t.every(x => x === true));
+    if (allGodsCompleted && activeVictoryGod !== 'odin') {
+      setTimeout(() => {
+        notify('ASCENSION_TRIGGERED', activeVictoryGod);
+      }, 500);
+    }
   });
 
   bindButton('btn-raid-cleared-continue', () => {

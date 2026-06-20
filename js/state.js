@@ -192,10 +192,6 @@ export function adjustFavor(godName, amt) {
         STATE.milestone5Order.push(godName);
       }
       notify('GOD_QUESTS_COMPLETE', godName);
-      const allGodsCompleted = Object.values(STATE.godQuests).every(t => t.every(x => x === true));
-      if (allGodsCompleted) {
-        notify('ASCENSION_TRIGGERED', godName);
-      }
     }
   }
 

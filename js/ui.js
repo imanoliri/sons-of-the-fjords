@@ -318,6 +318,13 @@ export function handleStateNotification(event, data) {
         STATE.combat.paused = false;
         notify('COMBAT_UPDATE');
       }
+      
+      const allGodsCompleted = Object.values(STATE.godQuests).every(t => t.every(x => x === true));
+      if (allGodsCompleted) {
+        setTimeout(() => {
+          notify('ASCENSION_TRIGGERED', godName);
+        }, 500);
+      }
     });
 
     const btnContinue = document.getElementById('btn-ascend-continue');
@@ -333,11 +340,11 @@ export function handleStateNotification(event, data) {
     elModalAscension.dataset.god = 'odin';
     elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-odin`;
     elModalAscension.querySelector('.logo-text').innerText = 'A S C E N S I O N';
-    elModalAscensionText.innerHTML = `You have completed all milestones for <b>ALL 5 GODS</b>!<br><br>The gates of Valhalla are open. You have achieved final ascension!`;
+    elModalAscensionText.innerHTML = `You have achieved what no mortal dared dream: all five High Gods of Asgard look upon you with favor. The skalds shall sing of your deeds until the stars go cold.<br><br>A seat of eternal glory is reserved for you in the halls of Valhalla, but for now, your saga continues. Guide your warband with the blessing of the gods.`;
 
-    // Unhide final ascension button
-    document.getElementById('btn-ascend-victory').classList.remove('hidden');
-    document.getElementById('btn-ascend-continue').innerText = 'Stay in Midgard';
+    // Keep final ascension button hidden
+    document.getElementById('btn-ascend-victory').classList.add('hidden');
+    document.getElementById('btn-ascend-continue').innerText = 'Continue';
 
     // Remove any previously injected buff button
     const prevBuff = document.getElementById('btn-ascend-buff');
