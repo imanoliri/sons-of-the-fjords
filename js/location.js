@@ -39,6 +39,8 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
   const pool = CFG.terrainPools[worldTileTerrain] || CFG.terrainPools.plains;
   const { x: sx, y: sy } = CFG.startTile;
 
+  let bestGrid = null;
+  let bestReachable = new Set();
   let preGeneratedGrid = {};
   let reachableCoords = new Set();
   const maxAttempts = 10;
@@ -91,6 +93,19 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
     }
 
     // We accept the layout if there is a reasonably large reachable area (at least 35 tiles)
+    if (reachableCoords.size > bestReachable.size) {
+      bestReachable = reachableCoords;
+      bestGrid = Object.assign({}, preGeneratedGrid);
+    }
+    if (reachableCoords.size >= 35) {
+      break;
+    }
+  }
+
+  // Use the best grid found
+  if (bestGrid) {
+    preGeneratedGrid = bestGrid;
+    reachableCoords = bestReachable;
   }
 
   // 3.5. pocket-connecting patch: Locate unreachable pockets and connect them by swapping skin non-traversable tiles
