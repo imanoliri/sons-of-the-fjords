@@ -66,6 +66,7 @@ export function logLocation(msg, typeClass = 'system-message') {
 
 // Display a discrete Norse-themed toast notification
 export function showToast(msg, icon = '✨', isImportant = false) {
+  if (STATE.combat && STATE.combat.active) return;
   const containerId = isImportant ? 'toast-container-important' : 'toast-container';
   const container = document.getElementById(containerId);
   if (!container) return;
