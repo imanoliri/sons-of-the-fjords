@@ -828,6 +828,10 @@ export function initUIBindings() {
     }
     // Check if player is on Location map screen
     else if (STATE.activeScreen === 'location') {
+      if (STATE.lootGatheringInProgress) {
+        e.preventDefault();
+        return;
+      }
       if (e.key === 'w' || e.key === 'W') {
         const warhornBtn = document.getElementById('btn-use-warhorn-sidebar');
         if (warhornBtn && !warhornBtn.classList.contains('hidden')) {

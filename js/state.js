@@ -74,6 +74,7 @@ export const STATE = {
 
   // Current global game day
   day: 1,
+  lootGatheringInProgress: false,
 
   // Active Champion Buff
   activeBlessing: null,

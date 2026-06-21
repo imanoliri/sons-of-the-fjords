@@ -357,6 +357,7 @@ export function renderLocationMap() {
 
 // Enter Cave Sub-Dungeon Portal
 export function triggerEnterCavePortal(coordKey, entity) {
+  if (STATE.lootGatheringInProgress) return;
   if (entity.isExit) {
     // Going back to parent location
     STATE.party.currentLocationId = entity.targetLocationId;
@@ -595,6 +596,7 @@ function findLocalPath(startX, startY, targetX, targetY, locState) {
 }
 
 export function attemptLocalPathMove(targetX, targetY) {
+  if (STATE.lootGatheringInProgress) return;
   const locId = STATE.party.currentLocationId;
   const locState = STATE.locations[locId];
   if (!locState) return;
@@ -629,6 +631,7 @@ export function attemptLocalPathMove(targetX, targetY) {
 }
 
 export function attemptLocalMove(targetX, targetY) {
+  if (STATE.lootGatheringInProgress) return;
   const locId = STATE.party.currentLocationId;
   const locState = STATE.locations[locId];
   if (!locState) return;
@@ -703,6 +706,7 @@ export function attemptLocalMove(targetX, targetY) {
 }
 
 export function useWarHorn() {
+  if (STATE.lootGatheringInProgress) return;
   const locId = STATE.party.currentLocationId;
   const locState = STATE.locations[locId];
   if (!locState) return;
@@ -863,12 +867,17 @@ export function gatherAndAnimateLoot() {
 
   if (lootTasks.length === 0) return;
 
+  STATE.lootGatheringInProgress = true;
+
   notify('STATE_UPDATED');
   renderLocationMap(); // Re-render first to remove static badges, so we only see flying ones
 
   const mapRect = elLocMap.getBoundingClientRect();
   const playerCell = elLocMap.querySelector(`.location-tile[data-x="${px}"][data-y="${py}"]`);
-  if (!playerCell) return;
+  if (!playerCell) {
+    STATE.lootGatheringInProgress = false;
+    return;
+  }
   const playerRect = playerCell.getBoundingClientRect();
   const targetX = playerRect.left - mapRect.left + playerRect.width / 2;
   const targetY = playerRect.top - mapRect.top + playerRect.height / 2;
@@ -906,6 +915,7 @@ export function gatherAndAnimateLoot() {
   });
 
   setTimeout(() => {
+    STATE.lootGatheringInProgress = false;
     renderLocationMap();
     showToast('All resources gathered! 🎒', '🎒');
   }, 1000);
