@@ -28,7 +28,7 @@ export const COMBAT_CONFIG = {
   // Monster stat table
   monsters: {
     // Standard Foes
-    'Giant Brood-Spider':  { hp: 20,  dmg: 3,  speed: 2, range: 2, emoji: '🕷️' },
+    'Brood Spider':  { hp: 20,  dmg: 3,  speed: 2, range: 2, emoji: '🕷️' },
     'Fenrir Pack Wolf':    { hp: 25,  dmg: 4,  speed: 3, range: 1, emoji: '🐺' },
     'Draugr Warrior':      { hp: 35,  dmg: 5,  speed: 1, range: 1, emoji: '🧟' },
     'Cave Troll':          { hp: 70,  dmg: 8,  speed: 1, range: 1, emoji: '🧌' },

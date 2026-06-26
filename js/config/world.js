@@ -73,9 +73,9 @@ export const MAPS = [
       "8,2":   { id: "raid_6", name: "Coastal Wolf Den",        type: "raid", terrain: "forest",   locationType: "forest",       raidType: "wolf_den",      dangerLevel: 2 }
     },
     monsterPoolOverrides: {
-      // Brood-spiders have no place on this military coastline
+      // Brood Spiders have no place on this military coastline
       global: {
-        remove: ['Giant Brood-Spider']
+        remove: ['Brood Spider']
       },
       // Burial grounds stay with their undead — keep out living combatants
       byBiomeType: {
@@ -294,7 +294,7 @@ export const MAPS = [
     },
     monsterPoolOverrides: {
       global: {
-        remove: ['Giant Brood-Spider', 'Fenrir Pack Wolf']
+        remove: ['Brood Spider', 'Fenrir Pack Wolf']
       },
       byBiomeType: {
         snow: { add: ['Ymir Frost-Shaman', 'Ice Wolf'] },

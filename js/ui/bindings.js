@@ -1295,13 +1295,13 @@ function initTooltipEvents() {
     if (locationType !== 'town' && (locationType === 'raid' || (terrain !== 'water' && terrain !== 'deep_water' && terrain !== 'river'))) {
       const biome = locationType === 'raid' ? (locationBiome || 'default') : terrain;
       const biomePools = {
-        forest: ['Fenrir Pack Wolf', 'Giant Brood-Spider'],
+        forest: ['Fenrir Pack Wolf', 'Brood Spider'],
         mountain: ['Cave Troll', 'Fenrir Pack Wolf'],
         cave: ['Cave Troll', 'Fenrir Pack Wolf'],
         burial_mound: ['Draugr Warrior'],
         snow: ['Frost Giant (Jotunn)', 'Fenrir Pack Wolf'],
-        water: ['Giant Brood-Spider'],
-        default: ['Giant Brood-Spider', 'Fenrir Pack Wolf']
+        water: ['Brood Spider'],
+        default: ['Brood Spider', 'Fenrir Pack Wolf']
       };
 
       let pool = [...(biomePools[biome] || biomePools.default)];

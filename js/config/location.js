@@ -86,7 +86,7 @@ export const LOCATION_CONFIG = {
         berry_bush: 3     // wild foraging
       },
       // Monster pool for enemy_army on this tile type
-      monsterPool: ['Fenrir Pack Wolf', 'Giant Brood-Spider']
+      monsterPool: ['Fenrir Pack Wolf', 'Brood Spider']
     },
     forest: {
       entities: {
@@ -98,7 +98,7 @@ export const LOCATION_CONFIG = {
         burial_mound: 1,
         berry_bush: 5     // forest berries
       },
-      monsterPool: ['Fenrir Pack Wolf', 'Giant Brood-Spider']
+      monsterPool: ['Fenrir Pack Wolf', 'Brood Spider']
     },
     rock: {
       entities: {
@@ -136,7 +136,7 @@ export const LOCATION_CONFIG = {
         enemy_army: 8,
         fishing_spot: 5   // minor wild food
       },
-      monsterPool: ['Giant Brood-Spider']
+      monsterPool: ['Brood Spider']
     }
   },
 
@@ -215,11 +215,11 @@ export const LOCATION_CONFIG = {
   // Specialized monster pools per locationType (used as fallback if a tile's
   // own monsterPool is not defined)
   monsterPoolsByBiome: {
-    forest: ['Fenrir Pack Wolf', 'Giant Brood-Spider'],
+    forest: ['Fenrir Pack Wolf', 'Brood Spider'],
     mountain: ['Cave Troll', 'Fenrir Pack Wolf'],
     cave: ['Cave Troll', 'Fenrir Pack Wolf'],
     burial_mound: ['Draugr Warrior'],
-    default: ['Giant Brood-Spider', 'Fenrir Pack Wolf']
+    default: ['Brood Spider', 'Fenrir Pack Wolf']
   },
 
   // Resource nodes harvest yield settings
@@ -260,7 +260,7 @@ export const LOCATION_CONFIG = {
   enemyArmy: {
     countMin: 1,
     countMax: 2,
-    monsterPool: ['Giant Brood-Spider', 'Fenrir Pack Wolf', 'Draugr Warrior', 'Cave Troll']
+    monsterPool: ['Brood Spider', 'Fenrir Pack Wolf', 'Draugr Warrior', 'Cave Troll']
   },
 
 

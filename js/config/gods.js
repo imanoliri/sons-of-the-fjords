@@ -19,18 +19,63 @@ export const GODS_CONFIG = {
     loki: ['thor', 'freya']
   },
 
-  // Alternative favor targets
-  alternativeFavor: {
-    freya: { sheepTarget: 2, woodTarget: 5 }
+  // Unified favor sources configuration
+  favorSources: {
+    odin: {
+      relic: "Shard of Gungnir",
+      monsters: [
+        {
+          stateKey: 'odinWolvesKilled',
+          targetCount: 2,
+          matches: (name) => {
+            const lower = name.toLowerCase();
+            return lower.includes('wolf');
+          },
+          message: 'slaying 2 wolves'
+        },
+        {
+          stateKey: 'odinGiantsKilled',
+          targetCount: 1,
+          matches: (name) => {
+            const lower = name.toLowerCase();
+            // Match true giants/jotunns, but NOT spiders/spinners or other insects
+            return (lower.includes('giant') || lower.includes('jotunn')) && !lower.includes('spider') && !lower.includes('spinner');
+          },
+          message: 'slaying a giant'
+        }
+      ]
+    },
+    thor: {
+      relic: "Mjolnir's Core",
+      monsters: [
+        {
+          stateKey: 'thorDraugrsKilled',
+          targetCount: 2,
+          matches: (name) => name.toLowerCase().includes('draugr'),
+          message: 'slaying 2 draugrs'
+        },
+        {
+          stateKey: 'thorLindwurmsKilled',
+          targetCount: 1,
+          matches: (name) => name.toLowerCase().includes('lindwurm'),
+          message: 'slaying a Lindwurm'
+        }
+      ]
+    },
+    freya: {
+      relic: "Freya's Amber Tear",
+      trade: {
+        sheep: { targetCount: 2, message: 'selling 2 sheep' },
+        wood: { targetCount: 5, message: 'selling 5 wood' }
+      }
+    },
+    hel: {
+      relic: "Hel's Urn of Ash"
+    },
+    loki: {
+      relic: "Loki's Trickster Coin"
+    }
   },
-
-  // Rules for gaining favor from monster kills
-  monsterKillFavorRules: [
-    { god: 'odin', stateKey: 'odinWolvesKilled', targetCount: 2, patterns: ['wolf'], message: 'slaying 2 wolves' },
-    { god: 'odin', stateKey: 'odinGiantsKilled', targetCount: 1, patterns: ['giant', 'jotunn'], message: 'slaying a giant' },
-    { god: 'thor', stateKey: 'thorDraugrsKilled', targetCount: 2, patterns: ['draugr'], message: 'slaying 2 draugrs' },
-    { god: 'thor', stateKey: 'thorLindwurmsKilled', targetCount: 1, patterns: ['lindwurm'], message: 'slaying a Lindwurm' }
-  ],
 
   // Relics & magic objects
   magicObjects: {

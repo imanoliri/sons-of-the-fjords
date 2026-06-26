@@ -211,19 +211,20 @@ export function adjustFavor(godName, amt) {
 
 // Record monster kills to award alternative favor
 export function recordMonsterKill(monsterType) {
-  if (!GC.monsterKillFavorRules) return;
-  const nameLower = monsterType.toLowerCase();
+  if (!GC.favorSources) return;
 
-  for (const rule of GC.monsterKillFavorRules) {
-    const matched = rule.patterns.some(p => nameLower.includes(p));
-    if (matched) {
-      STATE[rule.stateKey] = (STATE[rule.stateKey] || 0) + 1;
-      if (STATE[rule.stateKey] >= rule.targetCount) {
-        STATE[rule.stateKey] = 0;
-        const isMaxed = STATE.godQuests[rule.god] && STATE.godQuests[rule.god].every(x => x === true);
-        adjustFavor(rule.god, 1);
-        if (!isMaxed) {
-          notify('FAVOR_GAIN_ACTION', { god: rule.god, reason: rule.message });
+  for (const [god, source] of Object.entries(GC.favorSources)) {
+    if (!source.monsters) continue;
+    for (const rule of source.monsters) {
+      if (rule.matches(monsterType)) {
+        STATE[rule.stateKey] = (STATE[rule.stateKey] || 0) + 1;
+        if (STATE[rule.stateKey] >= rule.targetCount) {
+          STATE[rule.stateKey] = 0;
+          const isMaxed = STATE.godQuests[god] && STATE.godQuests[god].every(x => x === true);
+          adjustFavor(god, 1);
+          if (!isMaxed) {
+            notify('FAVOR_GAIN_ACTION', { god: god, reason: rule.message });
+          }
         }
       }
     }
@@ -232,18 +233,18 @@ export function recordMonsterKill(monsterType) {
 
 // Sell sheep and update Freya favor
 export function sellSheep() {
-  const targets = GC.alternativeFavor.freya;
+  const sheepRule = GC.favorSources.freya.trade.sheep;
   if (STATE.resources.sheep >= 1) {
     adjustResource('sheep', -1);
     adjustResource('gold', 4);
 
     STATE.freyaSheepSold = (STATE.freyaSheepSold || 0) + 1;
-    if (STATE.freyaSheepSold >= targets.sheepTarget) {
+    if (STATE.freyaSheepSold >= sheepRule.targetCount) {
       STATE.freyaSheepSold = 0;
       const isMaxed = STATE.godQuests['freya'] && STATE.godQuests['freya'].every(x => x === true);
       adjustFavor('freya', 1);
       if (!isMaxed) {
-        notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.sheepTarget} sheep` });
+        notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: sheepRule.message });
       }
     }
     return true;
@@ -253,19 +254,19 @@ export function sellSheep() {
 
 // Sell wood and update Freya favor
 export function sellWood() {
-  const targets = GC.alternativeFavor.freya;
-  if (STATE.resources.wood >= targets.woodTarget) {
-    adjustResource('wood', -targets.woodTarget);
+  const woodRule = GC.favorSources.freya.trade.wood;
+  if (STATE.resources.wood >= woodRule.targetCount) {
+    adjustResource('wood', -woodRule.targetCount);
     adjustResource('gold', 4);
 
-    STATE.freyaWoodSold = (STATE.freyaWoodSold || 0) + targets.woodTarget;
-    if (STATE.freyaWoodSold >= targets.woodTarget) {
-      const favorGained = Math.floor(STATE.freyaWoodSold / targets.woodTarget);
-      STATE.freyaWoodSold = STATE.freyaWoodSold % targets.woodTarget;
+    STATE.freyaWoodSold = (STATE.freyaWoodSold || 0) + woodRule.targetCount;
+    if (STATE.freyaWoodSold >= woodRule.targetCount) {
+      const favorGained = Math.floor(STATE.freyaWoodSold / woodRule.targetCount);
+      STATE.freyaWoodSold = STATE.freyaWoodSold % woodRule.targetCount;
       const isMaxed = STATE.godQuests['freya'] && STATE.godQuests['freya'].every(x => x === true);
       adjustFavor('freya', favorGained);
       if (!isMaxed) {
-        notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.woodTarget} wood` });
+        notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: woodRule.message });
       }
     }
     return true;
@@ -364,14 +365,14 @@ export function sellSheepDynamic(gain, amount = 1) {
   if (STATE.resources.sheep >= amount) {
     adjustResource('sheep', -amount);
     adjustResource('gold', gain);
-    const targets = GC.alternativeFavor.freya;
+    const sheepRule = GC.favorSources.freya.trade.sheep;
     STATE.freyaSheepSold = (STATE.freyaSheepSold || 0) + amount;
-    if (STATE.freyaSheepSold >= targets.sheepTarget) {
+    if (STATE.freyaSheepSold >= sheepRule.targetCount) {
       STATE.freyaSheepSold = 0;
       const isMaxed = STATE.godQuests['freya'] && STATE.godQuests['freya'].every(x => x === true);
       adjustFavor('freya', 1);
       if (!isMaxed) {
-        notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.sheepTarget} sheep` });
+        notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: sheepRule.message });
       }
     }
     return { success: true, message: `Sold ${amount} livestock sheep for ${gain} gold.` };
@@ -383,15 +384,15 @@ export function sellWoodDynamic(gain, amount = 10) {
   if (STATE.resources.wood >= amount) {
     adjustResource('wood', -amount);
     adjustResource('gold', gain);
-    const targets = GC.alternativeFavor.freya;
+    const woodRule = GC.favorSources.freya.trade.wood;
     STATE.freyaWoodSold = (STATE.freyaWoodSold || 0) + amount;
-    if (STATE.freyaWoodSold >= targets.woodTarget) {
-      const favorGained = Math.floor(STATE.freyaWoodSold / targets.woodTarget);
-      STATE.freyaWoodSold = STATE.freyaWoodSold % targets.woodTarget;
+    if (STATE.freyaWoodSold >= woodRule.targetCount) {
+      const favorGained = Math.floor(STATE.freyaWoodSold / woodRule.targetCount);
+      STATE.freyaWoodSold = STATE.freyaWoodSold % woodRule.targetCount;
       const isMaxed = STATE.godQuests['freya'] && STATE.godQuests['freya'].every(x => x === true);
       adjustFavor('freya', favorGained);
       if (!isMaxed) {
-        notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: `selling ${targets.woodTarget} wood` });
+        notify('FAVOR_GAIN_ACTION', { god: 'freya', reason: woodRule.message });
       }
     }
     return { success: true, message: `Sold ${amount} wood planks for ${gain} gold.` };
