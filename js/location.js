@@ -2,7 +2,7 @@
    LOCATION MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE } from './state.js';
+import { STATE, notify } from './state.js';
 import { LOCATION_CONFIG as CFG } from './config/location.js';
 import { GODS_CONFIG } from './config/gods.js';
 import { getActiveMap as getActiveWorldMap } from './world.js';
@@ -39,6 +39,8 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
   const pool = CFG.terrainPools[worldTileTerrain] || CFG.terrainPools.plains;
   const { x: sx, y: sy } = CFG.startTile;
 
+  let bestGrid = null;
+  let bestReachable = new Set();
   let preGeneratedGrid = {};
   let reachableCoords = new Set();
   const maxAttempts = 10;
@@ -91,6 +93,19 @@ export function generateLocationMap(locationId, worldTileTerrain, parentLocation
     }
 
     // We accept the layout if there is a reasonably large reachable area (at least 35 tiles)
+    if (reachableCoords.size > bestReachable.size) {
+      bestReachable = reachableCoords;
+      bestGrid = Object.assign({}, preGeneratedGrid);
+    }
+    if (reachableCoords.size >= 35) {
+      break;
+    }
+  }
+
+  // Use the best grid found
+  if (bestGrid) {
+    preGeneratedGrid = bestGrid;
+    reachableCoords = bestReachable;
   }
 
   // 3.5. pocket-connecting patch: Locate unreachable pockets and connect them by swapping skin non-traversable tiles
@@ -712,3 +727,151 @@ function calculateDifficulty(locationId, dangerLevel) {
   const maxCap = ds.maxTimeFactorCap !== undefined ? ds.maxTimeFactorCap : 2.5;
   return baseMulti + (subCaveDepth * ds.caveDepthFactor) + Math.min(maxCap, dayValue * ds.timeFactor);
 }
+
+// Check if a specific location (and all its generated sub-caves) is cleared of all enemy armies
+export function isLocationCleared(locationId) {
+  const locState = STATE.locations[locationId];
+  if (!locState) return false;
+
+  // Synchronize isDefeated between preGeneratedEntities and placedTiles
+  // (in case JSON serialization duplicated the objects on save/load)
+  for (const coordKey in locState.preGeneratedEntities) {
+    const preEnt = locState.preGeneratedEntities[coordKey];
+    const placedTile = locState.placedTiles[coordKey];
+    if (preEnt && placedTile && placedTile.entity) {
+      if (preEnt.isDefeated === true || placedTile.entity.isDefeated === true) {
+        preEnt.isDefeated = true;
+        placedTile.entity.isDefeated = true;
+      }
+    }
+  }
+
+  // Check placed tiles
+  for (const tile of Object.values(locState.placedTiles)) {
+    if (tile.entity && tile.entity.type === 'enemy_army' && !tile.entity.isDefeated) {
+      return false;
+    }
+  }
+
+  // Check pre-generated entities
+  for (const entity of Object.values(locState.preGeneratedEntities)) {
+    if (entity && entity.type === 'enemy_army' && !entity.isDefeated) {
+      return false;
+    }
+  }
+
+  // Check sub-caves via cave entrances (even if not yet generated/visited)
+  for (const entity of Object.values(locState.preGeneratedEntities)) {
+    if (entity && entity.type === 'cave_entrance' && !entity.isExit) {
+      const subCaveId = entity.targetLocationId;
+      if (!STATE.locations[subCaveId] || !isLocationCleared(subCaveId)) {
+        return false;
+      }
+    }
+  }
+
+  // Check sub-caves recursively that might be in STATE.locations
+  const targetDepth = (locationId.match(/_sub_cave_/g) || []).length + 1;
+  for (const locKey in STATE.locations) {
+    if (locKey.startsWith(locationId + '_sub_cave_')) {
+      const locDepth = (locKey.match(/_sub_cave_/g) || []).length;
+      if (locDepth === targetDepth) {
+        if (!isLocationCleared(locKey)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+// Detailed status check of a raid location for debugging
+export function explainRaidStatus(locationId) {
+  const locState = STATE.locations[locationId];
+  if (!locState) {
+    return "Not visited/no state initialized yet.";
+  }
+
+  const unclearedTiles = [];
+  for (const tile of Object.values(locState.placedTiles)) {
+    if (tile.entity && tile.entity.type === 'enemy_army' && !tile.entity.isDefeated) {
+      unclearedTiles.push(`placedTile at ${tile.entity.coordKey || 'unknown'} (${tile.entity.name || 'unnamed'})`);
+    }
+  }
+
+  const unclearedPreGenerated = [];
+  for (const entity of Object.values(locState.preGeneratedEntities)) {
+    if (entity && entity.type === 'enemy_army' && !entity.isDefeated) {
+      unclearedPreGenerated.push(`preGeneratedEntity at ${entity.coordKey || 'unknown'} (${entity.name || 'unnamed'})`);
+    }
+  }
+
+  const unclearedSubCaves = [];
+  for (const entity of Object.values(locState.preGeneratedEntities)) {
+    if (entity && entity.type === 'cave_entrance' && !entity.isExit) {
+      const subCaveId = entity.targetLocationId;
+      if (!STATE.locations[subCaveId]) {
+        unclearedSubCaves.push(`sub-cave ${subCaveId} (unvisited)`);
+      } else if (!isLocationCleared(subCaveId)) {
+        unclearedSubCaves.push(`sub-cave ${subCaveId} (visited but uncleared: ${explainRaidStatus(subCaveId)})`);
+      }
+    }
+  }
+
+  const targetDepth = (locationId.match(/_sub_cave_/g) || []).length + 1;
+  for (const locKey in STATE.locations) {
+    if (locKey.startsWith(locationId + '_sub_cave_')) {
+      const locDepth = (locKey.match(/_sub_cave_/g) || []).length;
+      if (locDepth === targetDepth) {
+        if (!isLocationCleared(locKey)) {
+          unclearedSubCaves.push(`sub-cave-key ${locKey} (uncleared)`);
+        }
+      }
+    }
+  }
+
+  if (unclearedTiles.length === 0 && unclearedPreGenerated.length === 0 && unclearedSubCaves.length === 0) {
+    return "CLEARED";
+  }
+
+  return `Uncleared elements: [Tiles: ${unclearedTiles.join(', ')}] [PreGenerated: ${unclearedPreGenerated.join(', ')}] [SubCaves: ${unclearedSubCaves.join(', ')}]`;
+}
+
+// Mark raid locations as cleared if all their enemies are defeated, then trigger notifications
+export function checkRaidCleared(locId) {
+  if (!locId) return;
+  const mainLocationId = locId.split('_sub_cave_')[0];
+
+  if (!mainLocationId.startsWith('raid_')) return;
+
+  if (isLocationCleared(mainLocationId)) {
+    // Find the world location object
+    let foundLoc = null;
+    for (const loc of Object.values(STATE.worldMap.locations)) {
+      if (loc.id === mainLocationId) {
+        foundLoc = loc;
+        break;
+      }
+    }
+
+    if (foundLoc) {
+      if (!foundLoc.isCleared) {
+        foundLoc.isCleared = true;
+        if (STATE.locations[mainLocationId]) {
+          STATE.locations[mainLocationId].isCleared = true;
+        }
+        notify('RAID_SITE_CLEARED', { id: mainLocationId, name: foundLoc.name });
+      }
+
+      // Check if all raiding sites on the map are cleared (filtering out dynamic wilderness raids)
+      const totalRaids = Object.values(STATE.worldMap.locations).filter(l => l.type === 'raid' && l.id.startsWith('raid_'));
+      const allCleared = totalRaids.every(l => l.isCleared);
+      if (allCleared) {
+        STATE.campaignWon = true;
+        notify('SAGA_VICTORY_ACHIEVED');
+      }
+    }
+  }
+}
+

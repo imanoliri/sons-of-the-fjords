@@ -51,8 +51,8 @@
       </div>
       <button class="btn btn-menu" id="btn-toggle-party" style="margin-right: 0.5rem;">Band [B]</button>
       <button class="btn btn-menu" id="btn-toggle-quests" style="margin-right: 0.5rem;">Quests [Q]</button>
-      <button class="btn btn-menu" id="btn-save-game" style="margin-right: 0.5rem;">Save Game</button>
-      <button class="btn btn-menu" id="btn-load-game" style="margin-right: 0.5rem;">Load Game</button>
+      <button class="btn btn-menu" id="btn-save-game" style="margin-right: 0.5rem;">Save Game [S]</button>
+      <button class="btn btn-menu" id="btn-load-game" style="margin-right: 0.5rem;">Load Game [L]</button>
       <button class="btn btn-menu btn-discrete" id="btn-toggle-console" title="Dev Console">⚙️</button>
     </header>
 
@@ -63,10 +63,12 @@
       <section class="screen screen-menu active" id="screen-menu">
         <div class="menu-box glass-panel animate-glow">
           <h1 class="logo-text">Sons of the Fjords</h1>
-
           <!-- MAP SELECTION -->
           <div class="map-selection-section">
-            <h3 class="map-selection-heading">Choose Your Saga</h3>
+            <div class="map-selection-header" style="position: relative; text-align: center; margin-bottom: 1rem;">
+              <h3 class="map-selection-heading" style="margin: 0; display: inline-block;">Choose Your Saga</h3>
+              <button class="btn btn-primary" id="btn-menu-load-game" style="position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%);">Load Game [L]</button>
+            </div>
 
             <div class="map-cards-container" id="map-cards-container">
               <!-- Populated dynamically by ui.js -->
@@ -80,17 +82,22 @@
 
 
           <div class="instructions-panel">
-            <h3>How to Play</h3>
+            <h3>How to Play & Controls</h3>
             <ul>
-              <li><strong>World Map</strong>: Sail your drakkar across sea tiles (safe and fast) or walk on land
-                (slow, consumes more food, triggers monster attacks).</li>
-              <li><strong>Starvation</strong>: If food hits 0, each step on the World Map kills one random band member!</li>
-              <li><strong>Raid Sites (10x10)</strong>: Pre-generated layout with Fog of War. Defeat monsters, open chests,
-                check burial mounds, or visit dolmen shrines to obtain <strong>Magic Objects</strong>.</li>
-              <li><strong>Lane Combat (10x8)</strong>: Automated lane battle. Deploy soldiers into lanes. Soldiers reaching
-                the end give <strong>+1 Gold</strong> and return to your pool. Units are lost permanently on death.</li>
-              <li><strong>The 5 Gods</strong>: Trade Magic Objects to advance god favor tracks. Reaching 5/5 unlocks
-                permanent favor and ultimate buffs.</li>
+              <li><strong>Objective</strong>: Clear all 5 static campaign Raid Sites marked on the map to complete your Saga!</li>
+              <li><strong>World Map Navigation</strong>: Move using <strong>Arrow Keys / WASD</strong> or click adjacent tiles. Sail on sea tiles (fast, safe) or walk on land (slow, consumes more food).</li>
+              <li><strong>Starvation Warning</strong>: If food reaches 0, every step taken on the World Map kills a random member of your band! Buy food at Towns.</li>
+              <li><strong>Raid Sites (Local Maps)</strong>: Explore the Fog of War to defeat monsters, raid burial mounds, and gather <strong>Magic Objects (Relics)</strong>.</li>
+              <li><strong>Lane Combat</strong>: Deploy your warriors. Warriors reaching the right side return to your band and yield <strong>+1 Gold</strong>. Warrior deaths are permanent!</li>
+              <li><strong>Appease the Gods</strong>: Sacrifice Relics at Towns to raise God Favor tracks. Reaching 5/5 unlocks ultimate buffs, but angering them triggers dangerous curses.</li>
+              <li><strong>Keyboard Shortcuts</strong>:
+                <br>• <strong>S</strong> / <strong>L</strong>: Save / Load game (on the World Map).
+                <br>• <strong>W</strong>: Blow the War Horn to pull enemies into combat from a distance (on Local Maps).
+                <br>• <strong>B</strong>: Toggle Viking Band Cargo Panel.
+                <br>• <strong>Q</strong>: Toggle God Favor / Quests screen.
+                <br>• <strong>1 - 9</strong>: Select modal options.
+                <br>• <strong>Escape</strong>: Cancel, close panels, or leave locations.
+              </li>
             </ul>
           </div>
         </div>
@@ -238,6 +245,7 @@
                 treasures, burial mounds, dolmens, and monster nests.</p>
             </div>
             <div class="sidebar-controls">
+              <button class="btn btn-primary hidden" id="btn-use-warhorn-sidebar" style="margin-bottom: 0.5rem; width: 100%;">Sound War Horn [W] 📯</button>
               <button class="btn btn-danger" id="btn-leave-location">Flee to World Map</button>
             </div>
           </div>
@@ -273,10 +281,41 @@
               </div>
             </div>
 
-            <!-- 10x8 COMBAT ARENA -->
-            <div style="position: relative; width: max-content; margin: 0 auto;">
-              <div class="combat-grid" id="combat-grid"></div>
-              <div id="combat-effects-overlay" style="position: absolute; inset: 0; pointer-events: none; z-index: 99; overflow: visible;"></div>
+            <!-- 10x8 COMBAT ARENA AND ORDERS PALETTE -->
+            <div style="display: flex; gap: 1rem; align-items: flex-start; justify-content: center; width: 100%; margin: 0 auto;">
+              <div style="position: relative; width: max-content;">
+                <div class="combat-grid" id="combat-grid"></div>
+                <div id="combat-effects-overlay" style="position: absolute; inset: 0; pointer-events: none; z-index: 99; overflow: visible;"></div>
+              </div>
+              
+              <!-- DRAG-AND-DROP SOLDIER PLANNING PLAN -->
+              <div class="orders-panel">
+                <div id="plan-buttons-container" style="display: flex; flex-direction: column; width: 100%; gap: 0.25rem;">
+                  <button id="btn-clear-plans" class="btn btn-sm btn-danger" style="width: 100%; font-size: 0.7rem; padding: 0.2rem 0.4rem;"
+                          title="Clear Plan: Delete all planned orders/plans on the map.">
+                    Clear
+                  </button>
+                  <button id="btn-save-plans" class="btn btn-sm btn-success" style="width: 100%; font-size: 0.75rem; padding: 0.2rem 0.4rem;"
+                          title="Save Plan: Download active battle plan as a JSON file.">
+                    Save
+                  </button>
+                  <button id="btn-load-plans" class="btn btn-sm btn-info" style="width: 100%; font-size: 0.75rem; padding: 0.2rem 0.4rem;"
+                          title="Load Plan: Upload and apply a JSON battle plan.">
+                    Load
+                  </button>
+                  <button id="btn-plan-title" class="btn btn-sm btn-primary" style="width: 100%; font-size: 0.8rem; padding: 0.25rem 0.5rem;"
+                          title="Plan [N]: Drag emojis to any column to plan lane defense. Right-click cell to clear.">
+                    Plan
+                  </button>
+                  <button id="btn-move-plans" class="btn btn-sm btn-primary" style="width: 100%; font-size: 0.8rem; padding: 0.25rem 0.5rem;"
+                          title="Move Mode [M]: Select and drag planned positions (defined in this tick).">
+                    Move
+                  </button>
+                </div>
+                <div id="orders-unit-list" style="display: flex; flex-direction: column; gap: 0.4rem; width: 100%; align-items: center; margin-top: 0.4rem;">
+                  <!-- Draggable soldier types will be populated here -->
+                </div>
+              </div>
             </div>
 
             <!-- DEPLOYMENT HAND -->
@@ -330,6 +369,34 @@
         </div>
       </div>
     </div>
+
+    <!-- OVERLAY MODAL: RAID SITE CLEARED -->
+    <div class="modal-overlay hidden" id="modal-raid-cleared">
+      <div class="modal-box glass-panel animate-glow" style="border-color: var(--color-success);">
+        <h2 class="logo-text" style="color: var(--color-success);">⚔️ SITE PLUNDERED ⚔️</h2>
+        <div class="modal-body">
+          <p id="modal-raid-cleared-text">You have cleared the raiding site and defeated all defenders!</p>
+        </div>
+        <div class="modal-choices">
+          <button class="btn btn-primary" id="btn-raid-cleared-continue">Continue Saga</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY MODAL: SAGA VICTORY -->
+    <div class="modal-overlay hidden" id="modal-saga-victory">
+      <div class="modal-box glass-panel animate-glow" style="border-color: var(--color-thor);">
+        <h2 class="logo-text" style="color: var(--color-thor);">👑 SAGA COMPLETE 👑</h2>
+        <div class="modal-body">
+          <p id="modal-saga-victory-text">All raiding sites have been cleared! Your name will echo in the halls of Valhalla forever. You have completed the campaign!</p>
+        </div>
+        <div class="modal-choices">
+          <button class="btn btn-primary" id="btn-saga-victory-restart">Return to Main Menu</button>
+          <button class="btn" id="btn-saga-victory-continue">Stay in Midgard</button>
+        </div>
+      </div>
+    </div>
+
 
     <!-- OVERLAY MODAL: PARTY PANEL -->
     <div class="modal-overlay hidden" id="modal-party">

@@ -3,16 +3,17 @@
    ========================================================================== */
 
 import { STATE, notify, setScreen, adjustResource } from '../state.js';
+import { initCombatSelection } from './combat.js';
 import { getAvailableMaps, setActiveMap, initializeWorld, getActiveMap } from '../world.js';
 import { SOLDIERS_CONFIG } from '../config/soldiers.js';
 import { GODS_CONFIG } from '../config/gods.js';
 import { TOWN_CONFIG } from '../config/town.js';
 import { LOCATION_CONFIG } from '../config/location.js';
-import { togglePause, deployUnit, undeployUnit, fleeCombat, adjustCombatSpeed } from '../combat.js';
+import { togglePause, deployUnit, undeployUnit, fleeCombat, adjustCombatSpeed, checkAndAutoDeploy } from '../combat.js';
 import { showToast, logWorld, logLocation } from './notifications.js';
 import { showOverlay, hideOverlay, updateModalKeyboardNavigation } from './overlay.js';
 import { renderPartyPanel, GOD_LORE } from './party.js';
-import { triggerEnterCavePortal, triggerEncounterEvent, attemptLocalMove } from './location.js';
+import { triggerEnterCavePortal, triggerEncounterEvent, attemptLocalMove, useWarHorn } from './location.js';
 import { movePartyOnWorld, tryEnterCurrentLocation } from './world.js';
 import { getEffectiveStats } from '../state.js';
 import { formatStat } from './dom.js';
@@ -22,7 +23,7 @@ import { executePlunderMound, executeSacrificeSheep } from '../state.js';
 import {
   elPartyModal, elConsoleModal, elConsoleTextarea, elModalEvent, elModalEventCloseBtn, elTabPartyBand, elTabPartyInventory,
   elPartyBandContent, elPartyInventoryContent, elModalGameOver, elModalAscension, elPromptPanel, elTooltip,
-  MONSTER_EMOJIS
+  MONSTER_EMOJIS, elModalRaidCleared, elModalSagaVictory
 } from './dom.js';
 
 // Bind simple click callback if element exists
@@ -266,16 +267,13 @@ export function initUIBindings() {
     }
     const godsStr = godsMilestone5.length > 0 ? godsMilestone5.join('_') : 'atheist';
 
-    // Composition of party
-    const compCounts = {};
-    for (const unit of STATE.band) {
-      compCounts[unit.type] = (compCounts[unit.type] || 0) + 1;
-    }
-    const compStr = Object.entries(compCounts).map(([type, count]) => `${count}${type}`).join('_');
-    const composition = compStr || 'crewless';
+    // Gold amount
+    const goldStr = `${STATE.resources.gold}_gold`;
 
-    // Filename: save_[timestamp]_[gods]_[composition].json
-    const filename = `save_${timestamp}_${godsStr}_${composition}.json`;
+    const worldName = STATE.worldMap && STATE.worldMap.name ? STATE.worldMap.name.toLowerCase().replace(/\s+/g, '_') : 'world';
+
+    // Filename: save__[world]__[timestamp]__[gods]__[goldStr].json
+    const filename = `save__${worldName}__${timestamp}__${godsStr}__${goldStr}.json`;
 
     // Download state
     const stateStr = JSON.stringify(STATE, null, 2);
@@ -306,9 +304,35 @@ export function initUIBindings() {
           const parsed = JSON.parse(evt.target.result);
           if (parsed && typeof parsed === 'object') {
             Object.assign(STATE, parsed);
+            if (STATE.worldMap && STATE.worldMap.id) {
+              setActiveMap(STATE.worldMap.id);
+            }
             notify('STATE_UPDATED');
             showToast('Game loaded successfully!', '📂');
             logWorld('Game loaded from save file.', 'gain-message');
+
+            import('../location.js').then(({ isLocationCleared }) => {
+              if (STATE.worldMap && STATE.worldMap.locations) {
+                let allCleared = true;
+                const totalRaids = Object.values(STATE.worldMap.locations).filter(l => l.type === 'raid' && l.id.startsWith('raid_'));
+                for (const l of totalRaids) {
+                  if (isLocationCleared(l.id)) {
+                    l.isCleared = true;
+                    if (STATE.locations[l.id]) {
+                      STATE.locations[l.id].isCleared = true;
+                    }
+                  } else {
+                    allCleared = false;
+                  }
+                }
+                if (totalRaids.length > 0 && allCleared) {
+                  STATE.campaignWon = true;
+                  import('../ui.js').then(({ notify: uiNotify }) => {
+                    uiNotify('SAGA_VICTORY_ACHIEVED');
+                  });
+                }
+              }
+            });
           } else {
             showToast('Invalid save file format.', '⚠️');
           }
@@ -319,6 +343,10 @@ export function initUIBindings() {
       reader.readAsText(file);
     };
     input.click();
+  });
+
+  bindButton('btn-menu-load-game', () => {
+    document.getElementById('btn-load-game')?.click();
   });
 
   bindButton('btn-toggle-console', () => {
@@ -339,6 +367,9 @@ export function initUIBindings() {
     try {
       const parsed = JSON.parse(elConsoleTextarea.value);
       Object.assign(STATE, parsed);
+      if (STATE.worldMap && STATE.worldMap.id) {
+        setActiveMap(STATE.worldMap.id);
+      }
       notify('STATE_UPDATED');
       hideOverlay(elConsoleModal);
       showToast('State updated successfully!', '🛠️');
@@ -425,6 +456,11 @@ export function initUIBindings() {
     logWorld('Escaped from raid site back to the open sea.');
   });
 
+  // Sound War Horn button in location sidebar
+  bindButton('btn-use-warhorn-sidebar', () => {
+    useWarHorn();
+  });
+
   // Combat controls
   bindButton('btn-combat-pause', () => {
     togglePause();
@@ -434,24 +470,73 @@ export function initUIBindings() {
     fleeCombat();
   });
 
-  bindButton('btn-stance-retreat', () => {
-    STATE.combat.stance = 'retreat';
+  function applyStance(stance) {
+    const selectedUnits = [];
+    if (STATE.combat.grid) {
+      for (let r = 0; r < STATE.combat.grid.length; r++) {
+        for (let c = 0; c < STATE.combat.grid[r].length; c++) {
+          const cell = STATE.combat.grid[r][c];
+          if (cell && cell.alliance === 'player' && cell.selected) {
+            selectedUnits.push(cell);
+          }
+        }
+      }
+    }
+
+    const unitsToChange = selectedUnits.length > 0 ? [...selectedUnits] : [];
+
+    if (selectedUnits.length > 0) {
+      selectedUnits.forEach(u => {
+        u.stance = stance;
+      });
+    } else {
+      STATE.combat.stance = stance;
+      if (STATE.combat.grid) {
+        for (let r = 0; r < STATE.combat.grid.length; r++) {
+          for (let c = 0; c < STATE.combat.grid[r].length; c++) {
+            const cell = STATE.combat.grid[r][c];
+            if (cell && cell.alliance === 'player') {
+              delete cell.stance;
+              unitsToChange.push(cell);
+            }
+          }
+        }
+      }
+    }
+
+    // Automatically remove plans/orders related to the units whose stance changed
+    if (STATE.combat.plannedLayout && unitsToChange.length > 0) {
+      unitsToChange.forEach(u => {
+        if (u.row !== undefined) {
+          const row = u.row;
+          for (let checkC = 0; checkC < 10; checkC++) {
+            if (STATE.combat.plannedLayout[row][checkC] === u.type) {
+              STATE.combat.plannedLayout[row][checkC] = null;
+              break;
+            }
+          }
+        }
+      });
+    }
+
+    checkAndAutoDeploy();
     notify('COMBAT_UPDATE');
+  }
+
+  bindButton('btn-stance-retreat', () => {
+    applyStance('retreat');
   });
 
   bindButton('btn-stance-defend', () => {
-    STATE.combat.stance = 'defend';
-    notify('COMBAT_UPDATE');
+    applyStance('defend');
   });
 
   bindButton('btn-stance-hold', () => {
-    STATE.combat.stance = 'hold';
-    notify('COMBAT_UPDATE');
+    applyStance('hold');
   });
 
   bindButton('btn-stance-attack', () => {
-    STATE.combat.stance = 'attack';
-    notify('COMBAT_UPDATE');
+    applyStance('attack');
   });
 
   const speedSlider = document.getElementById('slider-combat-speed');
@@ -485,6 +570,36 @@ export function initUIBindings() {
     if (activeVictoryGod) {
       STATE.godFavor[activeVictoryGod] = 5;
     }
+    if (STATE.combat.active) {
+      STATE.combat.paused = false;
+      notify('COMBAT_UPDATE');
+    }
+
+    // If all gods completed and we just closed a single-god champion popup
+    const allGodsCompleted = Object.values(STATE.godQuests).every(t => t.every(x => x === true));
+    if (allGodsCompleted && activeVictoryGod !== 'odin') {
+      setTimeout(() => {
+        notify('ASCENSION_TRIGGERED', activeVictoryGod);
+      }, 500);
+    }
+  });
+
+  bindButton('btn-raid-cleared-continue', () => {
+    hideOverlay(elModalRaidCleared);
+    if (STATE.combat.isWarHornBattle || STATE.combat.entityCoordKey === 'war_horn') {
+      import('./location.js').then(({ gatherAndAnimateLoot }) => {
+        gatherAndAnimateLoot();
+      });
+    }
+  });
+
+  bindButton('btn-saga-victory-restart', () => {
+    hideOverlay(elModalSagaVictory);
+    location.reload();
+  });
+
+  bindButton('btn-saga-victory-continue', () => {
+    hideOverlay(elModalSagaVictory);
   });
 
   // Keyboard Arrow Movement
@@ -670,12 +785,27 @@ export function initUIBindings() {
       return; // Block other navigation while modal is active
     }
 
+    // Check if player wants to load game on World Map or Menu screen
+    if (e.key === 'l' || e.key === 'L') {
+      if (STATE.activeScreen === 'world' || STATE.activeScreen === 'menu') {
+        e.preventDefault();
+        document.getElementById('btn-load-game')?.click();
+        return;
+      }
+    }
+
     // Check if player is on World Map screen
     if (STATE.activeScreen === 'world') {
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        document.getElementById('btn-save-game')?.click();
+        return;
+      }
+
       let dx = 0;
       let dy = 0;
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') dy = -1;
-      else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') dy = 1;
+      else if (e.key === 'ArrowDown') dy = 1;
       else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') dx = -1;
       else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') dx = 1;
       else if (e.key === 'Enter') {
@@ -698,6 +828,19 @@ export function initUIBindings() {
     }
     // Check if player is on Location map screen
     else if (STATE.activeScreen === 'location') {
+      if (STATE.lootGatheringInProgress) {
+        e.preventDefault();
+        return;
+      }
+      if (e.key === 'w' || e.key === 'W') {
+        const warhornBtn = document.getElementById('btn-use-warhorn-sidebar');
+        if (warhornBtn && !warhornBtn.classList.contains('hidden')) {
+          e.preventDefault();
+          warhornBtn.click();
+          return;
+        }
+      }
+
       let dx = 0;
       let dy = 0;
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') dy = -1;
@@ -768,6 +911,10 @@ export function initUIBindings() {
         e.preventDefault();
         document.getElementById('btn-buy-sheep')?.click();
       }
+      else if (key === 'o') {
+        e.preventDefault();
+        document.getElementById('btn-buy-warhorn')?.click();
+      }
 
       // Soldiers recruitment shortcuts: 1 (Shieldmaiden), 2 (Berserker), 3 (Huntsman)
       else if (key === '1') {
@@ -793,6 +940,36 @@ export function initUIBindings() {
     }
     // Check if player is on Combat screen
     else if (STATE.activeScreen === 'combat') {
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        // 1. Delete selected player units
+        const grid = STATE.combat.grid;
+        if (grid) {
+          for (let r = 0; r < grid.length; r++) {
+            for (let c = 0; c < grid[r].length; c++) {
+              const u = grid[r][c];
+              if (u && u.alliance === 'player' && u.selected) {
+                undeployUnit(r, c);
+              }
+            }
+          }
+        }
+        // 2. Delete selected planned locations
+        if (STATE.combat.selectedPlans && STATE.combat.selectedPlans.length > 0) {
+          STATE.combat.selectedPlans.forEach(p => {
+            if (STATE.combat.plannedLayout) {
+              STATE.combat.plannedLayout[p.r][p.c] = null;
+            }
+            if (STATE.combat.plansDefinedThisTick) {
+              delete STATE.combat.plansDefinedThisTick[`${p.r},${p.c}`];
+            }
+          });
+          STATE.combat.selectedPlans = [];
+          checkAndAutoDeploy();
+          notify('COMBAT_UPDATE');
+        }
+        return;
+      }
       if (e.key === 'Enter') {
         e.preventDefault();
         if (STATE.combat.paused) {
@@ -836,28 +1013,45 @@ export function initUIBindings() {
 
       const key = e.key.toLowerCase();
 
+      if (key === 'm') {
+        e.preventDefault();
+        const btnMove = document.getElementById('btn-move-plans');
+        if (btnMove && !btnMove.classList.contains('hidden')) {
+          btnMove.click();
+        }
+        return;
+      }
+
+      if (key === 'n') {
+        e.preventDefault();
+        const btnPlan = document.getElementById('btn-plan-title');
+        const btnWizardStep = document.getElementById('btn-plan-wizard-step');
+        if (btnPlan && !btnPlan.classList.contains('hidden')) {
+          btnPlan.click();
+        } else if (btnWizardStep && !btnWizardStep.classList.contains('hidden')) {
+          btnWizardStep.click();
+        }
+        return;
+      }
+
       if (key === 'y') {
         e.preventDefault();
-        STATE.combat.stance = 'retreat';
-        notify('COMBAT_UPDATE');
+        applyStance('retreat');
         return;
       }
       if (key === 'x') {
         e.preventDefault();
-        STATE.combat.stance = 'defend';
-        notify('COMBAT_UPDATE');
+        applyStance('defend');
         return;
       }
       if (key === 'c') {
         e.preventDefault();
-        STATE.combat.stance = 'hold';
-        notify('COMBAT_UPDATE');
+        applyStance('hold');
         return;
       }
       if (key === 'v') {
         e.preventDefault();
-        STATE.combat.stance = 'attack';
-        notify('COMBAT_UPDATE');
+        applyStance('attack');
         return;
       }
 
@@ -920,6 +1114,7 @@ export function initUIBindings() {
 
   // Start tooltip tracking
   initTooltipEvents();
+  initCombatSelection();
 }
 
 function initTooltipEvents() {
@@ -1100,13 +1295,13 @@ function initTooltipEvents() {
     if (locationType !== 'town' && (locationType === 'raid' || (terrain !== 'water' && terrain !== 'deep_water' && terrain !== 'river'))) {
       const biome = locationType === 'raid' ? (locationBiome || 'default') : terrain;
       const biomePools = {
-        forest: ['Fenrir Pack Wolf', 'Giant Brood-Spider'],
+        forest: ['Fenrir Pack Wolf', 'Brood Spider'],
         mountain: ['Cave Troll', 'Fenrir Pack Wolf'],
         cave: ['Cave Troll', 'Fenrir Pack Wolf'],
         burial_mound: ['Draugr Warrior'],
         snow: ['Frost Giant (Jotunn)', 'Fenrir Pack Wolf'],
-        water: ['Giant Brood-Spider'],
-        default: ['Giant Brood-Spider', 'Fenrir Pack Wolf']
+        water: ['Brood Spider'],
+        default: ['Brood Spider', 'Fenrir Pack Wolf']
       };
 
       let pool = [...(biomePools[biome] || biomePools.default)];
@@ -1306,16 +1501,16 @@ function initTooltipEvents() {
             const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
             godNames.forEach(g => {
               const unlocked = STATE.godQuests[g]?.[4] === true;
-              const hasCast = unit.runesCast && unit.runesCast[g] === true;
+              const cooldown = unit.runeCooldowns && unit.runeCooldowns[g] ? unit.runeCooldowns[g] : 0;
               
               let statusSymbol = '🔒';
               let statusText = 'Locked';
               let statusColor = 'var(--text-muted)';
               
               if (unlocked) {
-                if (hasCast) {
-                  statusSymbol = '🔲';
-                  statusText = 'Depleted';
+                if (cooldown > 0) {
+                  statusSymbol = '⏳';
+                  statusText = `${cooldown} ticks`;
                   statusColor = 'var(--text-muted)';
                 } else {
                   statusSymbol = '✅';

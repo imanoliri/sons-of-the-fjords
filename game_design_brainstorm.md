@@ -311,7 +311,7 @@ Initial prototype classes:
 
 ### D. Enemies (Monster Focus)
 Combat focuses on mythical monsters for the initial prototype.
-- **Giant Brood-Spider**: Fast. *Ability*: Web spit (roots a target unit, disabling lane advance for 1 turn).
+- **Brood Spider**: Fast. *Ability*: Web spit (roots a target unit, disabling lane advance for 1 turn).
 - **Fenrir Pack Wolf**: Swift lane-hopper. *Ability*: Ravage (leaps to the lowest-HP lane and attacks).
 - **Draugr Warrior**: Undead. *Ability*: Reanimate (rises once after death with 25% HP).
 - **Cave Troll**: Heavy mini-boss. *Ability*: Ground Slam (sweeps three lanes simultaneously, dealing high physical damage).

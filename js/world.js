@@ -57,6 +57,8 @@ export function initializeWorld() {
     revealed.push(fogRow);
   }
 
+  STATE.worldMap.id = cfg.id;
+  STATE.worldMap.name = cfg.name;
   STATE.worldMap.tiles = tiles;
   STATE.worldMap.revealed = revealed;
 

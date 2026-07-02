@@ -35,37 +35,14 @@ export function sortPoolByPoints() {
 }
 
 // Initialize combat map grid & pool
-export function startCombat(locationId, coordKey, enemyData) {
-  if (combatTimer) {
-    clearInterval(combatTimer);
-    combatTimer = null;
-  }
-  STATE.combat.active = true;
-  STATE.combat.paused = true;
-  STATE.combat.locationId = locationId;
-  STATE.combat.entityCoordKey = coordKey;
-  STATE.combat.fleeMode = false;
-  STATE.combat.stance = 'attack';
-  STATE.combat.deployHistory = [];
-  STATE.combat.activeDoTs = [];
-
-  // 1. Initialize grid
-  const grid = [];
-  for (let r = 0; r < CFG.gridRows; r++) {
-    const row = [];
-    for (let c = 0; c < CFG.gridCols; c++) row.push(null);
-    grid.push(row);
-  }
-  STATE.combat.grid = grid;
-
-  // 2. Clone active band into deployment pool
-  STATE.combat.pool = STATE.band.map(u => ({ ...u, maxHp: u.maxHp, hp: u.hp, currentHp: u.hp, alliance: 'player' }));
-  sortPoolByPoints();
-
-  // 3. Populate wave monsters on the far right
-  const monsters = [];
+function spawnMonsterGroup(group, groupIndex) {
+  const grid = STATE.combat.grid;
+  const enemyRef = group.enemyRef || null;
   const startLanes = Array.from({ length: CFG.gridRows }, (_, i) => i);
   shuffleArray(startLanes);
+
+  let spawnIndex = 0;
+  let charmedMonsterData = null;
 
   const activeBlessings = new Set();
   if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
@@ -73,59 +50,67 @@ export function startCombat(locationId, coordKey, enemyData) {
     STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
   }
   const hasLokiBlessing = activeBlessings.has('loki');
-
-  const totalMonstersCount = enemyData.monsters.reduce((sum, m) => sum + m.count, 0);
-
-  let confusedIndex = -1;
-  const lokiM3 = GC.modifiers.milestones.loki.find(m => m.index === 2);
-  const confuseChance = lokiM3?.confuseChance ?? 0.25;
-  if (STATE.godQuests.loki?.[2] && Math.random() < confuseChance) {
-    if (totalMonstersCount > 0) {
-      confusedIndex = Math.floor(Math.random() * totalMonstersCount);
-    }
-  }
-
-  // Loki Champion blessing: 25% chance overall to charm exactly one spawned monster in the combat wave
-  let charmedIndex = -1;
   const lokiBlessing = GC.modifiers.blessings.loki;
-  const charmChance = lokiBlessing?.charmChance ?? 0.25;
-  if (hasLokiBlessing && Math.random() < charmChance) {
-    if (totalMonstersCount > 0) {
-      charmedIndex = Math.floor(Math.random() * totalMonstersCount);
-    }
-  }
+  const lokiM3 = GC.modifiers.milestones.loki.find(m => m.index === 2);
 
-  let spawnIndex = 0;
-  let spawnedCount = 0;
-  let charmedMonsterData = null;
-
-  for (const m of enemyData.monsters) {
+  for (const m of group) {
     for (let i = 0; i < m.count; i++) {
-      const isCharmed = spawnedCount === charmedIndex;
-      const isConfused = !isCharmed && spawnedCount === confusedIndex;
+      const spawnedCount = STATE.combat.spawnedCount;
+      const isCharmed = spawnedCount === STATE.combat.charmedIndex;
+      const isConfused = !isCharmed && spawnedCount === STATE.combat.confusedIndex;
       const stats = getMonsterStats(m.monsterClass);
 
       if (isCharmed) {
-        // Delay placement of the charmed unit until we place the non-charmed enemies
         charmedMonsterData = {
           mClass: m.monsterClass,
           stats: stats,
           spawnedCount: spawnedCount
         };
-        spawnedCount++;
+        STATE.combat.spawnedCount++;
         continue;
       }
 
       const lane = startLanes[spawnIndex % CFG.gridRows];
       spawnIndex++;
 
-      let spawnCol = isConfused ? CFG.gridCols - 2 : CFG.gridCols - 1;
-      if (isConfused) {
-        for (let c = CFG.gridCols - 2; c >= 0; c--) {
-          if (!grid[lane][c]) {
+      let spawnRow = lane;
+      let spawnCol = CFG.gridCols - 1;
+      if (grid[spawnRow][CFG.gridCols - 1]) {
+        spawnCol = CFG.gridCols - 2;
+      }
+
+      if (grid[spawnRow][spawnCol]) {
+        let found = false;
+        // 1. Try to find a free cell in the same lane, searching from right to left
+        for (let c = CFG.gridCols - 1; c >= 0; c--) {
+          if (!grid[spawnRow][c]) {
             spawnCol = c;
+            found = true;
             break;
           }
+        }
+        // 2. If the lane is full, search other lanes from right to left, preferring lanes closer to the target lane
+        if (!found) {
+          let bestDist = Infinity;
+          for (let r = 0; r < CFG.gridRows; r++) {
+            for (let c = CFG.gridCols - 1; c >= 0; c--) {
+              if (!grid[r][c]) {
+                const dist = Math.abs(r - lane);
+                if (dist < bestDist) {
+                  bestDist = dist;
+                  spawnRow = r;
+                  spawnCol = c;
+                  found = true;
+                }
+              }
+            }
+          }
+        }
+
+        // 3. If the entire board is full, we must skip spawning this unit to avoid bricking the game
+        if (!found) {
+          console.warn(`Could not spawn monster ${m.monsterClass}: grid is completely full.`);
+          continue;
         }
       }
 
@@ -147,20 +132,22 @@ export function startCombat(locationId, coordKey, enemyData) {
         charmedTicksLeft: 0,
         isConfused: isConfused,
         confusedTicksLeft: isConfused ? (lokiM3?.confuseDurationTicks ?? 2) : 0,
-        row: lane,
-        col: spawnCol
+        row: spawnRow,
+        col: spawnCol,
+        enemyRef: enemyRef
       };
-      monsters.push(mUnit);
-      grid[lane][spawnCol] = mUnit;
-      spawnedCount++;
+      
+      STATE.combat.waveMonsters.push(mUnit);
+      grid[spawnRow][spawnCol] = mUnit;
+      STATE.combat.spawnedCount++;
+      notify('COMBAT_SPAWN', mUnit);
     }
   }
 
-  // Position and spawn the charmed unit in front of a random enemy
   if (charmedMonsterData) {
     notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_charm', unit: { name: charmedMonsterData.mClass } });
 
-    const enemies = monsters.filter(m => m.alliance === 'enemy');
+    const enemies = STATE.combat.waveMonsters.filter(m => m.alliance === 'enemy');
     let targetEnemy = null;
     if (enemies.length > 0) {
       targetEnemy = enemies[Math.floor(Math.random() * enemies.length)];
@@ -169,11 +156,11 @@ export function startCombat(locationId, coordKey, enemyData) {
     let spawnLane = startLanes[spawnIndex % CFG.gridRows];
     spawnIndex++;
     let spawnCol = CFG.gridCols - 2;
+    let found = false;
 
     if (targetEnemy) {
       spawnLane = targetEnemy.row;
       let checkCol = targetEnemy.col - 1;
-      let found = false;
       for (let c = checkCol; c >= 0; c--) {
         if (!grid[spawnLane][c]) {
           spawnCol = c;
@@ -194,33 +181,137 @@ export function startCombat(locationId, coordKey, enemyData) {
       for (let c = CFG.gridCols - 2; c >= 0; c--) {
         if (!grid[spawnLane][c]) {
           spawnCol = c;
+          found = true;
           break;
         }
       }
     }
 
-    const mUnit = {
-      id: Date.now() + "_" + charmedMonsterData.spawnedCount + "_" + Math.floor(Math.random() * 1000),
-      name: charmedMonsterData.mClass + ' 🌀',
-      type: charmedMonsterData.mClass,
-      hp: charmedMonsterData.stats.hp,
-      maxHp: charmedMonsterData.stats.hp,
-      dmg: charmedMonsterData.stats.dmg,
-      speed: charmedMonsterData.stats.speed,
-      range: charmedMonsterData.stats.range,
-      alliance: 'player',
-      isCharmed: true,
-      charmedTicksLeft: lokiBlessing?.charmDurationTicks ?? 2,
-      isConfused: false,
-      confusedTicksLeft: 0,
-      row: spawnLane,
-      col: spawnCol
-    };
-    monsters.push(mUnit);
-    grid[spawnLane][spawnCol] = mUnit;
+    // Safety fallback: if target position is still occupied or we didn't find any place in target lane
+    if (!found || grid[spawnLane][spawnCol]) {
+      found = false;
+      let bestDist = Infinity;
+      for (let r = 0; r < CFG.gridRows; r++) {
+        for (let c = CFG.gridCols - 1; c >= 0; c--) {
+          if (!grid[r][c]) {
+            const dist = Math.abs(r - spawnLane);
+            if (dist < bestDist) {
+              bestDist = dist;
+              spawnLane = r;
+              spawnCol = c;
+              found = true;
+            }
+          }
+        }
+      }
+    }
+
+    if (found) {
+      const mUnit = {
+        id: Date.now() + "_" + charmedMonsterData.spawnedCount + "_" + Math.floor(Math.random() * 1000),
+        name: charmedMonsterData.mClass + ' 🌀',
+        type: charmedMonsterData.mClass,
+        hp: charmedMonsterData.stats.hp,
+        maxHp: charmedMonsterData.stats.hp,
+        dmg: charmedMonsterData.stats.dmg,
+        speed: charmedMonsterData.stats.speed,
+        range: charmedMonsterData.stats.range,
+        alliance: 'player',
+        isCharmed: true,
+        charmedTicksLeft: lokiBlessing?.charmDurationTicks ?? 2,
+        isConfused: false,
+        confusedTicksLeft: 0,
+        row: spawnLane,
+        col: spawnCol
+      };
+      STATE.combat.waveMonsters.push(mUnit);
+      grid[spawnLane][spawnCol] = mUnit;
+      notify('COMBAT_SPAWN', mUnit);
+    } else {
+      console.warn(`Could not spawn charmed monster ${charmedMonsterData.mClass}: grid is completely full.`);
+    }
+  }
+}
+
+// Initialize combat map grid & pool
+export function startCombat(locationId, coordKey, enemyData) {
+  if (combatTimer) {
+    clearInterval(combatTimer);
+    combatTimer = null;
+  }
+  STATE.combat.active = true;
+  STATE.combat.paused = true;
+  STATE.combat.locationId = locationId;
+  STATE.combat.entityCoordKey = coordKey;
+  STATE.combat.fleeMode = false;
+  STATE.combat.stance = 'attack';
+  STATE.combat.deployHistory = [];
+  STATE.combat.activeDoTs = [];
+  
+  if (coordKey !== 'war_horn') {
+    STATE.combat.isWarHornBattle = false;
   }
 
-  STATE.combat.waveMonsters = monsters;
+  // 1. Initialize grid
+  const grid = [];
+  for (let r = 0; r < CFG.gridRows; r++) {
+    const row = [];
+    for (let c = 0; c < CFG.gridCols; c++) row.push(null);
+    grid.push(row);
+  }
+  STATE.combat.grid = grid;
+
+  // 2. Clone active band into deployment pool
+  STATE.combat.pool = STATE.band.map(u => ({ ...u, maxHp: u.maxHp, hp: u.hp, currentHp: u.hp, alliance: 'player', selected: false }));
+  sortPoolByPoints();
+
+  // Initialize group queues
+  const groups = enemyData.monsterGroups || [enemyData.monsters];
+  STATE.combat.pendingSpawnGroups = [...groups];
+  STATE.combat.spawnedCount = 0;
+  STATE.combat.waveMonsters = [];
+
+  // Determine Loki favor effects for all monsters in the campaign/fight
+  let totalMonstersCount = 0;
+  for (const group of groups) {
+    totalMonstersCount += group.reduce((sum, m) => sum + m.count, 0);
+  }
+
+  const activeBlessings = new Set();
+  if (STATE.activeBlessing) activeBlessings.add(STATE.activeBlessing);
+  if (STATE.permanentlyActivatedBlessings) {
+    STATE.permanentlyActivatedBlessings.forEach(b => activeBlessings.add(b));
+  }
+  const hasLokiBlessing = activeBlessings.has('loki');
+
+  let confusedIndex = -1;
+  const lokiM3 = GC.modifiers.milestones.loki.find(m => m.index === 2);
+  const confuseChance = lokiM3?.confuseChance ?? 0.25;
+  if (STATE.godQuests.loki?.[2] && Math.random() < confuseChance) {
+    if (totalMonstersCount > 0) {
+      confusedIndex = Math.floor(Math.random() * totalMonstersCount);
+    }
+  }
+
+  let charmedIndex = -1;
+  const lokiBlessing = GC.modifiers.blessings.loki;
+  const charmChance = lokiBlessing?.charmChance ?? 0.25;
+  if (hasLokiBlessing && Math.random() < charmChance) {
+    if (totalMonstersCount > 0) {
+      charmedIndex = Math.floor(Math.random() * totalMonstersCount);
+    }
+  }
+
+  STATE.combat.confusedIndex = confusedIndex;
+  STATE.combat.charmedIndex = charmedIndex;
+
+  // Spawn the first group immediately
+  if (STATE.combat.pendingSpawnGroups.length > 0) {
+    const firstGroup = STATE.combat.pendingSpawnGroups.shift();
+    spawnMonsterGroup(firstGroup, 0);
+  }
+
+  checkAndAutoDeploy();
   notify('COMBAT_START');
   combatTimer = setInterval(combatTick, STATE.combat.combatIntervalMs || CFG.tickIntervalMs);
 }
@@ -235,6 +326,15 @@ export function adjustCombatSpeed(newSpeedMs) {
 
 function combatTick() {
   if (STATE.combat.paused || !STATE.combat.active) return;
+  STATE.combat.plansDefinedThisTick = {};
+  STATE.combat.selectedPlans = [];
+
+  // Spawn next enemy group if any are pending
+  if (STATE.combat.pendingSpawnGroups && STATE.combat.pendingSpawnGroups.length > 0) {
+    const nextGroup = STATE.combat.pendingSpawnGroups.shift();
+    const groupIdx = STATE.combat.pendingSpawnGroups.length;
+    spawnMonsterGroup(nextGroup, groupIdx);
+  }
 
   const grid = STATE.combat.grid;
   const gridSnapshot = grid.map(row => [...row]);
@@ -344,12 +444,17 @@ function combatTick() {
 
     // ---- RUNECASTER: Divine Rune AI ----
     if (unit.type === 'runecaster' && unit.alliance === 'player' && !unit.isFleeing) {
-      if (!unit.runesCast) unit.runesCast = {};
+      if (!unit.runeCooldowns) unit.runeCooldowns = {};
+      for (const g of Object.keys(unit.runeCooldowns)) {
+        if (unit.runeCooldowns[g] > 0) {
+          unit.runeCooldowns[g]--;
+        }
+      }
 
-      // Gather available runes (god milestone 5 unlocked + not yet cast this battle)
+      // Gather available runes (god milestone 5 unlocked + not on cooldown)
       const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
       const availableRunes = godNames.filter(g =>
-        STATE.godQuests[g]?.[4] === true && !unit.runesCast[g]
+        STATE.godQuests[g]?.[4] === true && (!unit.runeCooldowns[g] || unit.runeCooldowns[g] <= 0)
       );
 
       let bestRune = null;
@@ -513,7 +618,7 @@ function combatTick() {
       if (bestRune && bestRune.target && STATE.resources.gold >= 1) {
         // Deduct gold & mark rune used
         adjustResource('gold', -1);
-        unit.runesCast[bestRune.name] = true;
+        unit.runeCooldowns[bestRune.name] = 10;
         const rt = bestRune.target;
         const rnName = bestRune.name;
 
@@ -725,6 +830,7 @@ function combatTick() {
     } else {
       let dir = 0;
       let shouldMove = true;
+      const stance = unit.stance || STATE.combat.stance || 'attack';
       if (unit.alliance === 'enemy') {
         dir = -1;
         // Hel Milestone 4: Enemy movement speed reduced by 10%
@@ -738,7 +844,6 @@ function combatTick() {
       } else if (unit.isFleeing) {
         dir = -1;
       } else {
-        const stance = STATE.combat.stance || 'attack';
         if (stance === 'attack') dir = 1;
         else if (stance === 'retreat' || stance === 'defend') dir = -1;
         else shouldMove = false;
@@ -749,7 +854,7 @@ function combatTick() {
         const fullLeapVal = 1 + effectiveLeap;
         let leapVal = 1; // Default normal movement
 
-        const isRetreatingOrFleeing = unit.isFleeing || (unit.alliance === 'player' && STATE.combat.stance === 'retreat');
+        const isRetreatingOrFleeing = unit.isFleeing || (unit.alliance === 'player' && stance === 'retreat');
 
         if (!isRetreatingOrFleeing && effectiveLeap > 0) {
           let canLeap = false;
@@ -943,16 +1048,27 @@ function combatTick() {
           if (isLeaping) {
             notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_leap', unit: unit, oldCol: oldCol });
           }
+
+          // ARRIVAL CHECK:
+          if (unit.alliance === 'player' && !unit.isCharmed && !unit.isConfused && !unit.isUndead) {
+            const r = unit.row;
+            const c = unit.col;
+            if (c < 10 && STATE.combat.plannedLayout && STATE.combat.plannedLayout[r]?.[c] === unit.type) {
+              unit.stance = 'hold';
+            }
+          }
         }
 
         if (reachedBoundary) {
           const boundaryCol = unit.col + dir; // The column that crossed the boundary
-          if (unit.alliance === 'player' && STATE.combat.stance === 'defend' && boundaryCol < 0) {
+          const stance = unit.stance || STATE.combat.stance || 'attack';
+          if (unit.alliance === 'player' && stance === 'defend' && boundaryCol < 0) {
             // Hold at col 0
           } else {
             grid[unit.row][unit.col] = null;
-            if (unit.alliance === 'player' && (unit.isFleeing || STATE.combat.stance === 'retreat') && boundaryCol < 0) {
+            if (unit.alliance === 'player' && (unit.isFleeing || stance === 'retreat') && boundaryCol < 0) {
               const poolUnit = { ...unit, hp: unit.hp, row: undefined, col: undefined, isFleeing: false };
+              delete poolUnit.stance; // Clear individual stance when returning to pool
               STATE.combat.pool.push(poolUnit);
               sortPoolByPoints();
               notify('COMBAT_UPDATE');
@@ -965,6 +1081,7 @@ function combatTick() {
     }
   }
 
+  checkAndAutoDeploy();
   notify('COMBAT_UPDATE');
   checkCombatEndConditions();
 }
@@ -1028,26 +1145,72 @@ function findTargetInLane(unit, grid = STATE.combat.grid) {
   return null;
 }
 
+function checkGroupDefeated(unit) {
+  if (STATE.combat.isWarHornBattle && unit.enemyRef) {
+    const remainingEnemiesOfGroup = STATE.combat.waveMonsters.some(
+      m => m.enemyRef === unit.enemyRef && m.hp > 0 && m.alliance === 'enemy'
+    );
+    if (!remainingEnemiesOfGroup) {
+      unit.enemyRef.isDefeated = true;
+      const locId = STATE.combat.locationId;
+      const locState = STATE.locations[locId];
+      if (locState) {
+        let matchedCoordKey = null;
+        for (const [coordKey, tile] of Object.entries(locState.placedTiles)) {
+          if (tile.entity === unit.enemyRef) {
+            matchedCoordKey = coordKey;
+            break;
+          }
+        }
+        if (!matchedCoordKey) {
+          for (const [coordKey, entity] of Object.entries(locState.preGeneratedEntities)) {
+            if (entity === unit.enemyRef) {
+              matchedCoordKey = coordKey;
+              break;
+            }
+          }
+        }
+        if (matchedCoordKey) {
+          if (locState.placedTiles[matchedCoordKey] && locState.placedTiles[matchedCoordKey].entity) {
+            locState.placedTiles[matchedCoordKey].entity.isDefeated = true;
+          }
+          if (locState.preGeneratedEntities[matchedCoordKey]) {
+            locState.preGeneratedEntities[matchedCoordKey].isDefeated = true;
+          }
+        }
+      }
+      import('./location.js').then(({ checkRaidCleared }) => {
+        checkRaidCleared(locId);
+      });
+    }
+  }
+}
+
 function removeUnitFromRegistry(unit) {
   if (unit.alliance === 'player' && !unit.isCharmed && !unit.isUndead && !unit.isConfused) {
     const idx = STATE.band.findIndex(u => u.id === unit.id);
     if (idx !== -1) STATE.band.splice(idx, 1);
   } else {
     const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
-    if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
+    if (idx !== -1) {
+      STATE.combat.waveMonsters.splice(idx, 1);
+      checkGroupDefeated(unit);
+    }
   }
 }
 
 function handleUnitReachEnd(unit) {
   if (unit.alliance === 'player') {
-    if (unit.isCharmed) {
+    if (unit.isCharmed || unit.isConfused) {
       const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
       if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
       notify('COMBAT_UPDATE');
       checkCombatEndConditions();
       return;
     }
-    if (unit.isUndead || unit.isConfused) {
+    if (unit.isUndead) {
+      const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
+      if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
       notify('COMBAT_UPDATE');
       return;
     }
@@ -1084,13 +1247,24 @@ function handleUnitReachEnd(unit) {
 
     if (!relocated) {
       const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
-      if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
+      if (idx !== -1) {
+        STATE.combat.waveMonsters.splice(idx, 1);
+        checkGroupDefeated(unit);
+      }
     }
   }
 }
 
 export function togglePause() {
   STATE.combat.paused = !STATE.combat.paused;
+  if (!STATE.combat.paused) {
+    STATE.combat.activePlanningType = null;
+    if (STATE.combat.planningWizard) {
+      STATE.combat.planningWizard.active = false;
+    }
+    STATE.combat.movePlansMode = false;
+    STATE.combat.selectedPlans = [];
+  }
   notify('COMBAT_PAUSED');
 }
 
@@ -1105,10 +1279,16 @@ export function deployUnit(poolIndex, row, col) {
   unit.row = row;
   unit.col = col;
   STATE.combat.grid[row][col] = unit;
+  
+  if (STATE.combat.plannedLayout && STATE.combat.plannedLayout[row] && STATE.combat.plannedLayout[row][col] === unit.type) {
+    unit.stance = 'hold';
+  }
+
   if (!STATE.combat.deployHistory) STATE.combat.deployHistory = [];
   STATE.combat.deployHistory.push(unit.id);
   STATE.combat.pool.splice(poolIndex, 1);
   STATE.combat.selectedPoolIndex = null;
+  checkAndAutoDeploy();
   notify('COMBAT_UPDATE');
 }
 
@@ -1117,20 +1297,42 @@ export function undeployUnit(row, col) {
   col = Number(col);
   const unit = STATE.combat.grid[row][col];
   if (!unit || unit.alliance !== 'player' || unit.isCharmed || unit.isConfused || unit.isUndead) return;
+
+  // Clear one plan of this unit's type in the same lane to prevent immediate auto-redeploy
+  if (STATE.combat.plannedLayout) {
+    for (let checkC = 0; checkC < 10; checkC++) {
+      if (STATE.combat.plannedLayout[row][checkC] === unit.type) {
+        STATE.combat.plannedLayout[row][checkC] = null;
+        if (STATE.combat.selectedPlans) {
+          STATE.combat.selectedPlans = STATE.combat.selectedPlans.filter(p => !(p.r === row && p.c === checkC));
+        }
+        break;
+      }
+    }
+  }
+
   STATE.combat.grid[row][col] = null;
   unit.row = undefined;
   unit.col = undefined;
+  delete unit.stance; // Clear individual stance when returning to pool
   STATE.combat.pool.push(unit);
   if (STATE.combat.deployHistory) {
     STATE.combat.deployHistory = STATE.combat.deployHistory.filter(id => id !== unit.id);
   }
   sortPoolByPoints();
+  checkAndAutoDeploy();
   notify('COMBAT_UPDATE');
 }
 
 function checkCombatEndConditions() {
   const activeEnemies = STATE.combat.waveMonsters.filter(m => m.alliance === 'enemy' || m.isCharmed || m.isConfused);
-  if (activeEnemies.length === 0) {
+  const allGroupsDeployed = (!STATE.combat.pendingSpawnGroups || STATE.combat.pendingSpawnGroups.length === 0);
+
+  const hasEnemyUnitsOnBoard = STATE.combat.grid.some(row =>
+    row.some(cell => cell && (cell.alliance === 'enemy' || cell.isCharmed || cell.isConfused))
+  );
+
+  if ((activeEnemies.length === 0 || !hasEnemyUnitsOnBoard) && allGroupsDeployed) {
     endCombat(true);
   } else {
     const hasPlayerUnitsOnBoard = STATE.combat.grid.some(row =>
@@ -1152,9 +1354,28 @@ export function endCombat(isVictory) {
     const locId = STATE.combat.locationId;
     const coordKey = STATE.combat.entityCoordKey;
     const locState = STATE.locations[locId];
-    if (locState && locState.placedTiles[coordKey]) {
-      const tile = locState.placedTiles[coordKey];
-      if (tile.entity && tile.entity.type === 'enemy_army') tile.entity.isDefeated = true;
+    if (locState) {
+      if (STATE.combat.isWarHornBattle || STATE.combat.entityCoordKey === 'war_horn') {
+        for (const tile of Object.values(locState.placedTiles)) {
+          if (tile.entity && tile.entity.type === 'enemy_army') {
+            tile.entity.isDefeated = true;
+          }
+        }
+        for (const entity of Object.values(locState.preGeneratedEntities)) {
+          if (entity && entity.type === 'enemy_army') {
+            entity.isDefeated = true;
+          }
+        }
+      } else {
+        if (locState.placedTiles[coordKey]) {
+          const tile = locState.placedTiles[coordKey];
+          if (tile.entity && tile.entity.type === 'enemy_army') tile.entity.isDefeated = true;
+        }
+        if (locState.preGeneratedEntities[coordKey]) {
+          const entity = locState.preGeneratedEntities[coordKey];
+          if (entity && entity.type === 'enemy_army') entity.isDefeated = true;
+        }
+      }
     }
 
     const boardUnits = [];
@@ -1214,6 +1435,93 @@ function shuffleArray(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+export function checkAndAutoDeploy() {
+  if (!STATE.combat.active) return;
+  if (!STATE.combat.plannedLayout) {
+    STATE.combat.plannedLayout = Array.from({ length: CFG.gridRows }, () => Array(CFG.gridCols).fill(null));
+  }
+
+  const grid = STATE.combat.grid;
+  const sizeR = CFG.gridRows;
+
+  for (let r = 0; r < sizeR; r++) {
+    // 1. Gather desired planned counts for this lane r
+    const desiredCounts = {};
+    for (let c = 0; c < CFG.gridCols; c++) {
+      const type = STATE.combat.plannedLayout[r][c];
+      if (type) {
+        desiredCounts[type] = (desiredCounts[type] || 0) + 1;
+      }
+    }
+
+    if (Object.keys(desiredCounts).length === 0) continue;
+
+    // 2. Count currently deployed player units of each type in lane r
+    const deployedCounts = {};
+    for (let c = 0; c < CFG.gridCols; c++) {
+      const cell = grid[r][c];
+      if (cell && cell.alliance === 'player' && !cell.isCharmed && !cell.isConfused && !cell.isUndead) {
+        deployedCounts[cell.type] = (deployedCounts[cell.type] || 0) + 1;
+      }
+    }
+
+    // 3. For each planned type T, see if we need to auto-deploy from pool
+    for (const [type, reqCount] of Object.entries(desiredCounts)) {
+      const currentCount = deployedCounts[type] || 0;
+      let needed = reqCount - currentCount;
+      if (needed <= 0) continue;
+
+      while (needed > 0) {
+        // Find matching unit in pool
+        const poolIndex = STATE.combat.pool.findIndex(u => u.type === type);
+        if (poolIndex === -1) {
+          // No more available units of this type in pool
+          break;
+        }
+
+        // Ranged units prefer column 0, melee units prefer column 1
+        const isRanged = ['huntsman', 'runecaster'].includes(type);
+        let targetCol = -1;
+        if (isRanged) {
+          if (!grid[r][0]) {
+            targetCol = 0;
+          } else if (!grid[r][1]) {
+            targetCol = 1;
+          }
+        } else {
+          if (!grid[r][1]) {
+            targetCol = 1;
+          } else if (!grid[r][0]) {
+            targetCol = 0;
+          }
+        }
+
+        if (targetCol === -1) {
+          // No vacant deployable cell in this lane
+          break;
+        }
+
+        // Deploy it!
+        const unit = STATE.combat.pool[poolIndex];
+        unit.row = r;
+        unit.col = targetCol;
+        grid[r][targetCol] = unit;
+
+        // Set stance to hold if it matches the planned position at targetCol
+        if (STATE.combat.plannedLayout[r][targetCol] === unit.type) {
+          unit.stance = 'hold';
+        }
+
+        if (!STATE.combat.deployHistory) STATE.combat.deployHistory = [];
+        STATE.combat.deployHistory.push(unit.id);
+        STATE.combat.pool.splice(poolIndex, 1);
+
+        needed--;
+      }
+    }
   }
 }
 

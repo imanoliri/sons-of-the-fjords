@@ -10,7 +10,8 @@ import { renderQuestsScreen, renderPartyPanel, GOD_LORE } from './ui/party.js';
 import { showOverlay, hideOverlay } from './ui/overlay.js';
 import {
   screens, elHeader, elModalAscension, elModalAscensionText, elModalGameOver,
-  elModalEventTitle, elModalEventBody
+  elModalEventTitle, elModalEventBody, elModalRaidCleared, elModalRaidClearedText,
+  elModalSagaVictory, elModalSagaVictoryText
 } from './ui/dom.js';
 
 // Re-export specific modules for external app.js or other systems
@@ -203,11 +204,18 @@ export function handleStateNotification(event, data) {
         if (tile && tile.entity && tile.entity.type === 'enemy_army') {
           tile.entity.isDefeated = true;
         }
+        if (locState.preGeneratedEntities[coordKey]) {
+          const entity = locState.preGeneratedEntities[coordKey];
+          if (entity && entity.type === 'enemy_army') {
+            entity.isDefeated = true;
+          }
+        }
       }
       delete STATE.party.pendingLocalX;
       delete STATE.party.pendingLocalY;
     }
 
+    const isWarHorn = STATE.combat.isWarHornBattle || STATE.combat.entityCoordKey === 'war_horn';
     setTimeout(() => {
       const locId = STATE.party.currentLocationId;
       import('./state.js').then(({ setScreen }) => {
@@ -217,6 +225,18 @@ export function handleStateNotification(event, data) {
           const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
           setScreen((locData && locData.type === 'town') ? 'world' : 'location');
         }
+        import('./location.js').then(({ checkRaidCleared }) => {
+          checkRaidCleared(locId);
+          if (isWarHorn) {
+            const modal = document.getElementById('modal-raid-cleared');
+            const modalShown = modal && !modal.classList.contains('hidden');
+            if (!modalShown) {
+              import('./ui/location.js').then(({ gatherAndAnimateLoot }) => {
+                gatherAndAnimateLoot();
+              });
+            }
+          }
+        });
       });
     }, 1000);
   }
@@ -294,28 +314,57 @@ export function handleStateNotification(event, data) {
       notify('STATE_UPDATED');
       showToast(`${lore.icon} ${godName.charAt(0).toUpperCase() + godName.slice(1)}'s Blessing activated!`, lore.icon, true);
       hideOverlay(elModalAscension);
+      if (STATE.combat.active) {
+        STATE.combat.paused = false;
+        notify('COMBAT_UPDATE');
+      }
+      
+      const allGodsCompleted = Object.values(STATE.godQuests).every(t => t.every(x => x === true));
+      if (allGodsCompleted) {
+        setTimeout(() => {
+          notify('ASCENSION_TRIGGERED', godName);
+        }, 500);
+      }
     });
 
     const btnContinue = document.getElementById('btn-ascend-continue');
     btnContinue.parentNode.insertBefore(btnBuff, btnContinue);
 
+    if (STATE.combat.active) {
+      STATE.combat.paused = true;
+      notify('COMBAT_UPDATE');
+    }
     showOverlay(elModalAscension);
   }
   else if (event === 'ASCENSION_TRIGGERED') {
     elModalAscension.dataset.god = 'odin';
     elModalAscension.querySelector('.modal-box').className = `modal-box glass-panel animate-glow deity-odin`;
     elModalAscension.querySelector('.logo-text').innerText = 'A S C E N S I O N';
-    elModalAscensionText.innerHTML = `You have completed all milestones for <b>ALL 5 GODS</b>!<br><br>The gates of Valhalla are open. You have achieved final ascension!`;
+    elModalAscensionText.innerHTML = `You have achieved what no mortal dared dream: all five High Gods of Asgard look upon you with favor. The skalds shall sing of your deeds until the stars go cold.<br><br>A seat of eternal glory is reserved for you in the halls of Valhalla, but for now, your saga continues. Guide your warband with the blessing of the gods.`;
 
-    // Unhide final ascension button
-    document.getElementById('btn-ascend-victory').classList.remove('hidden');
-    document.getElementById('btn-ascend-continue').innerText = 'Stay in Midgard';
+    // Keep final ascension button hidden
+    document.getElementById('btn-ascend-victory').classList.add('hidden');
+    document.getElementById('btn-ascend-continue').innerText = 'Continue';
 
     // Remove any previously injected buff button
     const prevBuff = document.getElementById('btn-ascend-buff');
     if (prevBuff) prevBuff.remove();
 
+    if (STATE.combat.active) {
+      STATE.combat.paused = true;
+      notify('COMBAT_UPDATE');
+    }
     showOverlay(elModalAscension);
+  }
+  else if (event === 'RAID_SITE_CLEARED') {
+    elModalRaidClearedText.innerHTML = `You have plundered and cleared the raiding site <b>${data.name}</b>!<br><br>All hostiles have been defeated and the area is secured.`;
+    showOverlay(elModalRaidCleared);
+    showToast(`Raid Site Cleared: ${data.name}!`, '⚔️', true);
+  }
+  else if (event === 'SAGA_VICTORY_ACHIEVED') {
+    elModalSagaVictoryText.innerHTML = `All raiding sites in Midgard have been cleared of defenders!<br><br>Your saga is complete, and your name will echo forever in the halls of Valhalla!`;
+    showOverlay(elModalSagaVictory);
+    showToast(`Campaign Victory: Midgard Cleared!`, '👑', true);
   }
   else if (event === 'GAME_OVER') {
     showOverlay(elModalGameOver);

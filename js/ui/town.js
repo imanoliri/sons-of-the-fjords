@@ -110,6 +110,26 @@ export function renderTownScreen() {
           logWorld(res.message, res.success ? 'gain-message' : 'warn-message');
           renderTownScreen();
         }
+      },
+      {
+        id: 'btn-buy-warhorn', label: `Buy War Horn 📯 (-60 🪙)`, btnText: 'Buy [O]', action: () => {
+          if (STATE.inventory.includes('War Horn')) {
+            logWorld('You already have a War Horn in your cargo!', 'warn-message');
+            showToast('Already own War Horn!', '📯');
+            return;
+          }
+          if (STATE.resources.gold >= 60) {
+            adjustResource('gold', -60);
+            STATE.inventory.push('War Horn');
+            notify('STATE_UPDATED');
+            logWorld('Bought a War Horn 📯 for 60 Gold! Use it during exploration to discover the level and challenge all defenders.', 'gain-message');
+            showToast('Bought War Horn!', '📯');
+            renderTownScreen();
+          } else {
+            logWorld('Not enough Gold to buy a War Horn!', 'warn-message');
+            showToast('Not enough Gold!', '🪙');
+          }
+        }
       }
     ];
 
@@ -122,6 +142,11 @@ export function renderTownScreen() {
       btn.classList.add('btn', 'btn-sm');
       btn.id = t.id;
       btn.innerText = t.btnText;
+      if (t.id === 'btn-buy-warhorn' && STATE.inventory.includes('War Horn')) {
+        btn.disabled = true;
+        btn.classList.add('disabled');
+        btn.innerText = 'Owned';
+      }
       btn.addEventListener('click', t.action);
       row.appendChild(span);
       row.appendChild(btn);

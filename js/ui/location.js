@@ -10,9 +10,10 @@ import { GODS_CONFIG } from '../config/gods.js';
 import {
   MONSTER_EMOJIS,
   elLocMap, elLocTitle, elLocThreat, elLocDeckCount, elLocationDifficultyStatus,
-  elPromptPanel, elModalEvent, elModalEventTitle, elModalEventBody, elModalEventChoices, elModalEventCloseBtn
+  elPromptPanel, elModalEvent, elModalEventTitle, elModalEventBody, elModalEventChoices, elModalEventCloseBtn,
+  elUseWarHornSidebar
 } from './dom.js';
-import { logLocation } from './notifications.js';
+import { logLocation, showToast } from './notifications.js';
 import { showOverlay, hideOverlay } from './overlay.js';
 
 let activePortalTarget = null;
@@ -34,6 +35,16 @@ export function renderLocationMap() {
   const locId = STATE.party.currentLocationId;
   const locState = STATE.locations[locId];
   if (!locState) return;
+
+  if (elUseWarHornSidebar) {
+    const hasWarHorn = STATE.inventory.includes('War Horn');
+    const isTown = locId && locId.startsWith('town_');
+    if (hasWarHorn && !isTown) {
+      elUseWarHornSidebar.classList.remove('hidden');
+    } else {
+      elUseWarHornSidebar.classList.add('hidden');
+    }
+  }
 
   const locData = Object.values(STATE.worldMap.locations).find(l => l.id === locId);
   const locName = locData ? locData.name : (locState.isSubCave ? 'Sub-Cave Chamber' : 'Exploring Site');
@@ -346,6 +357,7 @@ export function renderLocationMap() {
 
 // Enter Cave Sub-Dungeon Portal
 export function triggerEnterCavePortal(coordKey, entity) {
+  if (STATE.lootGatheringInProgress) return;
   if (entity.isExit) {
     // Going back to parent location
     STATE.party.currentLocationId = entity.targetLocationId;
@@ -584,6 +596,7 @@ function findLocalPath(startX, startY, targetX, targetY, locState) {
 }
 
 export function attemptLocalPathMove(targetX, targetY) {
+  if (STATE.lootGatheringInProgress) return;
   const locId = STATE.party.currentLocationId;
   const locState = STATE.locations[locId];
   if (!locState) return;
@@ -618,6 +631,7 @@ export function attemptLocalPathMove(targetX, targetY) {
 }
 
 export function attemptLocalMove(targetX, targetY) {
+  if (STATE.lootGatheringInProgress) return;
   const locId = STATE.party.currentLocationId;
   const locState = STATE.locations[locId];
   if (!locState) return;
@@ -690,3 +704,221 @@ export function attemptLocalMove(targetX, targetY) {
     notify('STATE_UPDATED');
   }
 }
+
+export function useWarHorn() {
+  if (STATE.lootGatheringInProgress) return;
+  const locId = STATE.party.currentLocationId;
+  const locState = STATE.locations[locId];
+  if (!locState) return;
+
+  // 1. Discover all tiles in the current location (just the 10x10)
+  for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 10; x++) {
+      const coordKey = `${x},${y}`;
+      if (!locState.placedTiles[coordKey]) {
+        discoverTile(locId, x, y);
+      }
+    }
+  }
+
+  // Render the fully discovered map
+  renderLocationMap();
+  logLocation('Sounded the War Horn! The entire area is revealed, and defenders are summoned.');
+  showToast('War Horn Sounded! 📯', '📯', true);
+
+  setTimeout(() => {
+    // 1. Synchronize defeat statuses first between placedTiles and preGeneratedEntities
+    for (const [coordKey, entity] of Object.entries(locState.preGeneratedEntities)) {
+      if (entity && entity.type === 'enemy_army') {
+        const tile = locState.placedTiles[coordKey];
+        if (tile && tile.entity) {
+          if (entity.isDefeated === true || tile.entity.isDefeated === true) {
+            entity.isDefeated = true;
+            tile.entity.isDefeated = true;
+          }
+        }
+      }
+    }
+
+    const uniqueEnemies = [];
+    const seenCoords = new Set();
+    
+    // 2. Gather from preGeneratedEntities (since it represents all generated spawns on this level)
+    for (const [coordKey, entity] of Object.entries(locState.preGeneratedEntities)) {
+      if (entity && entity.type === 'enemy_army' && entity.isDefeated !== true) {
+        seenCoords.add(coordKey);
+        uniqueEnemies.push(entity);
+      }
+    }
+
+    // 3. Fallback/Safety: Gather from placedTiles if any coordinates were somehow missed or dynamically added
+    for (const [coordKey, tile] of Object.entries(locState.placedTiles)) {
+      if (tile.entity && tile.entity.type === 'enemy_army' && tile.entity.isDefeated !== true) {
+        if (!seenCoords.has(coordKey)) {
+          seenCoords.add(coordKey);
+          uniqueEnemies.push(tile.entity);
+        }
+      }
+    }
+
+    console.log("War Horn gathered unique enemies:", uniqueEnemies.length, Array.from(seenCoords));
+
+    if (uniqueEnemies.length === 0) {
+      logLocation('The horns echo, but no defenders remain to answer.');
+      showToast('No defenders remain!', '📯');
+      return;
+    }
+
+    const monsterGroups = uniqueEnemies.map(enemy => {
+      const monstersArr = [...enemy.monsters];
+      monstersArr.enemyRef = enemy;
+      return monstersArr;
+    });
+
+    // Start combat
+    import('../state.js').then(({ setScreen }) => {
+      setScreen('combat');
+      STATE.combat.isWarHornBattle = true;
+      import('../combat.js').then(({ startCombat }) => {
+        startCombat(locId, 'war_horn', {
+          type: 'enemy_army',
+          monsterGroups: monsterGroups,
+          isDefeated: false
+        });
+      });
+    });
+  }, 1000);
+}
+
+export function gatherAndAnimateLoot() {
+  const locId = STATE.party.currentLocationId;
+  const locState = STATE.locations[locId];
+  if (!locState) return;
+
+  const px = STATE.party.localX;
+  const py = STATE.party.localY;
+
+  const lootTasks = [];
+  
+  for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 10; x++) {
+      const coordKey = `${x},${y}`;
+      const tile = locState.placedTiles[coordKey];
+      if (tile && tile.entity) {
+        const ent = tile.entity;
+        let emoji = null;
+        let looted = false;
+
+        if (ent.type === 'treasure' && !ent.isLooted) {
+          emoji = '🪙';
+          let goldGained = ent.silver || 15;
+          if (STATE.godQuests.loki?.[0]) {
+            const m1Config = GODS_CONFIG.modifiers.milestones.loki.find(m => m.index === 0);
+            goldGained += m1Config?.chestGoldBonus ?? 1;
+          }
+          adjustResource('gold', goldGained);
+          ent.isLooted = true;
+          looted = true;
+        }
+        else if (ent.type === 'wood_source' && !ent.isLooted) {
+          emoji = '🪵';
+          adjustResource('wood', ent.wood || 10);
+          ent.isLooted = true;
+          looted = true;
+        }
+        else if (ent.type === 'sheep_source' && !ent.isLooted) {
+          emoji = '🐑';
+          adjustResource('sheep', ent.sheep || 1);
+          ent.isLooted = true;
+          looted = true;
+        }
+        else if (ent.type === 'ore_deposit' && !ent.isLooted) {
+          emoji = '🪨';
+          adjustResource('gold', ent.gold || 20);
+          ent.isLooted = true;
+          looted = true;
+        }
+        else if (ent.type === 'fishing_spot' && !ent.isLooted) {
+          emoji = '🎣';
+          adjustResource('food', ent.food || 5);
+          ent.isLooted = true;
+          looted = true;
+        }
+        else if (ent.type === 'berry_bush' && !ent.isLooted) {
+          emoji = '🍒';
+          adjustResource('food', ent.food || 5);
+          ent.isLooted = true;
+          looted = true;
+        }
+        else if (ent.type === 'dolmen' && !ent.isVisited) {
+          emoji = '🏆';
+          STATE.inventory.push(ent.magicObjectId);
+          ent.isVisited = true;
+          looted = true;
+        }
+
+
+        if (looted && emoji) {
+          lootTasks.push({ x, y, emoji });
+        }
+      }
+    }
+  }
+
+  if (lootTasks.length === 0) return;
+
+  STATE.lootGatheringInProgress = true;
+
+  notify('STATE_UPDATED');
+  renderLocationMap(); // Re-render first to remove static badges, so we only see flying ones
+
+  const mapRect = elLocMap.getBoundingClientRect();
+  const playerCell = elLocMap.querySelector(`.location-tile[data-x="${px}"][data-y="${py}"]`);
+  if (!playerCell) {
+    STATE.lootGatheringInProgress = false;
+    return;
+  }
+  const playerRect = playerCell.getBoundingClientRect();
+  const targetX = playerRect.left - mapRect.left + playerRect.width / 2;
+  const targetY = playerRect.top - mapRect.top + playerRect.height / 2;
+
+  lootTasks.forEach(task => {
+    const sourceCell = elLocMap.querySelector(`.location-tile[data-x="${task.x}"][data-y="${task.y}"]`);
+    if (!sourceCell) return;
+    const sourceRect = sourceCell.getBoundingClientRect();
+    const startX = sourceRect.left - mapRect.left + sourceRect.width / 2;
+    const startY = sourceRect.top - mapRect.top + sourceRect.height / 2;
+
+    const floater = document.createElement('span');
+    floater.innerText = task.emoji;
+    floater.style.position = 'absolute';
+    floater.style.left = `${startX}px`;
+    floater.style.top = `${startY}px`;
+    floater.style.fontSize = '1.5rem';
+    floater.style.zIndex = '1000';
+    floater.style.pointerEvents = 'none';
+    floater.style.transform = 'translate(-50%, -50%)';
+    floater.style.transition = 'all 1s cubic-bezier(0.25, 1, 0.5, 1)';
+    
+    elLocMap.appendChild(floater);
+
+    requestAnimationFrame(() => {
+      floater.style.left = `${targetX}px`;
+      floater.style.top = `${targetY}px`;
+      floater.style.opacity = '0';
+      floater.style.transform = 'translate(-50%, -50%) scale(0.5)';
+    });
+
+    setTimeout(() => {
+      floater.remove();
+    }, 1000);
+  });
+
+  setTimeout(() => {
+    STATE.lootGatheringInProgress = false;
+    renderLocationMap();
+    showToast('All resources gathered! 🎒', '🎒');
+  }, 1000);
+}
+
+

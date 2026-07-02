@@ -3,13 +3,14 @@
    ========================================================================== */
 
 import { STATE, notify, getEffectiveStats } from '../state.js';
-import { togglePause, deployUnit, undeployUnit, sortPoolByPoints } from '../combat.js';
+import { togglePause, deployUnit, undeployUnit, sortPoolByPoints, checkAndAutoDeploy } from '../combat.js';
 import { SOLDIERS_CONFIG, SOLDIER_EMOJIS } from '../config/soldiers.js';
 import {
   elCombatGrid, elCombatPoolList, elCombatPauseBtn,
   elTooltip, MONSTER_EMOJIS
 } from './dom.js';
 import { formatStat } from './dom.js';
+import { showToast } from './notifications.js';
 
 export function renderFormationElement() {
   const container = document.getElementById('formation-container');
@@ -94,12 +95,88 @@ export function renderFormationElement() {
   });
 }
 
+// Helper to handle dragstart for planned positions
+function handlePlanDragstart(e, r, c, cellEl) {
+  e.dataTransfer.setData('text/plain', `move-plan:${r},${c}`);
+  e.dataTransfer.effectAllowed = 'move';
+
+  // Custom multi-drag ghost image
+  const isSelected = STATE.combat.selectedPlans && STATE.combat.selectedPlans.some(p => p.r === r && p.c === c);
+  const plans = isSelected ? [...STATE.combat.selectedPlans] : [{ r, c }];
+
+  if (plans.length > 1) {
+    const minR = Math.min(...plans.map(p => p.r));
+    const maxR = Math.max(...plans.map(p => p.r));
+    const minC = Math.min(...plans.map(p => p.c));
+    const maxC = Math.max(...plans.map(p => p.c));
+    
+    const rowsCount = maxR - minR + 1;
+    const colsCount = maxC - minC + 1;
+    
+    const cellWidth = cellEl.offsetWidth || 50;
+    const cellHeight = cellEl.offsetHeight || 50;
+    const gap = 2;
+    
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-3000px';
+    tempContainer.style.top = '-3000px';
+    tempContainer.style.display = 'grid';
+    tempContainer.style.gridTemplateRows = `repeat(${rowsCount}, ${cellHeight}px)`;
+    tempContainer.style.gridTemplateColumns = `repeat(${colsCount}, ${cellWidth}px)`;
+    tempContainer.style.gap = `${gap}px`;
+    tempContainer.style.pointerEvents = 'none';
+    
+    for (let curR = minR; curR <= maxR; curR++) {
+      for (let curC = minC; curC <= maxC; curC++) {
+        const cellDiv = document.createElement('div');
+        cellDiv.style.width = `${cellWidth}px`;
+        cellDiv.style.height = `${cellHeight}px`;
+        cellDiv.style.display = 'flex';
+        cellDiv.style.alignItems = 'center';
+        cellDiv.style.justifyContent = 'center';
+        
+        const isPart = plans.some(p => p.r === curR && p.c === curC);
+        if (isPart) {
+          const type = STATE.combat.plannedLayout?.[curR]?.[curC];
+          if (type) {
+            const ghostDiv = document.createElement('div');
+            ghostDiv.className = 'combat-unit ghost-unit ghost-soldier-available';
+            ghostDiv.innerText = SOLDIER_EMOJIS[type] || '👾';
+            ghostDiv.style.opacity = '0.7';
+            cellDiv.appendChild(ghostDiv);
+          }
+        }
+        tempContainer.appendChild(cellDiv);
+      }
+    }
+    
+    document.body.appendChild(tempContainer);
+    
+    const clickOffsetX = (c - minC) * (cellWidth + gap) + (e.offsetX || (cellWidth / 2));
+    const clickOffsetY = (r - minR) * (cellHeight + gap) + (e.offsetY || (cellHeight / 2));
+    
+    e.dataTransfer.setDragImage(tempContainer, clickOffsetX, clickOffsetY);
+    
+    setTimeout(() => {
+      tempContainer.remove();
+    }, 0);
+  }
+}
+
 // Render 10x8 Combat lanes grid
 export function renderCombatGrid() {
   elCombatGrid.innerHTML = '';
 
   const grid = STATE.combat.grid;
   if (!grid || grid.length === 0) return;
+
+  const planningActive = !!((STATE.combat.planningWizard && STATE.combat.planningWizard.active) || STATE.combat.activePlanningType || STATE.combat.movePlansMode);
+  if (planningActive) {
+    elCombatGrid.classList.add('planning-active');
+  } else {
+    elCombatGrid.classList.remove('planning-active');
+  }
 
   // Build grid layout cells
   for (let r = 0; r < 8; r++) {
@@ -109,26 +186,250 @@ export function renderCombatGrid() {
       elCell.dataset.row = r;
       elCell.dataset.col = c;
 
-      // Make columns 0 and 1 highlighted deploy zones when paused
-      if (STATE.combat.paused && c <= 1 && !grid[r][c]) {
-        if (STATE.combat.selectedPoolIndex !== null) {
-          elCell.classList.add('deployable-zone');
-          elCell.addEventListener('click', () => {
-            deployUnit(STATE.combat.selectedPoolIndex, r, c);
+      const planType = STATE.combat.plannedLayout?.[r]?.[c];
+      const isThisTick = STATE.combat.plansDefinedThisTick?.[`${r},${c}`];
+      const isSelectedPlan = STATE.combat.selectedPlans?.some(p => p.r === r && p.c === c);
+      if (isSelectedPlan) {
+        elCell.classList.add('selected-planned-cell');
+      }
+
+      // Make columns plan/deploy drop zones
+      if (c < 10) {
+        if (STATE.combat.movePlansMode && planType && isThisTick) {
+          elCell.draggable = true;
+          elCell.addEventListener('dragstart', (e) => {
+            handlePlanDragstart(e, r, c, elCell);
           });
         }
 
-        // Render keyboard shortcut key hint in the cell (qweruiop for col 0, asdfjklö for col 1)
-        const hints = {
-          '0,0': 'Q', '1,0': 'W', '2,0': 'E', '3,0': 'R', '4,0': 'U', '5,0': 'I', '6,0': 'O', '7,0': 'P',
-          '0,1': 'A', '1,1': 'S', '2,1': 'D', '3,1': 'F', '4,1': 'J', '5,1': 'K', '6,1': 'L', '7,1': 'Ö'
-        };
-        const hintKey = `${r},${c}`;
-        if (hints[hintKey]) {
-          const elHint = document.createElement('span');
-          elHint.className = 'cell-key-hint';
-          elHint.innerText = hints[hintKey];
-          elCell.appendChild(elHint);
+        // Drag over / drop handlers for planning layout
+        elCell.addEventListener('dragover', (e) => {
+          e.preventDefault();
+        });
+        elCell.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const dragData = e.dataTransfer.getData('text/plain');
+          if (dragData && dragData.startsWith('plan:')) {
+            const type = dragData.replace('plan:', '');
+            if (!STATE.combat.plannedLayout) {
+              STATE.combat.plannedLayout = Array.from({ length: 8 }, () => Array(10).fill(null));
+            }
+            if (type === 'clear') {
+              STATE.combat.plannedLayout[r][c] = null;
+              if (STATE.combat.plansDefinedThisTick) delete STATE.combat.plansDefinedThisTick[`${r},${c}`];
+              if (STATE.combat.selectedPlans) {
+                STATE.combat.selectedPlans = STATE.combat.selectedPlans.filter(p => !(p.r === r && p.c === c));
+              }
+            } else {
+              STATE.combat.plannedLayout[r][c] = type;
+              if (!STATE.combat.plansDefinedThisTick) STATE.combat.plansDefinedThisTick = {};
+              STATE.combat.plansDefinedThisTick[`${r},${c}`] = true;
+            }
+            checkAndAutoDeploy();
+            notify('COMBAT_UPDATE');
+          } else if (dragData && dragData.startsWith('move-plan:')) {
+            const [startR, startC] = dragData.replace('move-plan:', '').split(',').map(Number);
+            const dRow = r - startR;
+            const dCol = c - startC;
+            const plansToMove = (STATE.combat.selectedPlans && STATE.combat.selectedPlans.some(p => p.r === startR && p.c === startC))
+              ? [...STATE.combat.selectedPlans]
+              : [{ r: startR, c: startC }];
+
+            const moves = [];
+            plansToMove.forEach(p => {
+              const newR = Math.max(0, Math.min(7, p.r + dRow));
+              const newC = Math.max(0, Math.min(9, p.c + dCol));
+              const type = STATE.combat.plannedLayout[p.r][p.c];
+              moves.push({ fromR: p.r, fromC: p.c, toR: newR, toC: newC, type });
+            });
+
+            // Phase 1: Clear old plan positions
+            moves.forEach(m => {
+              STATE.combat.plannedLayout[m.fromR][m.fromC] = null;
+              if (STATE.combat.plansDefinedThisTick) delete STATE.combat.plansDefinedThisTick[`${m.fromR},${m.fromC}`];
+            });
+
+            // Phase 2: Set new plan positions
+            moves.forEach(m => {
+              STATE.combat.plannedLayout[m.toR][m.toC] = m.type;
+              if (!STATE.combat.plansDefinedThisTick) STATE.combat.plansDefinedThisTick = {};
+              STATE.combat.plansDefinedThisTick[`${m.toR},${m.toC}`] = true;
+            });
+
+            // Phase 3: Gather related deploying units to move (remove temporarily from grid to prevent blocking)
+            const unitsToMove = [];
+            moves.forEach(m => {
+              if (m.fromR !== m.toR) {
+                const grid = STATE.combat.grid;
+                let unit = null;
+                let unitCol = -1;
+                for (let checkCol = 0; checkCol <= 1; checkCol++) {
+                  const cell = grid[m.fromR][checkCol];
+                  // Search for matching player unit in this lane
+                  if (cell && cell.alliance === 'player' && cell.type === m.type && !cell.isCharmed && !cell.isConfused && !cell.isUndead) {
+                    unit = cell;
+                    unitCol = checkCol;
+                    break;
+                  }
+                }
+                if (unit) {
+                  grid[m.fromR][unitCol] = null;
+                  unitsToMove.push({ unit, toR: m.toR, preferredCol: unitCol });
+                }
+              }
+            });
+
+            // Phase 4: Place units back onto the grid in their new lanes
+            unitsToMove.forEach(item => {
+              const grid = STATE.combat.grid;
+              let targetCol = item.preferredCol;
+              if (grid[item.toR][targetCol]) {
+                targetCol = (item.preferredCol === 0) ? 1 : 0;
+              }
+              if (grid[item.toR][targetCol]) {
+                if (!grid[item.toR][0]) targetCol = 0;
+                else if (!grid[item.toR][1]) targetCol = 1;
+              }
+              item.unit.row = item.toR;
+              item.unit.col = targetCol;
+              grid[item.toR][targetCol] = item.unit;
+            });
+
+            // Update selection to match new coordinates
+            const newSelection = [];
+            moves.forEach(m => {
+              newSelection.push({ r: m.toR, c: m.toC });
+            });
+            STATE.combat.selectedPlans = newSelection;
+
+            checkAndAutoDeploy();
+            notify('COMBAT_UPDATE');
+          }
+        });
+
+        // Contextmenu (right-click) to clear planning
+        elCell.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          if (STATE.combat.plannedLayout && STATE.combat.plannedLayout[r][c]) {
+            STATE.combat.plannedLayout[r][c] = null;
+            if (STATE.combat.plansDefinedThisTick) delete STATE.combat.plansDefinedThisTick[`${r},${c}`];
+            if (STATE.combat.selectedPlans) {
+              STATE.combat.selectedPlans = STATE.combat.selectedPlans.filter(p => !(p.r === r && p.c === c));
+            }
+            checkAndAutoDeploy();
+            notify('COMBAT_UPDATE');
+          }
+        });
+
+        elCell.addEventListener('click', (e) => {
+          if (STATE.combat.movePlansMode) {
+            e.stopPropagation();
+            const planType = STATE.combat.plannedLayout?.[r]?.[c];
+            const isThisTick = STATE.combat.plansDefinedThisTick?.[`${r},${c}`];
+            if (planType && isThisTick) {
+              if (!e.shiftKey) {
+                STATE.combat.selectedPlans = [];
+              }
+              if (!STATE.combat.selectedPlans) STATE.combat.selectedPlans = [];
+              const existsIdx = STATE.combat.selectedPlans.findIndex(p => p.r === r && p.c === c);
+              if (existsIdx !== -1) {
+                STATE.combat.selectedPlans.splice(existsIdx, 1);
+              } else {
+                STATE.combat.selectedPlans.push({ r, c });
+              }
+              notify('COMBAT_UPDATE');
+            }
+            return;
+          }
+
+          let type = null;
+          let wiz = null;
+          if (STATE.combat.planningWizard && STATE.combat.planningWizard.active) {
+            wiz = STATE.combat.planningWizard;
+            const currentWizType = wiz.types[wiz.typeIndex];
+            if (currentWizType) {
+              type = currentWizType.type;
+            }
+          } else if (STATE.combat.activePlanningType) {
+            type = STATE.combat.activePlanningType;
+          }
+
+          if (type) {
+            e.stopPropagation();
+            
+            if (!STATE.combat.plannedLayout) {
+              STATE.combat.plannedLayout = Array.from({ length: 8 }, () => Array(10).fill(null));
+            }
+            STATE.combat.plannedLayout[r][c] = type;
+            if (!STATE.combat.plansDefinedThisTick) STATE.combat.plansDefinedThisTick = {};
+            STATE.combat.plansDefinedThisTick[`${r},${c}`] = true;
+            
+            if (wiz) {
+              wiz.placedCount++;
+              if (wiz.placedCount >= wiz.types[wiz.typeIndex].totalCount) {
+                wiz.typeIndex++;
+                wiz.placedCount = 0;
+                if (wiz.typeIndex >= wiz.types.length) {
+                  wiz.active = false;
+                }
+              }
+            }
+            
+            checkAndAutoDeploy();
+            notify('COMBAT_UPDATE');
+          } else {
+            // Delete plan if click on cell with existing planned location when not actively placing/moving
+            const planType = STATE.combat.plannedLayout?.[r]?.[c];
+            if (planType) {
+              e.stopPropagation();
+              STATE.combat.plannedLayout[r][c] = null;
+              if (STATE.combat.plansDefinedThisTick) delete STATE.combat.plansDefinedThisTick[`${r},${c}`];
+              if (STATE.combat.selectedPlans) {
+                STATE.combat.selectedPlans = STATE.combat.selectedPlans.filter(p => !(p.r === r && p.c === c));
+              }
+              checkAndAutoDeploy();
+              notify('COMBAT_UPDATE');
+            } else {
+              // Click on a completely empty cell
+              if (c <= 1 && STATE.combat.paused && !grid[r][c] && STATE.combat.selectedPoolIndex !== null) {
+                deployUnit(STATE.combat.selectedPoolIndex, r, c);
+                return;
+              }
+              
+              const unit = grid[r][c];
+              if (!unit) {
+                // Clear selected units
+                for (let row = 0; row < grid.length; row++) {
+                  for (let col = 0; col < grid[row].length; col++) {
+                    const u = grid[row][col];
+                    if (u) u.selected = false;
+                  }
+                }
+                // Clear selected planned locations
+                STATE.combat.selectedPlans = [];
+                notify('COMBAT_UPDATE');
+              }
+            }
+          }
+        });
+
+        if (c <= 1 && STATE.combat.paused && !grid[r][c]) {
+          if (STATE.combat.selectedPoolIndex !== null) {
+            elCell.classList.add('deployable-zone');
+          }
+
+          // Render keyboard shortcut key hint in the cell (qweruiop for col 0, asdfjklö for col 1)
+          const hints = {
+            '0,0': 'Q', '1,0': 'W', '2,0': 'E', '3,0': 'R', '4,0': 'U', '5,0': 'I', '6,0': 'O', '7,0': 'P',
+            '0,1': 'A', '1,1': 'S', '2,1': 'D', '3,1': 'F', '4,1': 'J', '5,1': 'K', '6,1': 'L', '7,1': 'Ö'
+          };
+          const hintKey = `${r},${c}`;
+          if (hints[hintKey]) {
+            const elHint = document.createElement('span');
+            elHint.className = 'cell-key-hint';
+            elHint.innerText = hints[hintKey];
+            elCell.appendChild(elHint);
+          }
         }
       }
 
@@ -137,6 +438,11 @@ export function renderCombatGrid() {
       if (unit) {
         const elUnit = document.createElement('div');
         elUnit.classList.add('combat-unit', `alliance-${unit.alliance}`);
+
+        // Highlight selected units
+        if (unit.alliance === 'player' && unit.selected) {
+          elUnit.classList.add('selected-unit');
+        }
 
         // Emoji display based on soldier/monster class type or fleeing state
         if (unit.isFleeing) {
@@ -171,7 +477,7 @@ export function renderCombatGrid() {
 
         // Apply active player stances visual style classes to player units
         if (unit.alliance === 'player') {
-          const stance = STATE.combat.stance || 'attack';
+          const stance = unit.stance || STATE.combat.stance || 'attack';
           elUnit.classList.add(`stance-${stance}`);
           if (stance !== 'attack') {
             const stanceBadge = document.createElement('span');
@@ -216,21 +522,38 @@ export function renderCombatGrid() {
           elUnit.appendChild(burnIcon);
         }
 
-        // Allow removing unit from deployment grid if paused, OR fleeing if fleeMode is active
+        // Left-click selection and right-click undeployment
         if (unit.alliance === 'player') {
-          if (STATE.combat.fleeMode) {
-            elUnit.classList.add('fleeing-target');
-            elUnit.addEventListener('click', (e) => {
-              e.stopPropagation();
+          elUnit.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (STATE.combat.fleeMode) {
               unit.isFleeing = true;
               notify('COMBAT_UPDATE');
-            });
-          } else if (STATE.combat.paused) {
-            elUnit.classList.add('removable-unit');
-            elUnit.addEventListener('click', (e) => {
-              e.stopPropagation();
+              return;
+            }
+            if (e.shiftKey) {
+              // Shift-click: toggle selection of this unit (additively)
+              unit.selected = !unit.selected;
+              notify('COMBAT_UPDATE');
+            } else {
+              // Regular click: remove/undeploy unit from map
+              if (STATE.combat.paused) {
+                undeployUnit(r, c);
+              }
+            }
+          });
+
+          // Right-click to undeploy (only when paused)
+          elUnit.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (STATE.combat.paused) {
               undeployUnit(r, c);
-            });
+            }
+          });
+
+          if (STATE.combat.fleeMode) {
+            elUnit.classList.add('fleeing-target');
           }
         }
 
@@ -258,6 +581,84 @@ export function renderCombatGrid() {
         hbContainer.appendChild(hbFill);
         elUnit.appendChild(hbContainer);
         elCell.appendChild(elUnit);
+      } else if (c < 10 && STATE.combat.plannedLayout && STATE.combat.plannedLayout[r][c]) {
+        // Draw ghost planned unit
+        const type = STATE.combat.plannedLayout[r][c];
+
+        // Determine ghost order state
+        let orderState = 'no soldier available';
+
+        // 1. Check if deployed in lane r
+        let isDeployedInLane = false;
+        for (let checkC = 0; checkC < 10; checkC++) {
+          const cell = grid[r][checkC];
+          if (cell && cell.alliance === 'player' && cell.type === type && !cell.isCharmed && !cell.isConfused && !cell.isUndead) {
+            isDeployedInLane = true;
+            break;
+          }
+        }
+
+        if (isDeployedInLane) {
+          orderState = 'soldier deployed';
+        } else {
+          // 2. Check if available in pool
+          const isAvailableInPool = STATE.combat.pool.some(u => u.type === type);
+          if (isAvailableInPool) {
+            orderState = 'soldier available';
+          }
+        }
+
+        const elGhost = document.createElement('div');
+        elGhost.classList.add('combat-unit', 'ghost-unit');
+        if (orderState === 'no soldier available') {
+          elGhost.classList.add('ghost-no-soldier');
+          elGhost.title = `Order: ${type} (No soldier available) - Click to delete`;
+        } else if (orderState === 'soldier available') {
+          elGhost.classList.add('ghost-soldier-available');
+          elGhost.title = `Order: ${type} (Available to deploy) - Click to delete`;
+        } else if (orderState === 'soldier deployed') {
+          elGhost.classList.add('ghost-soldier-deployed');
+          elGhost.title = `Order: ${type} (Deployed in lane) - Click to delete`;
+        }
+        elGhost.innerText = SOLDIER_EMOJIS[type] || '👾';
+
+        const isThisTick = STATE.combat.plansDefinedThisTick && STATE.combat.plansDefinedThisTick[`${r},${c}`];
+        if (STATE.combat.movePlansMode && isThisTick) {
+          elGhost.draggable = true;
+          elGhost.addEventListener('dragstart', (e) => {
+            handlePlanDragstart(e, r, c, elCell);
+          });
+        }
+
+        elGhost.addEventListener('click', (e) => {
+          if (STATE.combat.movePlansMode) {
+            return;
+          }
+          e.stopPropagation();
+          STATE.combat.plannedLayout[r][c] = null;
+          if (STATE.combat.plansDefinedThisTick) delete STATE.combat.plansDefinedThisTick[`${r},${c}`];
+          if (STATE.combat.selectedPlans) {
+            STATE.combat.selectedPlans = STATE.combat.selectedPlans.filter(p => !(p.r === r && p.c === c));
+          }
+          checkAndAutoDeploy();
+          notify('COMBAT_UPDATE');
+        });
+        elGhost.addEventListener('contextmenu', (e) => {
+          if (STATE.combat.movePlansMode) {
+            return;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          STATE.combat.plannedLayout[r][c] = null;
+          if (STATE.combat.plansDefinedThisTick) delete STATE.combat.plansDefinedThisTick[`${r},${c}`];
+          if (STATE.combat.selectedPlans) {
+            STATE.combat.selectedPlans = STATE.combat.selectedPlans.filter(p => !(p.r === r && p.c === c));
+          }
+          checkAndAutoDeploy();
+          notify('COMBAT_UPDATE');
+        });
+
+        elCell.appendChild(elGhost);
       }
 
       elCombatGrid.appendChild(elCell);
@@ -377,16 +778,16 @@ export function renderCombatGrid() {
         const godNames = ['odin', 'thor', 'hel', 'loki', 'freya'];
         godNames.forEach(g => {
           const unlocked = STATE.godQuests[g]?.[4] === true;
-          const hasCast = unit.runesCast && unit.runesCast[g] === true;
+          const cooldown = unit.runeCooldowns && unit.runeCooldowns[g] ? unit.runeCooldowns[g] : 0;
           
           let statusSymbol = '🔒';
           let statusText = 'Locked';
           let statusColor = 'var(--text-muted)';
           
           if (unlocked) {
-            if (hasCast) {
-              statusSymbol = '🔲';
-              statusText = 'Depleted';
+            if (cooldown > 0) {
+              statusSymbol = '⏳';
+              statusText = `${cooldown} ticks`;
               statusColor = 'var(--text-muted)';
             } else {
               statusSymbol = '✅';
@@ -428,6 +829,7 @@ export function renderCombatGrid() {
   });
 
   renderFormationElement();
+  renderOrdersPanel();
 }
 
 /* --- Visual Effects Helpers --- */
@@ -630,3 +1032,386 @@ export function markRunecasterCasting(unit) {
   unit.isCastingRune = true;
   setTimeout(() => { unit.isCastingRune = false; }, 600);
 }
+
+/* --- Orders Panel & Drag-Selection Helpers --- */
+
+export function renderOrdersPanel() {
+  const container = document.getElementById('orders-unit-list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const btnPlanTitle = document.getElementById('btn-plan-title');
+  const wiz = STATE.combat.planningWizard;
+  if (wiz && wiz.active && wiz.types && wiz.types.length > 0 && wiz.typeIndex < wiz.types.length) {
+    if (btnPlanTitle) {
+      btnPlanTitle.classList.add('btn-warning');
+      btnPlanTitle.classList.remove('btn-primary');
+    }
+    STATE.combat.activePlanningType = wiz.types[wiz.typeIndex].type;
+  } else {
+    if (btnPlanTitle) {
+      btnPlanTitle.classList.add('btn-primary');
+      btnPlanTitle.classList.remove('btn-warning');
+    }
+    if (wiz) wiz.active = false;
+  }
+
+  const btnMovePlans = document.getElementById('btn-move-plans');
+  if (btnMovePlans) {
+    if (STATE.combat.movePlansMode) {
+      btnMovePlans.classList.add('btn-warning');
+      btnMovePlans.classList.remove('btn-primary');
+    } else {
+      btnMovePlans.classList.add('btn-primary');
+      btnMovePlans.classList.remove('btn-warning');
+    }
+  }
+
+  // Get unique unit types present in the spawning pool
+  let poolTypes = [];
+  if (STATE.combat && STATE.combat.pool && STATE.combat.pool.length > 0) {
+    poolTypes = [...new Set(STATE.combat.pool.map(u => u.type))];
+  }
+  const uniqueTypes = poolTypes;
+
+  uniqueTypes.forEach(type => {
+    const card = document.createElement('div');
+    card.classList.add('orders-card');
+    if (STATE.combat.activePlanningType === type) {
+      card.classList.add('selected-orders-card');
+    }
+    card.draggable = true;
+    
+    const emoji = SOLDIER_EMOJIS[type] || '⚔️';
+    card.title = `${type.charAt(0).toUpperCase() + type.slice(1)} - Click to plan on map`;
+    card.innerHTML = `${emoji}`;
+
+    card.addEventListener('click', () => {
+      if (STATE.combat.activePlanningType === type) {
+        STATE.combat.activePlanningType = null;
+      } else {
+        STATE.combat.activePlanningType = type;
+        STATE.combat.movePlansMode = false;
+        STATE.combat.selectedPlans = [];
+        if (STATE.combat.planningWizard) {
+          STATE.combat.planningWizard.active = false;
+        }
+      }
+      notify('COMBAT_UPDATE');
+    });
+
+    card.addEventListener('dragstart', (e) => {
+      STATE.combat.movePlansMode = false;
+      STATE.combat.selectedPlans = [];
+      e.dataTransfer.setData('text/plain', `plan:${type}`);
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+
+    container.appendChild(card);
+  });
+}
+
+let isSelecting = false;
+let startX = 0;
+let startY = 0;
+let selectionBox = null;
+
+export function initCombatSelection() {
+  const gridEl = document.getElementById('combat-grid');
+  if (!gridEl) return;
+
+  gridEl.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  const btnClear = document.getElementById('btn-clear-plans');
+  if (btnClear) {
+    btnClear.onclick = () => {
+      if (STATE.combat.grid && STATE.combat.deployHistory) {
+        for (let r = 0; r < STATE.combat.grid.length; r++) {
+          for (let c = 0; c < STATE.combat.grid[r].length; c++) {
+            const unit = STATE.combat.grid[r][c];
+            if (unit && unit.alliance === 'player' && STATE.combat.deployHistory.includes(unit.id)) {
+              undeployUnit(r, c);
+            }
+          }
+        }
+      }
+      STATE.combat.plannedLayout = Array.from({ length: 8 }, () => Array(10).fill(null));
+      STATE.combat.activePlanningType = null;
+      STATE.combat.selectedPlans = [];
+      if (STATE.combat.planningWizard) {
+        STATE.combat.planningWizard.active = false;
+      }
+      checkAndAutoDeploy();
+      notify('COMBAT_UPDATE');
+    };
+  }
+
+  const btnSave = document.getElementById('btn-save-plans');
+  if (btnSave) {
+    btnSave.onclick = () => {
+      const layout = STATE.combat.plannedLayout || Array.from({ length: 8 }, () => Array(10).fill(null));
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(layout));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "battle_plan.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('Battle plan saved/downloaded!');
+    };
+  }
+
+  const btnLoad = document.getElementById('btn-load-plans');
+  if (btnLoad) {
+    btnLoad.onclick = () => {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = '.json';
+      fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const layout = JSON.parse(evt.target.result);
+            if (Array.isArray(layout) && layout.length === 8 && layout.every(row => Array.isArray(row) && row.length === 10)) {
+              STATE.combat.plannedLayout = layout;
+              STATE.combat.plansDefinedThisTick = {};
+              for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 10; col++) {
+                  if (layout[row][col]) {
+                    STATE.combat.plansDefinedThisTick[`${row},${col}`] = true;
+                  }
+                }
+              }
+              checkAndAutoDeploy();
+              notify('COMBAT_UPDATE');
+              showToast('Battle plan loaded successfully!');
+            } else {
+              showToast('Invalid battle plan layout format.');
+            }
+          } catch (err) {
+            showToast('Error parsing JSON battle plan.');
+          }
+        };
+        reader.readAsText(file);
+      };
+      fileInput.click();
+    };
+  }
+
+  const btnPlanTitle = document.getElementById('btn-plan-title');
+  if (btnPlanTitle) {
+    btnPlanTitle.onclick = () => {
+      STATE.combat.movePlansMode = false;
+      STATE.combat.selectedPlans = [];
+
+      if (STATE.combat.planningWizard && STATE.combat.planningWizard.active) {
+        STATE.combat.planningWizard.active = false;
+        STATE.combat.activePlanningType = null;
+        notify('COMBAT_UPDATE');
+        return;
+      }
+
+      STATE.combat.activePlanningType = null;
+      let poolTypes = [];
+      if (STATE.combat && STATE.combat.pool && STATE.combat.pool.length > 0) {
+        poolTypes = [...new Set(STATE.combat.pool.map(u => u.type))];
+      }
+      const uniqueTypes = poolTypes;
+
+      const wizardTypes = [];
+      uniqueTypes.forEach(type => {
+        const poolCount = STATE.combat.pool ? STATE.combat.pool.filter(u => u.type === type).length : 0;
+        const gridCount = (STATE.combat.grid || []).flat().filter(u => u && u.alliance === 'player' && !u.isCharmed && !u.isConfused && !u.isUndead && u.type === type).length;
+        const totalCount = poolCount + gridCount;
+        if (totalCount > 0) {
+          wizardTypes.push({ type, totalCount });
+        }
+      });
+
+      if (wizardTypes.length > 0) {
+        STATE.combat.planningWizard = {
+          active: true,
+          types: wizardTypes,
+          typeIndex: 0,
+          placedCount: 0
+        };
+      }
+      notify('COMBAT_UPDATE');
+    };
+  }
+
+  const btnMovePlans = document.getElementById('btn-move-plans');
+  if (btnMovePlans) {
+    btnMovePlans.onclick = () => {
+      STATE.combat.movePlansMode = !STATE.combat.movePlansMode;
+      if (STATE.combat.movePlansMode) {
+        STATE.combat.activePlanningType = null;
+        if (STATE.combat.planningWizard) {
+          STATE.combat.planningWizard.active = false;
+        }
+      }
+      STATE.combat.selectedPlans = [];
+      notify('COMBAT_UPDATE');
+    };
+  }
+
+  gridEl.addEventListener('mousedown', (e) => {
+    // Only select on left click
+    if (e.button !== 0) return;
+    
+    // Ignore if clicking on a real unit or input/button/removable card
+    const isRealUnit = e.target.closest('.combat-unit:not(.ghost-unit)');
+    if (isRealUnit || e.target.closest('.orders-card') || e.target.closest('.pool-card') || e.target.closest('.btn') || e.target.closest('button')) {
+      return;
+    }
+
+    // Ignore starting selection box if clicking/dragging a movable plan cell
+    const cellEl = e.target.closest('.combat-cell');
+    if (cellEl) {
+      const r = parseInt(cellEl.dataset.row);
+      const c = parseInt(cellEl.dataset.col);
+      const planType = STATE.combat.plannedLayout?.[r]?.[c];
+      const isThisTick = STATE.combat.plansDefinedThisTick?.[`${r},${c}`];
+      if (STATE.combat.movePlansMode && planType && isThisTick) {
+        return;
+      }
+    }
+
+    isSelecting = true;
+    startX = e.clientX;
+    startY = e.clientY;
+
+    if (!selectionBox) {
+      selectionBox = document.createElement('div');
+      selectionBox.className = 'selection-box';
+      document.body.appendChild(selectionBox);
+    }
+
+    selectionBox.style.left = `${startX}px`;
+    selectionBox.style.top = `${startY}px`;
+    selectionBox.style.width = '0px';
+    selectionBox.style.height = '0px';
+    selectionBox.style.display = 'none'; // Keep hidden until drag starts
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isSelecting || !selectionBox) return;
+
+    const currentX = e.clientX;
+    const currentY = e.clientY;
+
+    const width = Math.abs(startX - currentX);
+    const height = Math.abs(startY - currentY);
+
+    if (width > 5 || height > 5) {
+      selectionBox.style.display = 'block';
+      const left = Math.min(startX, currentX);
+      const top = Math.min(startY, currentY);
+
+      selectionBox.style.left = `${left}px`;
+      selectionBox.style.top = `${top}px`;
+      selectionBox.style.width = `${width}px`;
+      selectionBox.style.height = `${height}px`;
+    }
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    if (!isSelecting || !selectionBox) return;
+    isSelecting = false;
+    const isShowing = selectionBox.style.display === 'block';
+    
+    const boxRect = selectionBox.getBoundingClientRect();
+    selectionBox.style.display = 'none';
+
+    if (!isShowing) return;
+    if (boxRect.width < 5 || boxRect.height < 5) return;
+
+    const addToSelection = e.shiftKey;
+
+    if (STATE.combat.movePlansMode) {
+      if (!addToSelection) {
+        STATE.combat.selectedPlans = [];
+      }
+      let selectedAny = false;
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 10; c++) {
+          const planType = STATE.combat.plannedLayout?.[r]?.[c];
+          const isThisTick = STATE.combat.plansDefinedThisTick?.[`${r},${c}`];
+          if (planType && isThisTick) {
+            const cellEl = document.querySelector(`.combat-cell[data-row="${r}"][data-col="${c}"]`);
+            if (cellEl) {
+              const cellRect = cellEl.getBoundingClientRect();
+              const intersect = !(
+                cellRect.left > boxRect.right ||
+                cellRect.right < boxRect.left ||
+                cellRect.top > boxRect.bottom ||
+                cellRect.bottom < boxRect.top
+              );
+              if (intersect) {
+                if (!STATE.combat.selectedPlans) STATE.combat.selectedPlans = [];
+                if (!STATE.combat.selectedPlans.some(p => p.r === r && p.c === c)) {
+                  STATE.combat.selectedPlans.push({ r, c });
+                }
+                selectedAny = true;
+              }
+            }
+          }
+        }
+      }
+      notify('COMBAT_UPDATE');
+      return;
+    }
+
+    const grid = STATE.combat.grid;
+    if (!grid) return;
+
+    // Clear previous selection if not holding shift
+    if (!addToSelection) {
+      for (let r = 0; r < grid.length; r++) {
+        for (let c = 0; c < grid[r].length; c++) {
+          const u = grid[r][c];
+          if (u) u.selected = false;
+        }
+      }
+    }
+
+    let selectedAny = false;
+    for (let r = 0; r < grid.length; r++) {
+      for (let c = 0; c < grid[r].length; c++) {
+        const u = grid[r][c];
+        if (u && u.alliance === 'player') {
+          const cellEl = document.querySelector(`.combat-cell[data-row="${r}"][data-col="${c}"]`);
+          if (cellEl) {
+            const cellRect = cellEl.getBoundingClientRect();
+            // Check intersection
+            const intersect = !(
+              cellRect.left > boxRect.right ||
+              cellRect.right < boxRect.left ||
+              cellRect.top > boxRect.bottom ||
+              cellRect.bottom < boxRect.top
+            );
+            if (intersect) {
+              u.selected = true;
+              selectedAny = true;
+            }
+          }
+        }
+      }
+    }
+
+    // If click or very small drag on empty space, deselect all
+    if (!selectedAny && !addToSelection && boxRect.width < 6 && boxRect.height < 6) {
+      for (let r = 0; r < grid.length; r++) {
+        for (let c = 0; c < grid[r].length; c++) {
+          const u = grid[r][c];
+          if (u) u.selected = false;
+        }
+      }
+    }
+
+    notify('COMBAT_UPDATE');
+  });
+}
+

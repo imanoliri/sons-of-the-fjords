@@ -239,6 +239,8 @@ body {
   font-family: var(--font-runes);
   color: var(--text-muted);
   font-size: 1.1rem;
+  margin-left: 2rem;
+  margin-right: 1.5rem;
 }
 
 /* Menu Screen */
@@ -362,6 +364,7 @@ body {
 
 /* 10x10 Location Map Grid */
 .location-map-grid {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(10, 60px);
   grid-template-rows: repeat(10, 60px);
@@ -528,6 +531,19 @@ body {
 .raid-marker {
   font-size: 1.5rem;
   filter: drop-shadow(0 0 5px var(--color-danger));
+}
+
+.raid-marker.cleared {
+  filter: drop-shadow(0 0 6px var(--color-success)) !important;
+}
+
+.raid-checkmark-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 0.8rem;
+  z-index: 5;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
 }
 
 .world-tile.visited-wilderness {
@@ -2478,4 +2494,159 @@ body {
   0%, 100% { box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
   50%       { box-shadow: 0 0 22px rgba(250, 204, 21, 0.5), 0 0 40px rgba(250, 204, 21, 0.15); }
 }
-
+
+/* ==========================================================================
+   COMBAT ORDERS & AUTO-DEPLOYMENT STYLES
+   ========================================================================== */
+
+.orders-panel {
+  width: 78px;
+  min-width: 78px;
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.2rem;
+  box-sizing: border-box;
+  align-items: center;
+  align-self: flex-start;
+}
+
+.orders-card {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  cursor: grab;
+  user-select: none;
+  font-size: 1.5rem;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.orders-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--text-accent, #00f0ff);
+  transform: scale(1.08);
+  box-shadow: 0 4px 8px rgba(0, 240, 255, 0.2);
+}
+
+.orders-card:active {
+  cursor: grabbing;
+}
+
+/* Selection Box Overlay */
+.selection-box {
+  border: 1px solid var(--text-accent, #00f0ff);
+  background: rgba(0, 240, 255, 0.12);
+  position: absolute;
+  pointer-events: none;
+  z-index: 1000;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+}
+
+/* Selected Deployed Soldier Highlights */
+.combat-unit.selected-unit {
+  outline: 2.5px solid var(--text-accent, #00f0ff) !important;
+  box-shadow: 0 0 12px var(--text-accent, #00f0ff), inset 0 0 8px var(--text-accent, #00f0ff) !important;
+  animation: pulseSelectionGlow 1.2s infinite alternate;
+}
+
+@keyframes pulseSelectionGlow {
+  0% { box-shadow: 0 0 6px rgba(0, 240, 255, 0.4); }
+  100% { box-shadow: 0 0 15px rgba(0, 240, 255, 0.8), inset 0 0 8px rgba(0, 240, 255, 0.6); }
+}
+
+/* Ghost Units states */
+.combat-unit.ghost-unit {
+  opacity: 0.42;
+  background: rgba(0, 0, 0, 0.25) !important;
+  border-style: dashed !important;
+  border-width: 2px !important;
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.combat-unit.ghost-unit.ghost-no-soldier {
+  border-color: var(--color-danger, #ef4444) !important;
+  box-shadow: inset 0 0 6px rgba(239, 68, 68, 0.15) !important;
+}
+
+.combat-unit.ghost-unit.ghost-soldier-available {
+  border-color: rgba(255, 255, 255, 0.45) !important;
+  box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.08) !important;
+}
+
+.combat-unit.ghost-unit.ghost-soldier-deployed {
+  border-color: var(--text-accent, #00f0ff) !important;
+  box-shadow: inset 0 0 6px rgba(0, 240, 255, 0.15) !important;
+  animation: pulseGhostBorder 1.5s infinite alternate;
+}
+
+@keyframes pulseGhostBorder {
+  0% {
+    box-shadow: 0 0 2px rgba(0, 240, 255, 0.1), inset 0 0 4px rgba(0, 240, 255, 0.05);
+  }
+  100% {
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.4), inset 0 0 8px rgba(0, 240, 255, 0.2);
+  }
+}
+
+.orders-card.selected-orders-card {
+  border-color: var(--text-accent, #00f0ff) !important;
+  background: rgba(0, 240, 255, 0.15) !important;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.4) !important;
+}
+
+.combat-grid.planning-active .combat-cell {
+  cursor: pointer;
+}
+.combat-grid.planning-active .combat-cell:hover {
+  background-color: rgba(0, 240, 255, 0.15) !important;
+  box-shadow: inset 0 0 10px rgba(0, 240, 255, 0.3) !important;
+}
+
+.combat-cell.selected-planned-cell {
+  box-shadow: inset 0 0 10px rgba(255, 230, 0, 0.6) !important;
+  border: 1px dashed rgba(255, 230, 0, 0.8) !important;
+}
+
+/* Triumphant Golden Ascension Styling */
+.modal-box.deity-odin {
+  border: 2px solid gold !important;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.6), inset 0 0 15px rgba(255, 215, 0, 0.3) !important;
+  animation: runicPulseOdin 2.5s infinite ease-in-out !important;
+}
+
+.modal-box.deity-odin .logo-text {
+  color: gold !important;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.5) !important;
+  font-size: 2.25rem !important;
+  letter-spacing: 6px;
+  margin-bottom: 0.5rem;
+}
+
+@keyframes runicPulseOdin {
+  0% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4), inset 0 0 10px rgba(255, 215, 0, 0.2);
+    border-color: rgba(255, 215, 0, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 45px rgba(255, 215, 0, 0.9), inset 0 0 25px rgba(255, 215, 0, 0.5);
+    border-color: rgba(255, 215, 0, 1);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4), inset 0 0 10px rgba(255, 215, 0, 0.2);
+    border-color: rgba(255, 215, 0, 0.6);
+  }
+}
