@@ -534,7 +534,7 @@ export function startWorldHazardTicker() {
           break; // Enter combat and pause ticker/updates
         } else {
           logWorld(collision.text, 'warn-message');
-          if (collision.dead.length > 0) {
+          if (collision.dead && collision.dead.length > 0) {
             logWorld(`Sagas remember the fallen: ${collision.dead.join(', ')} perished in the disaster.`, 'warn-message');
           }
         }
