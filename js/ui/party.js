@@ -471,7 +471,7 @@ function renderSoldierDetails(container, record) {
   // Stats grid
   const statsHtml = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 1rem; font-size: 0.75rem; margin-bottom: 0.75rem;">
-      <div>${s.attacksMade}x ⚔️ <b>Attacks Made</b></div>
+      <div>${s.attacksMade}x 👊 <b>Attacks Made</b></div>
       <div>${s.damageDealt} 💥 <b>Damage Dealt</b></div>
       <div>${s.damageReceived} 🛡️ <b>Damage Received</b></div>
       <div>${s.damageBlocked} 🔰 <b>Damage Blocked</b> (${s.blockedHits}x hits)</div>
