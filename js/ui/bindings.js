@@ -9,6 +9,7 @@ import { SOLDIERS_CONFIG } from '../config/soldiers.js';
 import { GODS_CONFIG } from '../config/gods.js';
 import { TOWN_CONFIG } from '../config/town.js';
 import { LOCATION_CONFIG } from '../config/location.js';
+import { BIOME_MONSTER_POOLS } from '../config/biomes.js';
 import { togglePause, deployUnit, undeployUnit, fleeCombat, adjustCombatSpeed, checkAndAutoDeploy } from '../combat.js';
 import { showToast, logWorld, logLocation } from './notifications.js';
 import { showOverlay, hideOverlay, updateModalKeyboardNavigation } from './overlay.js';
@@ -1309,17 +1310,7 @@ function initTooltipEvents() {
     // Add concrete enemy description for any land/raid tiles on world map (excluding towns)
     if (locationType !== 'town' && (locationType === 'raid' || (terrain !== 'water' && terrain !== 'deep_water' && terrain !== 'river'))) {
       const biome = locationType === 'raid' ? (locationBiome || 'default') : terrain;
-      const biomePools = {
-        forest: ['Fenrir Pack Wolf', 'Brood Spider'],
-        mountain: ['Cave Troll', 'Fenrir Pack Wolf'],
-        cave: ['Cave Troll', 'Fenrir Pack Wolf'],
-        burial_mound: ['Draugr Warrior'],
-        snow: ['Frost Giant (Jotunn)', 'Fenrir Pack Wolf'],
-        water: ['Brood Spider'],
-        default: ['Brood Spider', 'Fenrir Pack Wolf']
-      };
-
-      let pool = [...(biomePools[biome] || biomePools.default)];
+      let pool = [...(BIOME_MONSTER_POOLS[biome] || BIOME_MONSTER_POOLS.default)];
       const activeMap = getActiveMap();
       if (activeMap && activeMap.monsterPoolOverrides) {
         const overrides = activeMap.monsterPoolOverrides;

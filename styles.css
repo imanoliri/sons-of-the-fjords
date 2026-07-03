@@ -523,6 +523,25 @@ body {
   100% { transform: rotate(360deg); }
 }
 
+.roaming-band-marker {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  z-index: 5;
+  pointer-events: none;
+  animation: bandBounce 2s infinite ease-in-out;
+}
+
+@keyframes bandBounce {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-6px) scale(1.1); }
+  100% { transform: translateY(0); }
+}
+
 .town-marker {
   font-size: 1.5rem;
   filter: drop-shadow(0 0 5px #ffd700);

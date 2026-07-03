@@ -34,12 +34,12 @@ export const COMBAT_CONFIG = {
     'Cave Troll':          { hp: 70,  dmg: 8,  speed: 1, range: 1, emoji: '🧌' },
     // Bosses
     'Frost Giant (Jotunn)':{ hp: 120, dmg: 10, speed: 1, range: 1, emoji: '❄️' },
-    'Lindwurm':            { hp: 50,  dmg: 6,  speed: 2, range: 1, emoji: '🐉' },
+    'Lindwurm':            { hp: 50,  dmg: 6,  speed: 2, range: 1, emoji: '🐉', isWaterborn: true },
     // New Monsters & Foes for specific worlds
     'Ice Wolf':            { hp: 30,  dmg: 5,  speed: 3, range: 1, emoji: '🐺' }, // Tundra/Frozen Wastes
     'Mercenary Guard':     { hp: 45,  dmg: 6,  speed: 2, range: 1, emoji: '♆' }, // Iron Coast
-    'Shore Raider':        { hp: 40,  dmg: 5,  speed: 2, range: 1, emoji: '🏴‍☠️' }, // Iron Coast / Dark Archipelago
-    'Archipelago Wraith':  { hp: 38,  dmg: 6,  speed: 1, range: 2, emoji: '👻' }, // Dark Archipelago ruins
+    'Shore Raider':        { hp: 40,  dmg: 5,  speed: 2, range: 1, emoji: '🏴‍☠️', isWaterborn: true }, // Iron Coast / Dark Archipelago
+    'Archipelago Wraith':  { hp: 38,  dmg: 6,  speed: 1, range: 2, emoji: '👻', isFlying: true }, // Dark Archipelago ruins
     // Muspelheim's Edge Monsters
     'Fire Giant':          { hp: 130, dmg: 12, speed: 1, range: 1, emoji: '🔥' },
     'Lava Beetle':         { hp: 22,  dmg: 4,  speed: 3, range: 1, emoji: '🪲' },
@@ -49,7 +49,7 @@ export const COMBAT_CONFIG = {
     'Swamp Hag':           { hp: 45,  dmg: 6,  speed: 2, range: 2, emoji: '🧙‍♀️' },
     // Jotunheim Peaks Monsters
     'Ymir Frost-Shaman':   { hp: 60,  dmg: 7,  speed: 1, range: 2, emoji: '🔮' },
-    'Rime-Crag Gargoyle':  { hp: 50,  dmg: 8,  speed: 2, range: 1, emoji: '🦇' },
+    'Rime-Crag Gargoyle':  { hp: 50,  dmg: 8,  speed: 2, range: 1, emoji: '🦇', isFlying: true },
     // Ash Wolf and Swamp Wolf to enable Odin favor progression
     'Ash Wolf':            { hp: 30,  dmg: 5,  speed: 3, range: 1, emoji: '🐺' },
     'Swamp Wolf':          { hp: 32,  dmg: 5,  speed: 3, range: 1, emoji: '🐺' }

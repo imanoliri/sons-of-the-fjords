@@ -1436,6 +1436,17 @@ export function endCombat(isVictory) {
   if (isVictory) {
     const locId = STATE.combat.locationId;
     const coordKey = STATE.combat.entityCoordKey;
+
+    if (coordKey && coordKey.startsWith('roaming_')) {
+      const bandId = coordKey.replace('roaming_', '');
+      if (STATE.worldMap.roamingBands) {
+        const band = STATE.worldMap.roamingBands.find(b => b.id === bandId);
+        if (band) {
+          band.isDefeated = true;
+        }
+      }
+    }
+
     const locState = STATE.locations[locId];
     if (locState) {
       if (STATE.combat.isWarHornBattle || STATE.combat.entityCoordKey === 'war_horn') {

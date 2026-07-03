@@ -171,6 +171,18 @@ export function renderWorldMap() {
         }
       }
 
+      // Draw active roaming enemy bands
+      if (STATE.worldMap.roamingBands && STATE.worldMap.roamingBands.length > 0) {
+        const activeBands = STATE.worldMap.roamingBands.filter(b => b.x === x && b.y === y && !b.isDefeated);
+        for (const band of activeBands) {
+          const bandEl = document.createElement('div');
+          bandEl.className = `roaming-band-marker roaming-${band.type}`;
+          bandEl.innerText = band.emoji || '🛡️';
+          bandEl.title = band.name;
+          elCell.appendChild(bandEl);
+        }
+      }
+
       // Navigation handler for adjacent cells
       const isAdjacent = adjacents.some(a => a.x === x && a.y === y);
       if (isAdjacent) {
@@ -312,6 +324,17 @@ export function movePartyOnWorld(x, y) {
 
   // Reveal fog in a 2-tile radius around player
   revealWorldFog(x, y);
+
+  // Check if player moved onto an active roaming band
+  if (STATE.worldMap.roamingBands && STATE.worldMap.roamingBands.length > 0) {
+    const bandOnTile = STATE.worldMap.roamingBands.find(b => b.x === x && b.y === y && !b.isDefeated);
+    if (bandOnTile) {
+      logWorld(`WARBAND ENCOUNTER: You intercepted the enemy group '${bandOnTile.name}'! Prepare for battle!`, 'warn-message');
+      triggerRoamingCombat(bandOnTile);
+      notify('STATE_UPDATED');
+      return;
+    }
+  }
 
   // Odin's Wrath: Random unit loses 1 HP every 3 world steps (only at -5 favor)
   if (STATE.godFavor.odin === -5) {
@@ -473,9 +496,15 @@ export function startWorldHazardTicker() {
     const hazardCollisions = tickHazards();
     if (hazardCollisions.length > 0) {
       for (const collision of hazardCollisions) {
-        logWorld(collision.text, 'warn-message');
-        if (collision.dead.length > 0) {
-          logWorld(`Sagas remember the fallen: ${collision.dead.join(', ')} perished in the disaster.`, 'warn-message');
+        if (collision.band) {
+          logWorld(collision.text, 'warn-message');
+          triggerRoamingCombat(collision.band);
+          break; // Enter combat and pause ticker/updates
+        } else {
+          logWorld(collision.text, 'warn-message');
+          if (collision.dead.length > 0) {
+            logWorld(`Sagas remember the fallen: ${collision.dead.join(', ')} perished in the disaster.`, 'warn-message');
+          }
         }
       }
       if (STATE.band.length === 0 && STATE.resources.gold === 0) {
@@ -484,6 +513,19 @@ export function startWorldHazardTicker() {
     }
     renderWorldMap();
   }, 3000); // Ticks every 3 seconds in real time
+}
+
+export function triggerRoamingCombat(band) {
+  import('../state.js').then(({ setScreen }) => {
+    setScreen('combat');
+    import('../combat.js').then(({ startCombat }) => {
+      startCombat(null, `roaming_${band.id}`, {
+        type: 'enemy_army',
+        monsters: band.monsters,
+        isDefeated: false
+      });
+    });
+  });
 }
 
 export function stopWorldHazardTicker() {
