@@ -2,7 +2,7 @@
    COMBAT MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, notify, adjustResource, getEffectiveStats, updateSoldierStat, recordSoldierKill, recordSoldierRuneCast, markSoldierDead, addSoldierEvent } from './state.js';
+import { STATE, notify, adjustResource, recordMonsterKill, getEffectiveStats, updateSoldierStat, recordSoldierKill, recordSoldierRuneCast, markSoldierDead, addSoldierEvent } from './state.js';
 import { COMBAT_CONFIG as CFG } from './config/combat.js';
 import { SOLDIERS_CONFIG } from './config/soldiers.js';
 import { GODS_CONFIG as GC } from './config/gods.js';
