@@ -4,6 +4,7 @@
 
 import { STATE, notify, adjustResource, setScreen } from '../state.js';
 import { getAdjacentCoords, getActiveMap, tickHazards } from '../world.js';
+import { COMBAT_CONFIG } from '../config/combat.js';
 import { generateLocationMap } from '../location.js';
 import { MOVEMENT_CONFIG } from '../config/movement.js';
 import { LOCATION_CONFIG } from '../config/location.js';
@@ -542,6 +543,11 @@ export function triggerRoamingCombat(band) {
   import('./overlay.js').then(({ showOverlay, hideOverlay }) => {
     import('./dom.js').then(({ elModalEvent, elModalEventTitle, elModalEventBody, elModalEventChoices, elModalEventCloseBtn }) => {
       if (elModalEventCloseBtn) elModalEventCloseBtn.style.display = 'none';
+
+      const monsterClass = band.monsters?.[0]?.monsterClass;
+      const monsterStats = COMBAT_CONFIG.monsters[monsterClass] || {};
+      const isIntelligent = monsterStats.isIntelligent === true;
+      const isMonster = monsterStats.isMonster === true;
       
       elModalEventTitle.innerText = `Ambushed: ${band.name}`;
       elModalEventBody.innerHTML = `
@@ -568,37 +574,41 @@ export function triggerRoamingCombat(band) {
       });
       elModalEventChoices.appendChild(fightBtn);
 
-      // Choice 2: Bribe (costs 30 Gold)
-      const bribeBtn = document.createElement('button');
-      bribeBtn.className = 'btn btn-warning';
-      bribeBtn.innerText = `Bribe them with 30 Gold (${STATE.resources.gold >= 30 ? 'Available' : 'Insufficient Gold'})`;
-      if (STATE.resources.gold < 30) {
-        bribeBtn.disabled = true;
+      // Choice 2: Bribe (costs 30 Gold) - Only for intelligent beings
+      if (isIntelligent) {
+        const bribeBtn = document.createElement('button');
+        bribeBtn.className = 'btn btn-warning';
+        bribeBtn.innerText = `Bribe them with 30 Gold (${STATE.resources.gold >= 30 ? 'Available' : 'Insufficient Gold'})`;
+        if (STATE.resources.gold < 30) {
+          bribeBtn.disabled = true;
+        }
+        bribeBtn.addEventListener('click', () => {
+          adjustResource('gold', -30);
+          band.cooldownTicks = 3;
+          hideOverlay(elModalEvent);
+          logWorld(`BRIBE: You paid 30 Gold to bribe ${band.name}. They will ignore you for 3 ticks.`, 'warn-message');
+          notify('STATE_UPDATED');
+        });
+        elModalEventChoices.appendChild(bribeBtn);
       }
-      bribeBtn.addEventListener('click', () => {
-        adjustResource('gold', -30);
-        band.cooldownTicks = 3;
-        hideOverlay(elModalEvent);
-        logWorld(`BRIBE: You paid 30 Gold to bribe ${band.name}. They will ignore you for 3 ticks.`, 'warn-message');
-        notify('STATE_UPDATED');
-      });
-      elModalEventChoices.appendChild(bribeBtn);
 
-      // Choice 3: Distract with Sheep (costs 2 Sheep)
-      const distractBtn = document.createElement('button');
-      distractBtn.className = 'btn btn-primary';
-      distractBtn.innerText = `Distract with 2 Sheep (${STATE.resources.sheep >= 2 ? 'Available' : 'Insufficient Sheep'})`;
-      if (STATE.resources.sheep < 2) {
-        distractBtn.disabled = true;
+      // Choice 3: Distract with Sheep (costs 2 Sheep) - Only for monsters
+      if (isMonster) {
+        const distractBtn = document.createElement('button');
+        distractBtn.className = 'btn btn-primary';
+        distractBtn.innerText = `Distract with 2 Sheep (${STATE.resources.sheep >= 2 ? 'Available' : 'Insufficient Sheep'})`;
+        if (STATE.resources.sheep < 2) {
+          distractBtn.disabled = true;
+        }
+        distractBtn.addEventListener('click', () => {
+          adjustResource('sheep', -2);
+          band.cooldownTicks = 3;
+          hideOverlay(elModalEvent);
+          logWorld(`DISTRACTION: You left 2 Sheep behind to distract ${band.name}. They will ignore you for 3 ticks.`, 'warn-message');
+          notify('STATE_UPDATED');
+        });
+        elModalEventChoices.appendChild(distractBtn);
       }
-      distractBtn.addEventListener('click', () => {
-        adjustResource('sheep', -2);
-        band.cooldownTicks = 3;
-        hideOverlay(elModalEvent);
-        logWorld(`DISTRACTION: You left 2 Sheep behind to distract ${band.name}. They will ignore you for 3 ticks.`, 'warn-message');
-        notify('STATE_UPDATED');
-      });
-      elModalEventChoices.appendChild(distractBtn);
 
       showOverlay(elModalEvent);
     });
