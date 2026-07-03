@@ -100,46 +100,57 @@ export function initializeWorld() {
   STATE.worldMap.roamingBands = [];
   const numBands = 3;
   for (let i = 0; i < numBands; i++) {
-    let rx, ry, attempts = 0;
-    let terrain = '';
-    do {
-      rx = Math.floor(Math.random() * size);
-      ry = Math.floor(Math.random() * size);
-      terrain = tiles[ry][rx];
-      attempts++;
-    } while (
-      (Math.abs(rx - cfg.partyStart.x) + Math.abs(ry - cfg.partyStart.y) < 5 ||
-      (terrain === 'water' && cfg.id !== 'dark_archipelago' && cfg.id !== 'iron_coast')) &&
-      attempts < 100
-    );
-
-    const isNaval = (terrain === 'water');
-    const pool = getMonsterPoolForTile(rx, ry);
-    const selectedMonster = pool[Math.floor(Math.random() * pool.length)] || 'Fenrir Pack Wolf';
-    const difficulty = cfg.difficulty || 1;
-    let countMin = Math.max(1, Math.floor(2 * difficulty));
-    let countMax = Math.max(countMin, Math.floor(4 * difficulty));
-    const count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
-
-    const monsterCfg = COMBAT_CONFIG.monsters[selectedMonster] || {};
-    const bandName = selectedMonster;
-    const bandEmoji = monsterCfg.emoji || '🛡️';
-
-    STATE.worldMap.roamingBands.push({
-      id: `band_${Date.now()}_${i}`,
-      name: bandName,
-      emoji: bandEmoji,
-      type: isNaval ? 'naval' : 'land',
-      x: rx,
-      y: ry,
-      isDefeated: false,
-      monsters: [{ monsterClass: selectedMonster, count }]
-    });
+    spawnSingleRoamingBand();
   }
 
   // 4. Set initial party spawn point from config
   STATE.party.worldX = cfg.partyStart.x;
   STATE.party.worldY = cfg.partyStart.y;
+}
+
+export function spawnSingleRoamingBand() {
+  const cfg = getActiveMap();
+  const size = cfg.gridSize;
+  const tiles = STATE.worldMap.tiles;
+  
+  let rx, ry, attempts = 0;
+  let terrain = '';
+  do {
+    rx = Math.floor(Math.random() * size);
+    ry = Math.floor(Math.random() * size);
+    terrain = tiles[ry][rx];
+    attempts++;
+  } while (
+    (Math.abs(rx - STATE.party.worldX) + Math.abs(ry - STATE.party.worldY) < 5 ||
+    (terrain === 'water' && cfg.id !== 'dark_archipelago' && cfg.id !== 'iron_coast')) &&
+    attempts < 100
+  );
+
+  const isNaval = (terrain === 'water');
+  const pool = getMonsterPoolForTile(rx, ry);
+  const selectedMonster = pool[Math.floor(Math.random() * pool.length)] || 'Fenrir Pack Wolf';
+  const difficulty = cfg.difficulty || 1;
+  let countMin = Math.max(1, Math.floor(2 * difficulty));
+  let countMax = Math.max(countMin, Math.floor(4 * difficulty));
+  const count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
+
+  const monsterCfg = COMBAT_CONFIG.monsters[selectedMonster] || {};
+  const bandName = selectedMonster;
+  const bandEmoji = monsterCfg.emoji || '🛡️';
+
+  const newBand = {
+    id: `band_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    name: bandName,
+    emoji: bandEmoji,
+    type: isNaval ? 'naval' : 'land',
+    x: rx,
+    y: ry,
+    isDefeated: false,
+    monsters: [{ monsterClass: selectedMonster, count }]
+  };
+  
+  STATE.worldMap.roamingBands.push(newBand);
+  return newBand;
 }
 
 // TODO: Consolidate this monster pool resolution logic with generateEntity() in location.js 
@@ -262,6 +273,19 @@ export function tickRoamingBands() {
     if (reinforced) {
       logs.push({
         text: `⚔️ RUMORS: Hostile roaming bands on the World Map have reinforced their numbers!`
+      });
+    }
+  }
+
+  if (!STATE.worldMap.lastRespawnDay) STATE.worldMap.lastRespawnDay = 1;
+  const respawnDaysDiff = STATE.day - STATE.worldMap.lastRespawnDay;
+  if (respawnDaysDiff >= 10) {
+    STATE.worldMap.lastRespawnDay = STATE.day;
+    const activeBandsCount = STATE.worldMap.roamingBands.filter(b => !b.isDefeated).length;
+    if (activeBandsCount < 3) {
+      const newBand = spawnSingleRoamingBand();
+      logs.push({
+        text: `⚔️ RUMORS: A new hostile warband (${newBand.name}) has sighted your party and is tracking you!`
       });
     }
   }

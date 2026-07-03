@@ -539,14 +539,68 @@ export function startWorldHazardTicker() {
 }
 
 export function triggerRoamingCombat(band) {
-  import('../state.js').then(({ setScreen }) => {
-    setScreen('combat');
-    import('../combat.js').then(({ startCombat }) => {
-      startCombat(null, `roaming_${band.id}`, {
-        type: 'enemy_army',
-        monsters: band.monsters,
-        isDefeated: false
+  import('./overlay.js').then(({ showOverlay, hideOverlay }) => {
+    import('./dom.js').then(({ elModalEvent, elModalEventTitle, elModalEventBody, elModalEventChoices, elModalEventCloseBtn }) => {
+      if (elModalEventCloseBtn) elModalEventCloseBtn.style.display = 'none';
+      
+      elModalEventTitle.innerText = `Ambushed: ${band.name}`;
+      elModalEventBody.innerHTML = `
+        The hostile roaming band <b>${band.name}</b> (${band.emoji}) has intercepted your party!<br><br>
+        They are blocking your path and outnumber your vanguard. How will you respond?
+      `;
+
+      elModalEventChoices.innerHTML = '';
+
+      // Choice 1: Fight!
+      const fightBtn = document.createElement('button');
+      fightBtn.className = 'btn btn-danger';
+      fightBtn.innerText = 'Stand and Fight!';
+      fightBtn.addEventListener('click', () => {
+        hideOverlay(elModalEvent);
+        setScreen('combat');
+        import('../combat.js').then(({ startCombat }) => {
+          startCombat(null, `roaming_${band.id}`, {
+            type: 'enemy_army',
+            monsters: band.monsters,
+            isDefeated: false
+          });
+        });
       });
+      elModalEventChoices.appendChild(fightBtn);
+
+      // Choice 2: Bribe (costs 30 Gold)
+      const bribeBtn = document.createElement('button');
+      bribeBtn.className = 'btn btn-warning';
+      bribeBtn.innerText = `Bribe them with 30 Gold (${STATE.resources.gold >= 30 ? 'Available' : 'Insufficient Gold'})`;
+      if (STATE.resources.gold < 30) {
+        bribeBtn.disabled = true;
+      }
+      bribeBtn.addEventListener('click', () => {
+        adjustResource('gold', -30);
+        band.cooldownTicks = 3;
+        hideOverlay(elModalEvent);
+        logWorld(`BRIBE: You paid 30 Gold to bribe ${band.name}. They will ignore you for 3 ticks.`, 'warn-message');
+        notify('STATE_UPDATED');
+      });
+      elModalEventChoices.appendChild(bribeBtn);
+
+      // Choice 3: Distract with Sheep (costs 2 Sheep)
+      const distractBtn = document.createElement('button');
+      distractBtn.className = 'btn btn-primary';
+      distractBtn.innerText = `Distract with 2 Sheep (${STATE.resources.sheep >= 2 ? 'Available' : 'Insufficient Sheep'})`;
+      if (STATE.resources.sheep < 2) {
+        distractBtn.disabled = true;
+      }
+      distractBtn.addEventListener('click', () => {
+        adjustResource('sheep', -2);
+        band.cooldownTicks = 3;
+        hideOverlay(elModalEvent);
+        logWorld(`DISTRACTION: You left 2 Sheep behind to distract ${band.name}. They will ignore you for 3 ticks.`, 'warn-message');
+        notify('STATE_UPDATED');
+      });
+      elModalEventChoices.appendChild(distractBtn);
+
+      showOverlay(elModalEvent);
     });
   });
 }
