@@ -3,6 +3,7 @@
    ========================================================================== */
 
 import { SOLDIER_EMOJIS } from '../config/soldiers.js';
+import { COMBAT_CONFIG } from '../config/combat.js';
 
 import { STATE, notify, getEffectiveStats, markSoldierDismissed } from '../state.js';
 import { GODS_CONFIG } from '../config/gods.js';
@@ -501,9 +502,11 @@ function renderSoldierDetails(container, record) {
   // Kill list
   const killEntries = Object.entries(s.killList || {});
   if (killEntries.length > 0) {
-    let killHtml = '<div style="font-size: 0.75rem; margin-bottom: 0.75rem;"><b>\ud83d\udde1\ufe0f Kill List:</b><br>';
+    let killHtml = '<div style="font-size: 0.75rem; margin-bottom: 0.75rem;"><b>🗡️ Kill List:</b><br>';
     killEntries.sort((a, b) => b[1] - a[1]).forEach(([monster, count]) => {
-      killHtml += `  ${monster}: ${count}x<br>`;
+      const cfg = COMBAT_CONFIG.monsters[monster] || COMBAT_CONFIG.monsterFallback;
+      const emoji = cfg.emoji;
+      killHtml += `  ${count}x ${emoji} ${monster}<br>`;
     });
     killHtml += '</div>';
     container.innerHTML += killHtml;
