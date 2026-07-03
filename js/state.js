@@ -117,6 +117,11 @@ export function subscribe(fn) {
 }
 
 export function notify(event, data = null) {
+  if (event === 'SAGA_VICTORY_ACHIEVED') {
+    STATE.band.forEach(s => {
+      addSoldierEvent(s.id, '🏆 Achieved Saga Victory! Immortalized in the Saga.');
+    });
+  }
   for (const listener of listeners) listener(event, data);
 }
 
