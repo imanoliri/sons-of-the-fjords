@@ -106,6 +106,8 @@ export function initializeWorld() {
   // 4. Set initial party spawn point from config
   STATE.party.worldX = cfg.partyStart.x;
   STATE.party.worldY = cfg.partyStart.y;
+  STATE.party.previousWorldX = cfg.partyStart.x;
+  STATE.party.previousWorldY = cfg.partyStart.y;
 }
 
 export function spawnSingleRoamingBand() {

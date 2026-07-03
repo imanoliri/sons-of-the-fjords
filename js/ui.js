@@ -262,6 +262,12 @@ export function handleStateNotification(event, data) {
     delete STATE.party.pendingLocalX;
     delete STATE.party.pendingLocalY;
 
+    const coordKey = STATE.combat.entityCoordKey;
+    if (coordKey && coordKey.startsWith('roaming_') && STATE.party.previousWorldX !== undefined) {
+      STATE.party.worldX = STATE.party.previousWorldX;
+      STATE.party.worldY = STATE.party.previousWorldY;
+    }
+
     const locId = STATE.party.currentLocationId;
     import('./state.js').then(({ setScreen }) => {
       if (!locId) {
@@ -275,6 +281,13 @@ export function handleStateNotification(event, data) {
   else if (event === 'COMBAT_DEFEAT') {
     logWorld('DEFEAT! All your Viking soldiers perished on the battlefield.', 'combat-message');
     showToast('Your band was wiped out!', '💀', true);
+
+    const coordKey = STATE.combat.entityCoordKey;
+    if (coordKey && coordKey.startsWith('roaming_') && STATE.party.previousWorldX !== undefined) {
+      STATE.party.worldX = STATE.party.previousWorldX;
+      STATE.party.worldY = STATE.party.previousWorldY;
+    }
+
     // If gold is also 0, trigger Game Over modal, else force them to world map so they recruit
     if (STATE.resources.gold === 0) {
       showOverlay(elModalGameOver);

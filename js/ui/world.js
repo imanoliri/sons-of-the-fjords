@@ -314,6 +314,8 @@ export function movePartyOnWorld(x, y) {
     }
   }
 
+  STATE.party.previousWorldX = STATE.party.worldX;
+  STATE.party.previousWorldY = STATE.party.worldY;
   STATE.party.worldX = x;
   STATE.party.worldY = y;
   STATE.day = (STATE.day || 1) + 1;
