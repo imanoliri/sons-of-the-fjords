@@ -2649,4 +2649,12 @@ body {
     box-shadow: 0 0 20px rgba(255, 215, 0, 0.4), inset 0 0 10px rgba(255, 215, 0, 0.2);
     border-color: rgba(255, 215, 0, 0.6);
   }
+}
+
+/* ── Hall of Fame ─────────────────────────────────────────────────────────── */
+.hof-card {
+  transition: border-color 0.2s ease;
+}
+.hof-card:hover {
+  border-color: var(--color-odin, #4fc3f7) !important;
 }

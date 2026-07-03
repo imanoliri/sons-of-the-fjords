@@ -2,7 +2,7 @@
    APPLICATION ENTRY - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, subscribe, resetGame } from './state.js';
+import { STATE, subscribe, resetGame, initHallOfFame } from './state.js';
 import { initializeWorld, setActiveMap } from './world.js';
 import { initUIBindings, render, handleStateNotification, logWorld } from './ui.js';
 
@@ -32,6 +32,9 @@ function initApp() {
 
   // 4. Mount render
   render();
+
+  // 5. Initialize Hall of Fame with starting band
+  initHallOfFame();
 }
 
 // Fire loading

@@ -32,6 +32,8 @@ export const elPartyBandContent = document.getElementById('party-band-content');
 export const elPartyInventoryContent = document.getElementById('party-inventory-content');
 export const elTabPartyBand = document.getElementById('tab-party-band');
 export const elTabPartyInventory = document.getElementById('tab-party-inventory');
+export const elTabPartyHallOfFame = document.getElementById('tab-party-hall-of-fame');
+export const elPartyHallOfFameContent = document.getElementById('party-hall-of-fame-content');
 
 // Screens
 export const screens = {

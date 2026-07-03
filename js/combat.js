@@ -2,7 +2,7 @@
    COMBAT MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, notify, adjustResource, recordMonsterKill, getEffectiveStats } from './state.js';
+import { STATE, notify, adjustResource, recordMonsterKill, getEffectiveStats, updateSoldierStat, recordSoldierKill, recordSoldierRuneCast, markSoldierDead, addSoldierEvent } from './state.js';
 import { COMBAT_CONFIG as CFG } from './config/combat.js';
 import { SOLDIERS_CONFIG } from './config/soldiers.js';
 import { GODS_CONFIG as GC } from './config/gods.js';
@@ -265,6 +265,12 @@ export function startCombat(locationId, coordKey, enemyData) {
   STATE.combat.pool = STATE.band.map(u => ({ ...u, maxHp: u.maxHp, hp: u.hp, currentHp: u.hp, alliance: 'player', selected: false }));
   sortPoolByPoints();
 
+  // Track combat participation in Hall of Fame
+  STATE.combat.pool.forEach(u => {
+    updateSoldierStat(u.id, 'combatsParticipated', 1);
+    addSoldierEvent(u.id, 'Entered combat');
+  });
+
   // Initialize group queues
   const groups = enemyData.monsterGroups || [enemyData.monsters];
   STATE.combat.pendingSpawnGroups = [...groups];
@@ -386,6 +392,7 @@ function combatTick() {
       const healAmount = m2Config?.healAmount ?? 1;
       if (unit.hp < effStats.maxHp.total * healThreshold) {
         unit.hp = Math.min(effStats.maxHp.total, unit.hp + healAmount);
+        updateSoldierStat(unit.id, 'damageHealed', healAmount);
         notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_heal', unit: unit, amount: healAmount });
       }
     }
@@ -402,6 +409,7 @@ function combatTick() {
           if (unit.hp < effStats.maxHp.total) {
             const healAmount = GC.modifiers.blessings.freya?.healAmount ?? 2;
             unit.hp = Math.min(effStats.maxHp.total, unit.hp + healAmount);
+            updateSoldierStat(unit.id, 'damageHealed', healAmount);
             notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_heal', unit: unit, amount: healAmount });
           }
         }
@@ -619,6 +627,10 @@ function combatTick() {
         // Deduct gold & mark rune used
         adjustResource('gold', -1);
         unit.runeCooldowns[bestRune.name] = 10;
+        // Hall of Fame: track rune cast
+        if (unit.alliance === 'player') {
+          recordSoldierRuneCast(unit.id, bestRune.name);
+        }
         const rt = bestRune.target;
         const rnName = bestRune.name;
 
@@ -634,22 +646,25 @@ function combatTick() {
             const cell = grid[n.r]?.[n.c];
             if (cell && cell.alliance === 'enemy' && cell.hp > 0) {
               cell.hp = Math.max(0, cell.hp - 25);
+              if (unit.alliance === 'player') updateSoldierStat(unit.id, 'runeDamageDealt', 25);
               notify('COMBAT_DAMAGE', { attacker: { name: '⚡ Odin Rune' }, defender: cell });
               if (!STATE.combat.activeDoTs) STATE.combat.activeDoTs = [];
               STATE.combat.activeDoTs.push({ unit: cell, dmgPerTick: 5, ticksLeft: 3 });
               if (cell.hp <= 0) {
-                if (grid[cell.row]?.[cell.col] === cell) { grid[cell.row][cell.col] = null; removeUnitFromRegistry(cell); if (cell.alliance === 'enemy') recordMonsterKill(cell.type); notify('COMBAT_DEATH', cell); }
+                if (grid[cell.row]?.[cell.col] === cell) { grid[cell.row][cell.col] = null; removeUnitFromRegistry(cell); if (cell.alliance === 'enemy') recordMonsterKill(cell.type); if (unit.alliance === 'player') { recordSoldierKill(unit.id, cell.type); updateSoldierStat(unit.id, 'runeKills', 1); } notify('COMBAT_DEATH', cell); }
               }
             }
           });
         } else if (rnName === 'thor') {
           // 50 direct + 10 splash + 2-tick stun
           rt.hp = Math.max(0, rt.hp - 50);
+          if (unit.alliance === 'player') updateSoldierStat(unit.id, 'runeDamageDealt', 50);
           notify('COMBAT_DAMAGE', { attacker: { name: '🔨 Thor Rune' }, defender: rt });
           getRadius1Cells(rt.row, rt.col).forEach(n => {
             const cell = grid[n.r]?.[n.c];
             if (cell && cell.alliance === 'enemy' && cell.hp > 0 && cell.id !== rt.id) {
               cell.hp = Math.max(0, cell.hp - 10);
+              if (unit.alliance === 'player') updateSoldierStat(unit.id, 'runeDamageDealt', 10);
               notify('COMBAT_DAMAGE', { attacker: { name: '🔨 Thor Rune' }, defender: cell });
             }
           });
@@ -665,16 +680,19 @@ function combatTick() {
           [rt, ...getRadius1Cells(rt.row, rt.col).map(n => grid[n.r]?.[n.c]).filter(Boolean)].forEach(cell => {
             if (cell && cell.hp <= 0 && grid[cell.row]?.[cell.col] === cell) {
               grid[cell.row][cell.col] = null; removeUnitFromRegistry(cell);
-              if (cell.alliance === 'enemy') recordMonsterKill(cell.type); notify('COMBAT_DEATH', cell);
+              if (cell.alliance === 'enemy') recordMonsterKill(cell.type); if (unit.alliance === 'player') { recordSoldierKill(unit.id, cell.type); updateSoldierStat(unit.id, 'runeKills', 1); } notify('COMBAT_DEATH', cell);
             }
           });
         } else if (rnName === 'hel') {
           // Halve current HP
           rt.hp = Math.ceil(rt.hp / 2);
+          if (unit.alliance === 'player') {
+            updateSoldierStat(unit.id, 'runeDamageDealt', rt.hp);
+          }
           notify('COMBAT_DAMAGE', { attacker: { name: '💀 Hel Rune' }, defender: rt });
           if (rt.hp <= 0 && grid[rt.row]?.[rt.col] === rt) {
             grid[rt.row][rt.col] = null; removeUnitFromRegistry(rt);
-            if (rt.alliance === 'enemy') recordMonsterKill(rt.type); notify('COMBAT_DEATH', rt);
+            if (rt.alliance === 'enemy') recordMonsterKill(rt.type); if (unit.alliance === 'player') { recordSoldierKill(unit.id, rt.type); updateSoldierStat(unit.id, 'runeKills', 1); } notify('COMBAT_DEATH', rt);
           }
         } else if (rnName === 'loki') {
           // Teleport enemy to beginning of its lane (rightmost column)
@@ -697,6 +715,7 @@ function combatTick() {
               const healedAmt = effMax - cell.hp;
               if (healedAmt > 0) {
                 cell.hp = effMax;
+                if (unit.alliance === 'player') updateSoldierStat(unit.id, 'runeHealingDone', healedAmt);
                 notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_heal', unit: cell, amount: healedAmt });
               }
             }
@@ -737,6 +756,7 @@ function combatTick() {
       const isDoubleAttack = hasThorAttackSpeed && Math.random() < doubleAttackChance;
       if (isDoubleAttack) {
         notify('COMBAT_EFFECT_TRIGGER', { effect: 'thor_double', unit: unit });
+        if (unit.alliance === 'player') updateSoldierStat(unit.id, 'doubleAttacks', 1);
       }
       const attackCount = isDoubleAttack ? 2 : 1;
 
@@ -751,6 +771,10 @@ function combatTick() {
         if (currentTarget.type === 'huskarl') {
           dmgTaken = Math.max(0, dmgTaken - 1);
           notify('COMBAT_EFFECT_TRIGGER', { effect: 'huskarl_armor', unit: currentTarget });
+          if (currentTarget.alliance === 'player') {
+            updateSoldierStat(currentTarget.id, 'blockedHits', 1);
+            updateSoldierStat(currentTarget.id, 'damageBlocked', 1);
+          }
         }
 
         // Freya Milestone 4: Shieldmaidens block 1 DMG per hit
@@ -759,6 +783,10 @@ function combatTick() {
           const blockAmount = m4Config?.blockAmount ?? 1;
           dmgTaken = Math.max(0, dmgTaken - blockAmount);
           notify('COMBAT_EFFECT_TRIGGER', { effect: 'shieldmaiden_block', unit: currentTarget, amount: blockAmount });
+          if (currentTarget.alliance === 'player') {
+            updateSoldierStat(currentTarget.id, 'blockedHits', 1);
+            updateSoldierStat(currentTarget.id, 'damageBlocked', blockAmount);
+          }
         }
 
         let nextHp = currentTarget.hp - dmgTaken;
@@ -774,9 +802,22 @@ function combatTick() {
         }
 
         currentTarget.hp = nextHp;
+        // Hall of Fame: track damage received
+        if (currentTarget.alliance === 'player') {
+          updateSoldierStat(currentTarget.id, 'damageReceived', dmgTaken);
+        }
+        // Track last attacker for death cause
+        if (unit.alliance === 'enemy' && currentTarget.alliance === 'player') {
+          currentTarget._lastAttackerName = unit.type || unit.name;
+        }
         notify('COMBAT_DAMAGE', { attacker: unit, defender: currentTarget });
         unit.isAttacking = true;
         setTimeout(() => { unit.isAttacking = false; }, 200);
+        // Hall of Fame: track attack stats
+        if (unit.alliance === 'player') {
+          updateSoldierStat(unit.id, 'attacksMade', 1);
+          updateSoldierStat(unit.id, 'damageDealt', dmgTaken);
+        }
 
         // Hel Champion Blessing: Once-per-battle 50% chance to turn into an undead when hurt under 50% max HP
         if (currentTarget.alliance === 'enemy' && currentTarget.hp > 0 && !currentTarget.helUndeadChecked) {
@@ -816,6 +857,10 @@ function combatTick() {
           removeUnitFromRegistry(currentTarget);
           if (currentTarget.alliance === 'enemy') {
             recordMonsterKill(currentTarget.type);
+            // Hall of Fame: track kill
+            if (unit.alliance === 'player') {
+              recordSoldierKill(unit.id, currentTarget.type);
+            }
 
             // Hel Milestone 3: Slain enemies drop +1 extra Gold
             if (STATE.godQuests.hel?.[2]) {
@@ -1045,8 +1090,17 @@ function combatTick() {
           unit.col = lastValidCol;
           grid[unit.row][lastValidCol] = unit;
 
+          // Hall of Fame: track movement
+          if (unit.alliance === 'player') {
+            const hofCellsMoved = Math.abs(lastValidCol - oldCol);
+            updateSoldierStat(unit.id, 'cellsMoved', hofCellsMoved);
+          }
+
           if (isLeaping) {
             notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_leap', unit: unit, oldCol: oldCol });
+            if (unit.alliance === 'player') {
+              updateSoldierStat(unit.id, 'leaps', 1);
+            }
           }
 
           // ARRIVAL CHECK:
@@ -1188,6 +1242,9 @@ function checkGroupDefeated(unit) {
 
 function removeUnitFromRegistry(unit) {
   if (unit.alliance === 'player' && !unit.isCharmed && !unit.isUndead && !unit.isConfused) {
+    // Hall of Fame: mark soldier as dead
+    const killerName = unit._lastAttackerName || 'Unknown enemy';
+    markSoldierDead(unit.id, `Slain by ${killerName} in combat`);
     const idx = STATE.band.findIndex(u => u.id === unit.id);
     if (idx !== -1) STATE.band.splice(idx, 1);
   } else {
@@ -1216,6 +1273,8 @@ function handleUnitReachEnd(unit) {
     }
     const reward = CFG.playerCrossReward;
     Object.entries(reward).forEach(([res, amt]) => adjustResource(res, amt));
+    updateSoldierStat(unit.id, 'timesReachedEnd', 1);
+    addSoldierEvent(unit.id, 'Crossed enemy lines (+1 Gold)');
     const poolUnit = { ...unit, hp: unit.maxHp, row: undefined, col: undefined };
     STATE.combat.pool.push(poolUnit);
     sortPoolByPoints();
@@ -1286,6 +1345,7 @@ export function deployUnit(poolIndex, row, col) {
 
   if (!STATE.combat.deployHistory) STATE.combat.deployHistory = [];
   STATE.combat.deployHistory.push(unit.id);
+  updateSoldierStat(unit.id, 'timesDeployed', 1);
   STATE.combat.pool.splice(poolIndex, 1);
   STATE.combat.selectedPoolIndex = null;
   checkAndAutoDeploy();
@@ -1391,7 +1451,15 @@ export function endCombat(isVictory) {
     }
 
     notify('COMBAT_VICTORY');
+    // Hall of Fame: track combat wins for surviving soldiers
+    for (const member of STATE.band) {
+      updateSoldierStat(member.id, 'combatsWon', 1);
+    }
   } else {
+    // Hall of Fame: mark all remaining band members as dead
+    for (const member of STATE.band) {
+      markSoldierDead(member.id, 'Band wiped out in combat');
+    }
     STATE.band = [];
     notify('COMBAT_DEFEAT');
   }

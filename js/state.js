@@ -31,6 +31,9 @@ export const STATE = {
 
   inventory: [], // Collected items and magic objects
 
+  // Hall of Fame: historical records of all soldiers (active, dead, dismissed)
+  hallOfFame: [],
+
   // World Map State
   worldMap: {
     id: null,
@@ -117,6 +120,100 @@ export function notify(event, data = null) {
   for (const listener of listeners) listener(event, data);
 }
 
+// ── Hall of Fame helpers ────────────────────────────────────────────────────
+
+function createSoldierStats() {
+  return {
+    damageDealt: 0,
+    damageReceived: 0,
+    damageBlocked: 0,
+    damageHealed: 0,
+    attacksMade: 0,
+    doubleAttacks: 0,
+    cellsMoved: 0,
+    leaps: 0,
+    enemiesKilled: 0,
+    killList: {},
+    runesCast: {},
+    runeDamageDealt: 0,
+    runeKills: 0,
+    runeHealingDone: 0,
+    blockedHits: 0,
+    combatsParticipated: 0,
+    combatsWon: 0,
+    timesDeployed: 0,
+    timesReachedEnd: 0
+  };
+}
+
+export function addToHallOfFame(soldier, reason) {
+  // Don't add duplicates
+  if (STATE.hallOfFame.find(r => r.id === soldier.id)) return;
+  STATE.hallOfFame.push({
+    id: soldier.id,
+    name: soldier.name,
+    type: soldier.type,
+    status: 'active',
+    hiredDay: STATE.day || 1,
+    hiredReason: reason || 'Recruited',
+    deathDay: null,
+    deathCause: null,
+    stats: createSoldierStats(),
+    events: [{ day: STATE.day || 1, text: reason || 'Recruited' }]
+  });
+}
+
+export function updateSoldierStat(soldierId, statKey, amount) {
+  const record = STATE.hallOfFame.find(r => r.id === soldierId);
+  if (!record) return;
+  if (record.stats[statKey] !== undefined) {
+    record.stats[statKey] += amount;
+  }
+}
+
+export function recordSoldierKill(soldierId, monsterType) {
+  const record = STATE.hallOfFame.find(r => r.id === soldierId);
+  if (!record) return;
+  record.stats.enemiesKilled++;
+  record.stats.killList[monsterType] = (record.stats.killList[monsterType] || 0) + 1;
+}
+
+export function recordSoldierRuneCast(soldierId, runeType) {
+  const record = STATE.hallOfFame.find(r => r.id === soldierId);
+  if (!record) return;
+  record.stats.runesCast[runeType] = (record.stats.runesCast[runeType] || 0) + 1;
+}
+
+export function markSoldierDead(soldierId, cause) {
+  const record = STATE.hallOfFame.find(r => r.id === soldierId);
+  if (!record || record.status !== 'active') return;
+  record.status = 'dead';
+  record.deathDay = STATE.day || 1;
+  record.deathCause = cause || 'Unknown';
+  record.events.push({ day: STATE.day || 1, text: `💀 ${cause || 'Died'}` });
+}
+
+export function markSoldierDismissed(soldierId) {
+  const record = STATE.hallOfFame.find(r => r.id === soldierId);
+  if (!record || record.status !== 'active') return;
+  record.status = 'dismissed';
+  record.deathDay = STATE.day || 1;
+  record.deathCause = 'Dismissed by chieftain';
+  record.events.push({ day: STATE.day || 1, text: '🖐️ Dismissed from the band' });
+}
+
+export function addSoldierEvent(soldierId, text) {
+  const record = STATE.hallOfFame.find(r => r.id === soldierId);
+  if (!record) return;
+  record.events.push({ day: STATE.day || 1, text });
+}
+
+export function initHallOfFame() {
+  if (STATE.hallOfFame.length === 0) {
+    STATE.band.forEach(s => addToHallOfFame(s, 'Founding member of the band'));
+  }
+}
+
 // Modify screen state
 export function setScreen(screenName) {
   STATE.activeScreen = screenName;
@@ -148,6 +245,7 @@ export function recruitSoldier(type) {
     hp = Math.max(10, hp - penalty);
   }
   STATE.band.push({ id, name: rName, type, ...base, maxHp, hp });
+  addToHallOfFame({ id, name: rName, type }, 'Recruited at town');
   notify('RESOURCES_UPDATED');
 }
 
@@ -280,6 +378,7 @@ export function triggerStarvationDamage() {
     const targetIdx = Math.floor(Math.random() * STATE.band.length);
     const deadUnit = STATE.band[targetIdx];
     STATE.band.splice(targetIdx, 1);
+    markSoldierDead(deadUnit.id, 'Starved to death on the World Map');
     notify('STARVATION_DEATH', deadUnit);
     if (STATE.band.length === 0 && STATE.resources.gold === 0) {
       notify('GAME_OVER');
@@ -317,6 +416,8 @@ export function resetGame() {
     selectedPlans: [],
     movePlansMode: false
   };
+  STATE.hallOfFame = [];
+  STATE.band.forEach(s => addToHallOfFame(s, 'Founding member of the band'));
 }
 
 // Execute plundering a burial mound

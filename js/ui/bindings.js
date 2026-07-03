@@ -12,7 +12,7 @@ import { LOCATION_CONFIG } from '../config/location.js';
 import { togglePause, deployUnit, undeployUnit, fleeCombat, adjustCombatSpeed, checkAndAutoDeploy } from '../combat.js';
 import { showToast, logWorld, logLocation } from './notifications.js';
 import { showOverlay, hideOverlay, updateModalKeyboardNavigation } from './overlay.js';
-import { renderPartyPanel, GOD_LORE } from './party.js';
+import { renderPartyPanel, renderHallOfFame, GOD_LORE } from './party.js';
 import { triggerEnterCavePortal, triggerEncounterEvent, attemptLocalMove, useWarHorn } from './location.js';
 import { movePartyOnWorld, tryEnterCurrentLocation } from './world.js';
 import { getEffectiveStats } from '../state.js';
@@ -22,7 +22,8 @@ import { executePlunderMound, executeSacrificeSheep } from '../state.js';
 
 import {
   elPartyModal, elConsoleModal, elConsoleTextarea, elModalEvent, elModalEventCloseBtn, elTabPartyBand, elTabPartyInventory,
-  elPartyBandContent, elPartyInventoryContent, elModalGameOver, elModalAscension, elPromptPanel, elTooltip,
+  elPartyBandContent, elPartyInventoryContent, elTabPartyHallOfFame, elPartyHallOfFameContent,
+  elModalGameOver, elModalAscension, elPromptPanel, elTooltip,
   MONSTER_EMOJIS, elModalRaidCleared, elModalSagaVictory
 } from './dom.js';
 
@@ -386,15 +387,29 @@ export function initUIBindings() {
   bindButton('tab-party-band', () => {
     elTabPartyBand.classList.add('btn-primary');
     elTabPartyInventory.classList.remove('btn-primary');
+    elTabPartyHallOfFame.classList.remove('btn-primary');
     elPartyBandContent.classList.remove('hidden');
     elPartyInventoryContent.classList.add('hidden');
+    elPartyHallOfFameContent.classList.add('hidden');
   });
 
   bindButton('tab-party-inventory', () => {
     elTabPartyInventory.classList.add('btn-primary');
     elTabPartyBand.classList.remove('btn-primary');
+    elTabPartyHallOfFame.classList.remove('btn-primary');
     elPartyInventoryContent.classList.remove('hidden');
     elPartyBandContent.classList.add('hidden');
+    elPartyHallOfFameContent.classList.add('hidden');
+  });
+
+  bindButton('tab-party-hall-of-fame', () => {
+    elTabPartyHallOfFame.classList.add('btn-primary');
+    elTabPartyBand.classList.remove('btn-primary');
+    elTabPartyInventory.classList.remove('btn-primary');
+    elPartyHallOfFameContent.classList.remove('hidden');
+    elPartyBandContent.classList.add('hidden');
+    elPartyInventoryContent.classList.add('hidden');
+    renderHallOfFame();
   });
 
   // Town leave button
