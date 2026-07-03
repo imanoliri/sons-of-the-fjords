@@ -3,11 +3,12 @@
    ========================================================================== */
 
 import { SOLDIER_EMOJIS } from '../config/soldiers.js';
+import { COMBAT_CONFIG } from '../config/combat.js';
 
-import { STATE, notify, getEffectiveStats } from '../state.js';
+import { STATE, notify, getEffectiveStats, markSoldierDismissed } from '../state.js';
 import { GODS_CONFIG } from '../config/gods.js';
 import {
-  elQuestsList, elPartyBandContent, elPartyInventoryContent,
+  elQuestsList, elPartyBandContent, elPartyInventoryContent, elPartyHallOfFameContent,
   elModalEvent, elModalEventTitle, elModalEventBody, elModalEventChoices, elModalEventCloseBtn,
   elPartyModal
 } from './dom.js';
@@ -332,6 +333,7 @@ export function renderPartyPanel() {
       disbandBtn.addEventListener('click', () => {
         const idx = STATE.band.findIndex(u => u.id === unit.id);
         if (idx !== -1) {
+          markSoldierDismissed(unit.id);
           STATE.band.splice(idx, 1);
           notify('RESOURCES_UPDATED');
           renderPartyPanel();
@@ -376,5 +378,161 @@ export function renderPartyPanel() {
 
       elPartyInventoryContent.appendChild(row);
     });
+  }
+}
+
+// Render the Hall of Fame tab
+export function renderHallOfFame() {
+  elPartyHallOfFameContent.innerHTML = '';
+
+  if (!STATE.hallOfFame || STATE.hallOfFame.length === 0) {
+    elPartyHallOfFameContent.innerHTML = '<p style="color:var(--text-muted);">No warriors have been recorded in the Hall of Fame yet.</p>';
+    return;
+  }
+
+  // Sort: active first, then dead, then dismissed. Within each group, sort by hiredDay
+  const sorted = [...STATE.hallOfFame].sort((a, b) => {
+    const statusOrder = { active: 0, dead: 1, dismissed: 2 };
+    const diff = (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
+    if (diff !== 0) return diff;
+    return (a.hiredDay || 0) - (b.hiredDay || 0);
+  });
+
+  const icons = SOLDIER_EMOJIS;
+  const statusIcons = { active: '⚔️', dead: '💀', dismissed: '🖐️' };
+  const statusColors = { active: 'var(--color-success)', dead: 'var(--color-danger)', dismissed: 'var(--text-muted)' };
+
+  sorted.forEach(record => {
+    const card = document.createElement('div');
+    card.className = 'hof-card';
+    card.style.cssText = 'border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; background: rgba(0,0,0,0.3);';
+
+    // Header row
+    const header = document.createElement('div');
+    header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; cursor: pointer;';
+
+    const statusPrefix = record.status === 'active' ? '' : `${statusIcons[record.status] || '⚔️'} `;
+    const nameSpan = document.createElement('span');
+    nameSpan.innerHTML = `${statusPrefix}${icons[record.type] || '⚔️'} <b>${record.name}</b> <span style="color:var(--text-muted);font-size:0.8rem;">(${record.type.toUpperCase()})</span>`;
+    nameSpan.style.color = statusColors[record.status] || 'inherit';
+
+    const statusSpan = document.createElement('span');
+    statusSpan.style.cssText = `font-size: 0.75rem; color: ${statusColors[record.status]};`;
+    if (record.status === 'active') {
+      statusSpan.innerText = `Active \u00b7 Hired Day ${record.hiredDay}`;
+    } else if (record.status === 'dead') {
+      statusSpan.innerText = `Died Day ${record.deathDay || '?'}`;
+    } else {
+      statusSpan.innerText = `Dismissed Day ${record.deathDay || '?'}`;
+    }
+
+    header.appendChild(nameSpan);
+    header.appendChild(statusSpan);
+    card.appendChild(header);
+
+    // Death cause
+    if (record.deathCause && record.status !== 'active') {
+      const causeEl = document.createElement('p');
+      causeEl.style.cssText = 'font-size: 0.8rem; color: var(--text-muted); margin: 0 0 0.5rem 0; font-style: italic;';
+      causeEl.innerText = record.deathCause;
+      card.appendChild(causeEl);
+    }
+
+    // Collapsible details
+    const detailsToggle = document.createElement('button');
+    detailsToggle.className = 'btn btn-sm btn-no-shortcut';
+    detailsToggle.style.cssText = 'padding: 2px 8px; font-size: 0.7rem; margin-bottom: 0.5rem;';
+    detailsToggle.innerText = '\u25b6 Stats & History';
+    card.appendChild(detailsToggle);
+
+    const detailsDiv = document.createElement('div');
+    detailsDiv.style.display = 'none';
+    card.appendChild(detailsDiv);
+
+    detailsToggle.addEventListener('click', () => {
+      if (detailsDiv.style.display === 'none') {
+        detailsDiv.style.display = 'block';
+        detailsToggle.innerText = '\u25bc Stats & History';
+        renderSoldierDetails(detailsDiv, record);
+      } else {
+        detailsDiv.style.display = 'none';
+        detailsToggle.innerText = '\u25b6 Stats & History';
+      }
+    });
+
+    elPartyHallOfFameContent.appendChild(card);
+  });
+}
+
+function renderSoldierDetails(container, record) {
+  container.innerHTML = '';
+  const s = record.stats;
+
+  // Stats grid
+  const statsHtml = `
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 1rem; font-size: 0.75rem; margin-bottom: 0.75rem;">
+      <div>${s.attacksMade}x 👊 <b>Attacks Made</b></div>
+      <div>${s.damageDealt} 💥 <b>Damage Dealt</b></div>
+      <div>${s.damageReceived} 🛡️ <b>Damage Received</b></div>
+      <div>${s.damageBlocked} 🔰 <b>Damage Blocked</b> (${s.blockedHits}x hits)</div>
+      <div>${s.damageHealed} 💚 <b>Damage Healed</b></div>
+      <div>${s.doubleAttacks}x ⚡ <b>Double Attacks</b></div>
+      <div>${s.cellsMoved} 🦶 <b>Cells Moved</b></div>
+      <div>${s.leaps}x 🦅 <b>Leaps</b></div>
+      <div>${s.enemiesKilled}x 💀 <b>Enemies Killed</b></div>
+      <div>${s.timesReachedEnd}x 🏆 <b>Reached Enemy End</b></div>
+      <div>${s.timesDeployed}x 📋 <b>Times Deployed</b></div>
+      <div>${s.combatsWon}/${s.combatsParticipated} 🎖️ <b>Combats Won</b></div>
+    </div>
+  `;
+  container.innerHTML += statsHtml;
+
+  // Rune stats (if any)
+  const runeEntries = Object.entries(s.runesCast || {});
+  if (runeEntries.length > 0) {
+    const runeIcons = { odin: '⚡', thor: '🔨', hel: '💀', loki: '🃏', freya: '💚' };
+    let runeHtml = '<div style="font-size: 0.75rem; margin-bottom: 0.75rem;"><b>🔮 Rune Casts:</b><br>';
+    runeEntries.forEach(([rune, count]) => {
+      runeHtml += `  ${count}x ${runeIcons[rune] || '✨'} ${rune.charAt(0).toUpperCase() + rune.slice(1)}<br>`;
+    });
+    runeHtml += `  Rune Damage: ${s.runeDamageDealt} · Rune Kills: ${s.runeKills} · Rune Healing: ${s.runeHealingDone}`;
+    runeHtml += '</div>';
+    container.innerHTML += runeHtml;
+  }
+
+  // Kill list
+  const killEntries = Object.entries(s.killList || {});
+  if (killEntries.length > 0) {
+    let killHtml = '<div style="font-size: 0.75rem; margin-bottom: 0.75rem;"><b>🗡️ Kill List:</b><br>';
+    killEntries.sort((a, b) => b[1] - a[1]).forEach(([monster, count]) => {
+      const cfg = COMBAT_CONFIG.monsters[monster] || COMBAT_CONFIG.monsterFallback;
+      const emoji = cfg.emoji;
+      killHtml += `  ${count}x ${emoji} ${monster}<br>`;
+    });
+    killHtml += '</div>';
+    container.innerHTML += killHtml;
+  }
+
+  // Event timeline (consolidate repeated events on the same day)
+  if (record.events && record.events.length > 0) {
+    const grouped = [];
+    const seen = new Map();
+    record.events.forEach(ev => {
+      const key = `${ev.day}|||${ev.text}`;
+      if (seen.has(key)) {
+        seen.get(key).count++;
+      } else {
+        const entry = { day: ev.day, text: ev.text, count: 1 };
+        seen.set(key, entry);
+        grouped.push(entry);
+      }
+    });
+    let eventsHtml = '<div style="font-size: 0.75rem;"><b>\ud83d\udcdc Timeline:</b><br>';
+    grouped.forEach(ev => {
+      const countStr = ev.count > 1 ? ` (${ev.count})` : '';
+      eventsHtml += `  <span style="color:var(--text-muted);">Day ${ev.day}:</span> ${ev.text}${countStr}<br>`;
+    });
+    eventsHtml += '</div>';
+    container.innerHTML += eventsHtml;
   }
 }
