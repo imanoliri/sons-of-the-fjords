@@ -477,7 +477,7 @@ function renderSoldierDetails(container, record) {
       <div>${s.damageBlocked} 🔰 <b>Damage Blocked</b> (${s.blockedHits}x hits)</div>
       <div>${s.damageHealed} 💚 <b>Damage Healed</b></div>
       <div>${s.doubleAttacks}x ⚡ <b>Double Attacks</b></div>
-      <div>${s.cellsMoved} 🦿 <b>Cells Moved</b></div>
+      <div>${s.cellsMoved} 🦶 <b>Cells Moved</b></div>
       <div>${s.leaps}x 🦅 <b>Leaps</b></div>
       <div>${s.enemiesKilled}x 💀 <b>Enemies Killed</b></div>
       <div>${s.timesReachedEnd}x 🏆 <b>Reached Enemy End</b></div>
