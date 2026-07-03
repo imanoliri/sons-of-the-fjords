@@ -546,8 +546,8 @@ export function triggerRoamingCombat(band) {
 
       const monsterClass = band.monsters?.[0]?.monsterClass;
       const monsterStats = COMBAT_CONFIG.monsters[monsterClass] || {};
-      const isIntelligent = monsterStats.isIntelligent === true;
-      const isMonster = monsterStats.isMonster === true;
+      const isBribableWithGold = monsterStats.isBribableWithGold === true;
+      const isDistractableWithSheep = monsterStats.isDistractableWithSheep === true;
       
       elModalEventTitle.innerText = `Ambushed: ${band.name}`;
       elModalEventBody.innerHTML = `
@@ -574,8 +574,8 @@ export function triggerRoamingCombat(band) {
       });
       elModalEventChoices.appendChild(fightBtn);
 
-      // Choice 2: Bribe (costs 30 Gold) - Only for intelligent beings
-      if (isIntelligent) {
+      // Choice 2: Bribe (costs 30 Gold) - Only for bribable beings
+      if (isBribableWithGold) {
         const bribeBtn = document.createElement('button');
         bribeBtn.className = 'btn btn-warning';
         bribeBtn.innerText = `Bribe them with 30 Gold (${STATE.resources.gold >= 30 ? 'Available' : 'Insufficient Gold'})`;
@@ -592,8 +592,8 @@ export function triggerRoamingCombat(band) {
         elModalEventChoices.appendChild(bribeBtn);
       }
 
-      // Choice 3: Distract with Sheep (costs 2 Sheep) - Only for monsters
-      if (isMonster) {
+      // Choice 3: Distract with Sheep (costs 2 Sheep) - Only for distractable monsters
+      if (isDistractableWithSheep) {
         const distractBtn = document.createElement('button');
         distractBtn.className = 'btn btn-primary';
         distractBtn.innerText = `Distract with 2 Sheep (${STATE.resources.sheep >= 2 ? 'Available' : 'Insufficient Sheep'})`;
