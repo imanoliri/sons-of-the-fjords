@@ -39,7 +39,7 @@ export const COMBAT_CONFIG = {
     'Ice Wolf':            { hp: 30,  dmg: 5,  speed: 3, range: 1, emoji: '🐺', isDistractableWithSheep: true }, // Tundra/Frozen Wastes
     'Mercenary Guard':     { hp: 45,  dmg: 6,  speed: 2, range: 1, emoji: '♆', isBribableWithGold: true }, // Iron Coast
     'Shore Raider':        { hp: 40,  dmg: 5,  speed: 2, range: 1, emoji: '🏴‍☠️', isWaterborn: true, isBribableWithGold: true }, // Iron Coast / Dark Archipelago
-    'Archipelago Wraith':  { hp: 38,  dmg: 6,  speed: 1, range: 2, emoji: '👻', isFlying: true, isDistractableWithSheep: true }, // Dark Archipelago ruins
+    'Archipelago Wraith':  { hp: 38,  dmg: 6,  speed: 1, range: 2, emoji: '👻', isFlying: true }, // Dark Archipelago ruins
     // Muspelheim's Edge Monsters
     'Fire Giant':          { hp: 130, dmg: 12, speed: 1, range: 1, emoji: '🔥', isBribableWithGold: true, isDistractableWithSheep: true },
     'Lava Beetle':         { hp: 22,  dmg: 4,  speed: 3, range: 1, emoji: '🪲', isDistractableWithSheep: true },
