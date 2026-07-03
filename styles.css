@@ -542,6 +542,16 @@ body {
   100% { transform: translateY(0); }
 }
 
+.roaming-band-marker.nearby-alert {
+  filter: drop-shadow(0 0 6px #ff0000) drop-shadow(0 0 12px #ff0000);
+  animation: bandPulseFast 1s infinite alternate ease-in-out;
+}
+
+@keyframes bandPulseFast {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.25); }
+}
+
 .town-marker {
   font-size: 1.5rem;
   filter: drop-shadow(0 0 5px #ffd700);

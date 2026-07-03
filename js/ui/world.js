@@ -177,6 +177,10 @@ export function renderWorldMap() {
         for (const band of activeBands) {
           const bandEl = document.createElement('div');
           bandEl.className = `roaming-band-marker roaming-${band.type}`;
+          const dist = Math.abs(band.x - STATE.party.worldX) + Math.abs(band.y - STATE.party.worldY);
+          if (dist <= 2 && !band.cooldownTicks) {
+            bandEl.classList.add('nearby-alert');
+          }
           bandEl.innerText = band.emoji || '🛡️';
           bandEl.title = band.name;
           elCell.appendChild(bandEl);
@@ -493,6 +497,25 @@ export function startWorldHazardTicker() {
   if (worldHazardTicker) clearInterval(worldHazardTicker);
   worldHazardTicker = setInterval(() => {
     if (STATE.activeScreen !== 'world' || STATE.combat.active) return;
+
+    // Check proximity alerts for nearby roaming bands
+    if (STATE.worldMap.roamingBands) {
+      const px = STATE.party.worldX;
+      const py = STATE.party.worldY;
+      const nearbyBands = STATE.worldMap.roamingBands.filter(b => !b.isDefeated && !b.cooldownTicks && (Math.abs(b.x - px) + Math.abs(b.y - py) <= 2));
+      for (const band of nearbyBands) {
+        if (!band.alerted) {
+          logWorld(`⚠️ THREAT: The enemy band '${band.name}' is closing in on your position!`, 'warn-message');
+          band.alerted = true;
+        }
+      }
+      STATE.worldMap.roamingBands.forEach(b => {
+        if (Math.abs(b.x - px) + Math.abs(b.y - py) > 2) {
+          b.alerted = false;
+        }
+      });
+    }
+
     const hazardCollisions = tickHazards();
     if (hazardCollisions.length > 0) {
       for (const collision of hazardCollisions) {

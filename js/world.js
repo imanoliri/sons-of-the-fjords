@@ -246,6 +246,26 @@ export function tickRoamingBands() {
   const tiles = STATE.worldMap.tiles;
   const logs = [];
 
+  if (!STATE.worldMap.lastScaledDay) STATE.worldMap.lastScaledDay = 1;
+  const daysDiff = STATE.day - STATE.worldMap.lastScaledDay;
+  if (daysDiff >= 5) {
+    STATE.worldMap.lastScaledDay = STATE.day;
+    let reinforced = false;
+    for (const band of STATE.worldMap.roamingBands) {
+      if (!band.isDefeated && band.monsters) {
+        band.monsters.forEach(m => {
+          m.count = Math.min(8, m.count + 1);
+        });
+        reinforced = true;
+      }
+    }
+    if (reinforced) {
+      logs.push({
+        text: `⚔️ RUMORS: Hostile roaming bands on the World Map have reinforced their numbers!`
+      });
+    }
+  }
+
   for (const band of STATE.worldMap.roamingBands) {
     if (band.isDefeated) continue;
 

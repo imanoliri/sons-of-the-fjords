@@ -186,6 +186,16 @@ export function handleStateNotification(event, data) {
     logWorld(`Success! '${data.name}' reached Asgard boundary, earning 1 Gold and returning to pool.`, 'gain-message');
   }
   else if (event === 'COMBAT_VICTORY') {
+    const coordKey = STATE.combat.entityCoordKey;
+    const isRoaming = coordKey && coordKey.startsWith('roaming_');
+    if (isRoaming) {
+      const goldPlunder = Math.floor(Math.random() * 11) + 10;
+      const foodPlunder = Math.floor(Math.random() * 11) + 10;
+      adjustResource('gold', goldPlunder);
+      adjustResource('food', foodPlunder);
+      logWorld(`PLUNDER: Slaying the roaming band yielded ${goldPlunder} Gold and ${foodPlunder} Food!`, 'gain-message');
+    }
+
     logWorld('VICTORY! The lane has been cleared of monsters.', 'gain-message');
     showToast('Victory! You cleared the monsters.', '⚔️', true);
 
