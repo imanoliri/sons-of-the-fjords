@@ -352,7 +352,8 @@ export function tickRoamingBands() {
     if (band.x === STATE.party.worldX && band.y === STATE.party.worldY && !isPlayerInTown) {
       logs.push({
         text: `WARBAND ENCOUNTER: The mobile enemy group '${band.name}' intercepted your party! Prepare for battle!`,
-        band: band
+        band: band,
+        dead: []
       });
     }
   }
