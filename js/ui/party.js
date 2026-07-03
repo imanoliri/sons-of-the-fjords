@@ -471,18 +471,18 @@ function renderSoldierDetails(container, record) {
   // Stats grid
   const statsHtml = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 1rem; font-size: 0.75rem; margin-bottom: 0.75rem;">
-      <div>\u2694\ufe0f <b>Attacks Made:</b> ${s.attacksMade}</div>
-      <div>\ud83d\udca5 <b>Damage Dealt:</b> ${s.damageDealt}</div>
-      <div>\ud83d\udee1\ufe0f <b>Damage Received:</b> ${s.damageReceived}</div>
-      <div>\ud83d\udd30 <b>Damage Blocked:</b> ${s.damageBlocked} (${s.blockedHits} hits)</div>
-      <div>\ud83d\udc9a <b>Damage Healed:</b> ${s.damageHealed}</div>
-      <div>\u26a1 <b>Double Attacks:</b> ${s.doubleAttacks}</div>
-      <div>\ud83e\uddb6 <b>Cells Moved:</b> ${s.cellsMoved}</div>
-      <div>\ud83e\udd85 <b>Leaps:</b> ${s.leaps}</div>
-      <div>\ud83d\udc80 <b>Enemies Killed:</b> ${s.enemiesKilled}</div>
-      <div>\ud83c\udfc6 <b>Reached Enemy End:</b> ${s.timesReachedEnd}</div>
-      <div>\ud83d\udccb <b>Times Deployed:</b> ${s.timesDeployed}</div>
-      <div>\ud83c\udf96\ufe0f <b>Combats Won:</b> ${s.combatsWon} / ${s.combatsParticipated}</div>
+      <div>${s.attacksMade}x ⚔️ <b>Attacks Made</b></div>
+      <div>${s.damageDealt} 💥 <b>Damage Dealt</b></div>
+      <div>${s.damageReceived} 🛡️ <b>Damage Received</b></div>
+      <div>${s.damageBlocked} 🔰 <b>Damage Blocked</b> (${s.blockedHits}x hits)</div>
+      <div>${s.damageHealed} 💚 <b>Damage Healed</b></div>
+      <div>${s.doubleAttacks}x ⚡ <b>Double Attacks</b></div>
+      <div>${s.cellsMoved} 🦿 <b>Cells Moved</b></div>
+      <div>${s.leaps}x 🦅 <b>Leaps</b></div>
+      <div>${s.enemiesKilled}x 💀 <b>Enemies Killed</b></div>
+      <div>${s.timesReachedEnd}x 🏆 <b>Reached Enemy End</b></div>
+      <div>${s.timesDeployed}x 📋 <b>Times Deployed</b></div>
+      <div>${s.combatsWon}/${s.combatsParticipated} 🎖️ <b>Combats Won</b></div>
     </div>
   `;
   container.innerHTML += statsHtml;
