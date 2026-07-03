@@ -249,13 +249,17 @@ export function tickRoamingBands() {
   for (const band of STATE.worldMap.roamingBands) {
     if (band.isDefeated) continue;
 
+    const px = STATE.party.worldX;
+    const py = STATE.party.worldY;
+
     if (band.cooldownTicks > 0) {
-      band.cooldownTicks--;
+      const isSameTile = (band.x === px && band.y === py);
+      if (!isSameTile) {
+        band.cooldownTicks--;
+      }
       continue;
     }
 
-    const px = STATE.party.worldX;
-    const py = STATE.party.worldY;
     const dist = Math.abs(band.x - px) + Math.abs(band.y - py);
 
     let nextStep = null;
