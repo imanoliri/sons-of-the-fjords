@@ -490,12 +490,12 @@ function renderSoldierDetails(container, record) {
   // Rune stats (if any)
   const runeEntries = Object.entries(s.runesCast || {});
   if (runeEntries.length > 0) {
-    const runeIcons = { odin: '\u26a1', thor: '\ud83d\udd28', hel: '\ud83d\udc80', loki: '\ud83c\udccf', freya: '\ud83d\udc9a' };
-    let runeHtml = '<div style="font-size: 0.75rem; margin-bottom: 0.75rem;"><b>\ud83d\udd2e Rune Casts:</b><br>';
+    const runeIcons = { odin: '⚡', thor: '🔨', hel: '💀', loki: '🃏', freya: '💚' };
+    let runeHtml = '<div style="font-size: 0.75rem; margin-bottom: 0.75rem;"><b>🔮 Rune Casts:</b><br>';
     runeEntries.forEach(([rune, count]) => {
-      runeHtml += `  ${runeIcons[rune] || '\u2728'} ${rune.charAt(0).toUpperCase() + rune.slice(1)}: ${count}x<br>`;
+      runeHtml += `  ${count}x ${runeIcons[rune] || '✨'} ${rune.charAt(0).toUpperCase() + rune.slice(1)}<br>`;
     });
-    runeHtml += `  Rune Damage: ${s.runeDamageDealt} \u00b7 Rune Kills: ${s.runeKills} \u00b7 Rune Healing: ${s.runeHealingDone}`;
+    runeHtml += `  Rune Damage: ${s.runeDamageDealt} · Rune Kills: ${s.runeKills} · Rune Healing: ${s.runeHealingDone}`;
     runeHtml += '</div>';
     container.innerHTML += runeHtml;
   }
