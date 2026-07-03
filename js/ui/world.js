@@ -4,6 +4,7 @@
 
 import { STATE, notify, adjustResource, setScreen } from '../state.js';
 import { getAdjacentCoords, getActiveMap, tickHazards } from '../world.js';
+import { COMBAT_CONFIG } from '../config/combat.js';
 import { generateLocationMap } from '../location.js';
 import { MOVEMENT_CONFIG } from '../config/movement.js';
 import { LOCATION_CONFIG } from '../config/location.js';
@@ -171,6 +172,22 @@ export function renderWorldMap() {
         }
       }
 
+      // Draw active roaming enemy bands
+      if (STATE.worldMap.roamingBands && STATE.worldMap.roamingBands.length > 0) {
+        const activeBands = STATE.worldMap.roamingBands.filter(b => b.x === x && b.y === y && !b.isDefeated);
+        for (const band of activeBands) {
+          const bandEl = document.createElement('div');
+          bandEl.className = `roaming-band-marker roaming-${band.type}`;
+          const dist = Math.abs(band.x - STATE.party.worldX) + Math.abs(band.y - STATE.party.worldY);
+          if (dist <= 2 && !band.cooldownTicks) {
+            bandEl.classList.add('nearby-alert');
+          }
+          bandEl.innerText = band.emoji || '🛡️';
+          bandEl.title = band.name;
+          elCell.appendChild(bandEl);
+        }
+      }
+
       // Navigation handler for adjacent cells
       const isAdjacent = adjacents.some(a => a.x === x && a.y === y);
       if (isAdjacent) {
@@ -297,6 +314,8 @@ export function movePartyOnWorld(x, y) {
     }
   }
 
+  STATE.party.previousWorldX = STATE.party.worldX;
+  STATE.party.previousWorldY = STATE.party.worldY;
   STATE.party.worldX = x;
   STATE.party.worldY = y;
   STATE.day = (STATE.day || 1) + 1;
@@ -312,6 +331,17 @@ export function movePartyOnWorld(x, y) {
 
   // Reveal fog in a 2-tile radius around player
   revealWorldFog(x, y);
+
+  // Check if player moved onto an active roaming band
+  if (STATE.worldMap.roamingBands && STATE.worldMap.roamingBands.length > 0) {
+    const bandOnTile = STATE.worldMap.roamingBands.find(b => b.x === x && b.y === y && !b.isDefeated && !b.cooldownTicks);
+    if (bandOnTile) {
+      logWorld(`WARBAND ENCOUNTER: You intercepted the enemy group '${bandOnTile.name}'! Prepare for battle!`, 'warn-message');
+      triggerRoamingCombat(bandOnTile);
+      notify('STATE_UPDATED');
+      return;
+    }
+  }
 
   // Odin's Wrath: Random unit loses 1 HP every 3 world steps (only at -5 favor)
   if (STATE.godFavor.odin === -5) {
@@ -470,12 +500,37 @@ export function startWorldHazardTicker() {
   if (worldHazardTicker) clearInterval(worldHazardTicker);
   worldHazardTicker = setInterval(() => {
     if (STATE.activeScreen !== 'world' || STATE.combat.active) return;
+
+    // Check proximity alerts for nearby roaming bands
+    if (STATE.worldMap.roamingBands) {
+      const px = STATE.party.worldX;
+      const py = STATE.party.worldY;
+      const nearbyBands = STATE.worldMap.roamingBands.filter(b => !b.isDefeated && !b.cooldownTicks && (Math.abs(b.x - px) + Math.abs(b.y - py) <= 2));
+      for (const band of nearbyBands) {
+        if (!band.alerted) {
+          logWorld(`⚠️ THREAT: The enemy band '${band.name}' is closing in on your position!`, 'warn-message');
+          band.alerted = true;
+        }
+      }
+      STATE.worldMap.roamingBands.forEach(b => {
+        if (Math.abs(b.x - px) + Math.abs(b.y - py) > 2) {
+          b.alerted = false;
+        }
+      });
+    }
+
     const hazardCollisions = tickHazards();
     if (hazardCollisions.length > 0) {
       for (const collision of hazardCollisions) {
-        logWorld(collision.text, 'warn-message');
-        if (collision.dead.length > 0) {
-          logWorld(`Sagas remember the fallen: ${collision.dead.join(', ')} perished in the disaster.`, 'warn-message');
+        if (collision.band) {
+          logWorld(collision.text, 'warn-message');
+          triggerRoamingCombat(collision.band);
+          break; // Enter combat and pause ticker/updates
+        } else {
+          logWorld(collision.text, 'warn-message');
+          if (collision.dead.length > 0) {
+            logWorld(`Sagas remember the fallen: ${collision.dead.join(', ')} perished in the disaster.`, 'warn-message');
+          }
         }
       }
       if (STATE.band.length === 0 && STATE.resources.gold === 0) {
@@ -484,6 +539,82 @@ export function startWorldHazardTicker() {
     }
     renderWorldMap();
   }, 3000); // Ticks every 3 seconds in real time
+}
+
+export function triggerRoamingCombat(band) {
+  import('./overlay.js').then(({ showOverlay, hideOverlay }) => {
+    import('./dom.js').then(({ elModalEvent, elModalEventTitle, elModalEventBody, elModalEventChoices, elModalEventCloseBtn }) => {
+      if (elModalEventCloseBtn) elModalEventCloseBtn.style.display = 'none';
+
+      const monsterClass = band.monsters?.[0]?.monsterClass;
+      const monsterStats = COMBAT_CONFIG.monsters[monsterClass] || {};
+      const isBribableWithGold = monsterStats.isBribableWithGold === true;
+      const isDistractableWithSheep = monsterStats.isDistractableWithSheep === true;
+      
+      elModalEventTitle.innerText = `Ambushed: ${band.name}`;
+      elModalEventBody.innerHTML = `
+        The hostile roaming band <b>${band.name}</b> (${band.emoji}) has intercepted your party!<br><br>
+        They are blocking your path and outnumber your vanguard. How will you respond?
+      `;
+
+      elModalEventChoices.innerHTML = '';
+
+      // Choice 1: Fight!
+      const fightBtn = document.createElement('button');
+      fightBtn.className = 'btn btn-danger';
+      fightBtn.innerText = 'Stand and Fight!';
+      fightBtn.addEventListener('click', () => {
+        hideOverlay(elModalEvent);
+        setScreen('combat');
+        import('../combat.js').then(({ startCombat }) => {
+          startCombat(null, `roaming_${band.id}`, {
+            type: 'enemy_army',
+            monsters: band.monsters,
+            isDefeated: false
+          });
+        });
+      });
+      elModalEventChoices.appendChild(fightBtn);
+
+      // Choice 2: Bribe (costs 30 Gold) - Only for bribable beings
+      if (isBribableWithGold) {
+        const bribeBtn = document.createElement('button');
+        bribeBtn.className = 'btn btn-warning';
+        bribeBtn.innerText = `Bribe them with 30 Gold (${STATE.resources.gold >= 30 ? 'Available' : 'Insufficient Gold'})`;
+        if (STATE.resources.gold < 30) {
+          bribeBtn.disabled = true;
+        }
+        bribeBtn.addEventListener('click', () => {
+          adjustResource('gold', -30);
+          band.cooldownTicks = 3;
+          hideOverlay(elModalEvent);
+          logWorld(`BRIBE: You paid 30 Gold to bribe ${band.name}. They will ignore you for 3 ticks.`, 'warn-message');
+          notify('STATE_UPDATED');
+        });
+        elModalEventChoices.appendChild(bribeBtn);
+      }
+
+      // Choice 3: Distract with Sheep (costs 2 Sheep) - Only for distractable monsters
+      if (isDistractableWithSheep) {
+        const distractBtn = document.createElement('button');
+        distractBtn.className = 'btn btn-primary';
+        distractBtn.innerText = `Distract with 2 Sheep (${STATE.resources.sheep >= 2 ? 'Available' : 'Insufficient Sheep'})`;
+        if (STATE.resources.sheep < 2) {
+          distractBtn.disabled = true;
+        }
+        distractBtn.addEventListener('click', () => {
+          adjustResource('sheep', -2);
+          band.cooldownTicks = 3;
+          hideOverlay(elModalEvent);
+          logWorld(`DISTRACTION: You left 2 Sheep behind to distract ${band.name}. They will ignore you for 3 ticks.`, 'warn-message');
+          notify('STATE_UPDATED');
+        });
+        elModalEventChoices.appendChild(distractBtn);
+      }
+
+      showOverlay(elModalEvent);
+    });
+  });
 }
 
 export function stopWorldHazardTicker() {

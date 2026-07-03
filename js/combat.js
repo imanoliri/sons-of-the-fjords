@@ -1433,9 +1433,24 @@ export function endCombat(isVictory) {
   clearInterval(combatTimer);
   combatTimer = null;
 
+  const coordKey = STATE.combat.entityCoordKey;
+  const locId = STATE.combat.locationId;
+
+  if (coordKey && coordKey.startsWith('roaming_')) {
+    const bandId = coordKey.replace('roaming_', '');
+    if (STATE.worldMap.roamingBands) {
+      const band = STATE.worldMap.roamingBands.find(b => b.id === bandId);
+      if (band) {
+        if (isVictory) {
+          band.isDefeated = true;
+        } else {
+          band.cooldownTicks = 3;
+        }
+      }
+    }
+  }
+
   if (isVictory) {
-    const locId = STATE.combat.locationId;
-    const coordKey = STATE.combat.entityCoordKey;
     const locState = STATE.locations[locId];
     if (locState) {
       if (STATE.combat.isWarHornBattle || STATE.combat.entityCoordKey === 'war_horn') {
@@ -1493,6 +1508,17 @@ export function fleeCombat() {
   STATE.combat.paused = true;
   clearInterval(combatTimer);
   combatTimer = null;
+
+  const coordKey = STATE.combat.entityCoordKey;
+  if (coordKey && coordKey.startsWith('roaming_')) {
+    const bandId = coordKey.replace('roaming_', '');
+    if (STATE.worldMap.roamingBands) {
+      const band = STATE.worldMap.roamingBands.find(b => b.id === bandId);
+      if (band) {
+        band.cooldownTicks = 3;
+      }
+    }
+  }
 
   const resTypes = ['gold', 'food', 'wood', 'sheep'];
   const stolen = {};
