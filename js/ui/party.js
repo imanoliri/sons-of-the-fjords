@@ -411,8 +411,9 @@ export function renderHallOfFame() {
     const header = document.createElement('div');
     header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; cursor: pointer;';
 
+    const statusPrefix = record.status === 'active' ? '' : `${statusIcons[record.status] || '⚔️'} `;
     const nameSpan = document.createElement('span');
-    nameSpan.innerHTML = `${statusIcons[record.status] || '⚔️'} ${icons[record.type] || '⚔️'} <b>${record.name}</b> <span style="color:var(--text-muted);font-size:0.8rem;">(${record.type.toUpperCase()})</span>`;
+    nameSpan.innerHTML = `${statusPrefix}${icons[record.type] || '⚔️'} <b>${record.name}</b> <span style="color:var(--text-muted);font-size:0.8rem;">(${record.type.toUpperCase()})</span>`;
     nameSpan.style.color = statusColors[record.status] || 'inherit';
 
     const statusSpan = document.createElement('span');
