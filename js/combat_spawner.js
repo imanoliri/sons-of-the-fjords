@@ -290,6 +290,9 @@ export function handleUnitReachEnd(unit) {
       const idx = STATE.combat.waveMonsters.findIndex(m => m.id === unit.id);
       if (idx !== -1) STATE.combat.waveMonsters.splice(idx, 1);
       notify('COMBAT_UPDATE');
+      import('./combat_lifecycle.js').then(({ checkCombatEndConditions }) => {
+        checkCombatEndConditions();
+      });
       return;
     }
     if (unit.isUndead) {
