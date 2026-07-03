@@ -1,4 +1,4 @@
-import { STATE, notify } from './state.js';
+import { STATE, notify, adjustResource } from './state.js';
 import { GODS_CONFIG } from './config/gods.js';
 import { initUIBindings } from './ui/bindings.js';
 import { showToast, logWorld, logLocation } from './ui/notifications.js';
