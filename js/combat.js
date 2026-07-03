@@ -356,13 +356,22 @@ function combatTick() {
     dot.ticksLeft--;
     const target = dot.unit;
     if (target && target.hp > 0) {
+      const dmgDealt = Math.min(target.hp, dot.dmgPerTick);
       target.hp = Math.max(0, target.hp - dot.dmgPerTick);
+      if (dot.attackerId) {
+        updateSoldierStat(dot.attackerId, 'runeDamageDealt', dmgDealt);
+        updateSoldierStat(dot.attackerId, 'damageDealt', dmgDealt);
+      }
       notify('COMBAT_DAMAGE', { attacker: { name: 'Odin Rune' }, defender: target });
       if (target.hp <= 0) {
         if (grid[target.row] && grid[target.row][target.col] === target) {
           grid[target.row][target.col] = null;
           removeUnitFromRegistry(target);
           if (target.alliance === 'enemy') recordMonsterKill(target.type);
+          if (dot.attackerId) {
+            recordSoldierKill(dot.attackerId, target.type);
+            updateSoldierStat(dot.attackerId, 'runeKills', 1);
+          }
           notify('COMBAT_DEATH', target);
         }
       }
@@ -646,10 +655,13 @@ function combatTick() {
             const cell = grid[n.r]?.[n.c];
             if (cell && cell.alliance === 'enemy' && cell.hp > 0) {
               cell.hp = Math.max(0, cell.hp - 25);
-              if (unit.alliance === 'player') updateSoldierStat(unit.id, 'runeDamageDealt', 25);
+              if (unit.alliance === 'player') {
+                updateSoldierStat(unit.id, 'runeDamageDealt', 25);
+                updateSoldierStat(unit.id, 'damageDealt', 25);
+              }
               notify('COMBAT_DAMAGE', { attacker: { name: '⚡ Odin Rune' }, defender: cell });
               if (!STATE.combat.activeDoTs) STATE.combat.activeDoTs = [];
-              STATE.combat.activeDoTs.push({ unit: cell, dmgPerTick: 5, ticksLeft: 3 });
+              STATE.combat.activeDoTs.push({ unit: cell, dmgPerTick: 5, ticksLeft: 3, attackerId: unit.alliance === 'player' ? unit.id : null });
               if (cell.hp <= 0) {
                 if (grid[cell.row]?.[cell.col] === cell) { grid[cell.row][cell.col] = null; removeUnitFromRegistry(cell); if (cell.alliance === 'enemy') recordMonsterKill(cell.type); if (unit.alliance === 'player') { recordSoldierKill(unit.id, cell.type); updateSoldierStat(unit.id, 'runeKills', 1); } notify('COMBAT_DEATH', cell); }
               }
@@ -658,13 +670,19 @@ function combatTick() {
         } else if (rnName === 'thor') {
           // 50 direct + 10 splash + 2-tick stun
           rt.hp = Math.max(0, rt.hp - 50);
-          if (unit.alliance === 'player') updateSoldierStat(unit.id, 'runeDamageDealt', 50);
+          if (unit.alliance === 'player') {
+            updateSoldierStat(unit.id, 'runeDamageDealt', 50);
+            updateSoldierStat(unit.id, 'damageDealt', 50);
+          }
           notify('COMBAT_DAMAGE', { attacker: { name: '🔨 Thor Rune' }, defender: rt });
           getRadius1Cells(rt.row, rt.col).forEach(n => {
             const cell = grid[n.r]?.[n.c];
             if (cell && cell.alliance === 'enemy' && cell.hp > 0 && cell.id !== rt.id) {
               cell.hp = Math.max(0, cell.hp - 10);
-              if (unit.alliance === 'player') updateSoldierStat(unit.id, 'runeDamageDealt', 10);
+              if (unit.alliance === 'player') {
+                updateSoldierStat(unit.id, 'runeDamageDealt', 10);
+                updateSoldierStat(unit.id, 'damageDealt', 10);
+              }
               notify('COMBAT_DAMAGE', { attacker: { name: '🔨 Thor Rune' }, defender: cell });
             }
           });
@@ -685,9 +703,11 @@ function combatTick() {
           });
         } else if (rnName === 'hel') {
           // Halve current HP
+          const dmg = rt.hp - Math.ceil(rt.hp / 2);
           rt.hp = Math.ceil(rt.hp / 2);
           if (unit.alliance === 'player') {
-            updateSoldierStat(unit.id, 'runeDamageDealt', rt.hp);
+            updateSoldierStat(unit.id, 'runeDamageDealt', dmg);
+            updateSoldierStat(unit.id, 'damageDealt', dmg);
           }
           notify('COMBAT_DAMAGE', { attacker: { name: '💀 Hel Rune' }, defender: rt });
           if (rt.hp <= 0 && grid[rt.row]?.[rt.col] === rt) {
@@ -715,7 +735,10 @@ function combatTick() {
               const healedAmt = effMax - cell.hp;
               if (healedAmt > 0) {
                 cell.hp = effMax;
-                if (unit.alliance === 'player') updateSoldierStat(unit.id, 'runeHealingDone', healedAmt);
+                if (unit.alliance === 'player') {
+                  updateSoldierStat(unit.id, 'runeHealingDone', healedAmt);
+                }
+                updateSoldierStat(cell.id, 'damageHealed', healedAmt);
                 notify('COMBAT_EFFECT_TRIGGER', { effect: 'unit_heal', unit: cell, amount: healedAmt });
               }
             }
