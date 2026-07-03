@@ -7,6 +7,7 @@ import { COMBAT_CONFIG as CFG } from './config/combat.js';
 import { GODS_CONFIG as GC } from './config/gods.js';
 import { sortPoolByPoints, checkAndAutoDeploy } from './combat_deployment.js';
 import { spawnMonsterGroup } from './combat_spawner.js';
+import { combatTick } from './combat.js';
 
 let combatTimer = null;
 
@@ -18,7 +19,7 @@ export function setCombatTimer(timer) {
   combatTimer = timer;
 }
 
-export function startCombat(locationId, coordKey, enemyData, combatTickCallback) {
+export function startCombat(locationId, coordKey, enemyData, combatTickCallback = combatTick) {
   if (combatTimer) {
     clearInterval(combatTimer);
     combatTimer = null;
@@ -99,7 +100,7 @@ export function startCombat(locationId, coordKey, enemyData, combatTickCallback)
   combatTimer = setInterval(combatTickCallback, STATE.combat.combatIntervalMs || CFG.tickIntervalMs);
 }
 
-export function adjustCombatSpeed(newSpeedMs, combatTickCallback) {
+export function adjustCombatSpeed(newSpeedMs, combatTickCallback = combatTick) {
   STATE.combat.combatIntervalMs = newSpeedMs;
   if (STATE.combat.active && combatTimer) {
     clearInterval(combatTimer);
