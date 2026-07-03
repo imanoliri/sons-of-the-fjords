@@ -2236,6 +2236,53 @@ body {
   100% { opacity: 0; transform: scale(1.2); }
 }
 
+/* 9. Web Root Particle */
+.particle-web-root {
+  background: radial-gradient(circle, rgba(230, 230, 230, 0.4) 0%, rgba(200, 200, 200, 0.1) 40%, rgba(0,0,0,0) 80%);
+  border: 1px dashed rgba(255, 255, 255, 0.5);
+  animation: webRootFX 1s ease-out forwards;
+}
+@keyframes webRootFX {
+  0% { opacity: 0; transform: scale(0.5); }
+  30% { opacity: 1; border-color: rgba(255, 255, 255, 0.8); }
+  100% { opacity: 0; transform: scale(1.2); }
+}
+
+/* 10. Cave Troll Slam Particle */
+.particle-cave-troll-slam {
+  background: radial-gradient(circle, rgba(139, 69, 19, 0.5) 0%, rgba(0,0,0,0) 70%);
+  box-shadow: inset 0 0 15px rgba(255, 69, 0, 0.4);
+  animation: trollSlamFX 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+@keyframes trollSlamFX {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+
+/* 11. Freeze Aura Particle */
+.particle-freeze-aura {
+  background: radial-gradient(circle, rgba(0, 208, 255, 0.3) 0%, rgba(0, 208, 255, 0) 75%);
+  border: 1px solid rgba(0, 208, 255, 0.5);
+  animation: freezeAuraFX 0.8s ease-out forwards;
+}
+@keyframes freezeAuraFX {
+  0% { opacity: 0; transform: scale(0.8); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+
+/* 12. Acid Corrode Particle */
+.particle-acid-corrode {
+  background: radial-gradient(circle, rgba(76, 175, 80, 0.4) 0%, rgba(0,0,0,0) 70%);
+  animation: acidCorrodeFX 0.7s ease-in-out forwards;
+}
+@keyframes acidCorrodeFX {
+  0% { opacity: 0; transform: translateY(-5px) scale(0.9); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(10px) scale(1.1); }
+}
+
 
 
 

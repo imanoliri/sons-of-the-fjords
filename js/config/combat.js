@@ -28,13 +28,13 @@ export const COMBAT_CONFIG = {
   // Monster stat table
   monsters: {
     // Standard Foes
-    'Brood Spider':  { hp: 20,  dmg: 3,  speed: 2, range: 2, emoji: '🕷️', isDistractableWithSheep: true },
-    'Fenrir Pack Wolf':    { hp: 25,  dmg: 4,  speed: 3, range: 1, emoji: '🐺', isDistractableWithSheep: true },
+    'Brood Spider':  { hp: 20,  dmg: 3,  speed: 2, range: 2, emoji: '🕷️', isDistractableWithSheep: true, abilities: [{ type: 'web_spit', cooldownTicks: 4, durationTicks: 3 }] },
+    'Fenrir Pack Wolf':    { hp: 25,  dmg: 4,  speed: 3, range: 1, emoji: '🐺', isDistractableWithSheep: true, abilities: [{ type: 'lane_hop', cooldownTicks: 5 }] },
     'Draugr Warrior':      { hp: 35,  dmg: 5,  speed: 1, range: 1, emoji: '🧟', isDistractableWithSheep: true },
-    'Cave Troll':          { hp: 70,  dmg: 8,  speed: 1, range: 1, emoji: '🧌', isDistractableWithSheep: true },
+    'Cave Troll':          { hp: 70,  dmg: 8,  speed: 1, range: 1, emoji: '🧌', isDistractableWithSheep: true, abilities: [{ type: 'ground_slam', cooldownTicks: 4, splashRows: 1, dmgMultiplier: 0.6 }] },
     // Bosses
-    'Frost Giant (Jotunn)':{ hp: 120, dmg: 10, speed: 1, range: 1, emoji: '❄️', isBribableWithGold: true, isDistractableWithSheep: true },
-    'Lindwurm':            { hp: 50,  dmg: 6,  speed: 2, range: 1, emoji: '🐉', isWaterborn: true, isDistractableWithSheep: true },
+    'Frost Giant (Jotunn)':{ hp: 120, dmg: 10, speed: 1, range: 1, emoji: '❄️', isBribableWithGold: true, isDistractableWithSheep: true, abilities: [{ type: 'freeze_aura', radius: 2, attackSkipProbability: 1.0 }] },
+    'Lindwurm':            { hp: 50,  dmg: 6,  speed: 2, range: 1, emoji: '🐉', isWaterborn: true, isDistractableWithSheep: true, abilities: [{ type: 'acid_spit', maxStacks: 3, dmgIncreasePerStack: 1 }] },
     // New Monsters & Foes for specific worlds
     'Ice Wolf':            { hp: 30,  dmg: 5,  speed: 3, range: 1, emoji: '🐺', isDistractableWithSheep: true }, // Tundra/Frozen Wastes
     'Mercenary Guard':     { hp: 45,  dmg: 6,  speed: 2, range: 1, emoji: '♆', isBribableWithGold: true }, // Iron Coast

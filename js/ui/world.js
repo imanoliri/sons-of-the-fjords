@@ -505,15 +505,21 @@ export function startWorldHazardTicker() {
     if (STATE.worldMap.roamingBands) {
       const px = STATE.party.worldX;
       const py = STATE.party.worldY;
-      const nearbyBands = STATE.worldMap.roamingBands.filter(b => !b.isDefeated && !b.cooldownTicks && (Math.abs(b.x - px) + Math.abs(b.y - py) <= 2));
-      for (const band of nearbyBands) {
-        if (!band.alerted) {
-          logWorld(`⚠️ THREAT: The enemy band '${band.name}' is closing in on your position!`, 'warn-message');
-          band.alerted = true;
+      const playerTileKey = `${px},${py}`;
+      const playerLocation = STATE.worldMap.locations?.[playerTileKey];
+      const isPlayerInTown = playerLocation && playerLocation.type === 'town';
+
+      if (!isPlayerInTown) {
+        const nearbyBands = STATE.worldMap.roamingBands.filter(b => !b.isDefeated && !b.cooldownTicks && (Math.abs(b.x - px) + Math.abs(b.y - py) <= 2));
+        for (const band of nearbyBands) {
+          if (!band.alerted) {
+            logWorld(`⚠️ THREAT: The enemy band '${band.name}' is closing in on your position!`, 'warn-message');
+            band.alerted = true;
+          }
         }
       }
       STATE.worldMap.roamingBands.forEach(b => {
-        if (Math.abs(b.x - px) + Math.abs(b.y - py) > 2) {
+        if (isPlayerInTown || Math.abs(b.x - px) + Math.abs(b.y - py) > 2) {
           b.alerted = false;
         }
       });

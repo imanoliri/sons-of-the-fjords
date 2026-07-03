@@ -177,6 +177,32 @@ export function handleStateNotification(event, data) {
       showToast(`Freya Rune: Blessed Healing!`, '🌸', true);
       flashRuneOnCells(t.row, t.col, 'freya', true, data.unit.row, data.unit.col);
       markRunecasterCasting(data.unit);
+    } else if (data.effect === 'monster_web_spit') {
+      logWorld(`🕸️ ${data.unit.name} spat a web at ${data.target.name}, rooting them!`, 'warn-message');
+      spawnFloatyText(data.target.row, data.target.col, '🕸️ ROOTED!', '#9E9E9E');
+      spawnCombatParticle(data.target.row, data.target.col, 'particle-web-root');
+    } else if (data.effect === 'monster_lane_hop') {
+      logWorld(`🐺 ${data.unit.name} leap-flanked from row ${data.oldRow} to row ${data.unit.row}!`, 'warn-message');
+      showToast(`Wolf Flanked!`, '🐺');
+      spawnFloatyText(data.unit.row, data.unit.col, '💨 FLANKED!', 'var(--color-danger)');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-leap-wind');
+    } else if (data.effect === 'monster_ground_slam') {
+      logWorld(`🧌 ${data.unit.name} smashed the ground! Splash damage dealt across lanes.`, 'warn-message');
+      showToast(`Ground Slam!`, '🧌');
+      data.targets.forEach(t => {
+        spawnFloatyText(t.row, t.col, '💥 SLAM!', 'var(--color-danger)');
+        spawnCombatParticle(t.row, t.col, 'particle-cave-troll-slam');
+      });
+    } else if (data.effect === 'monster_freeze_aura_slowed') {
+      // Show floaty text occasionally (avoid spam)
+      if (Math.random() < 0.25) {
+        spawnFloatyText(data.unit.row, data.unit.col, '❄️ FROZEN', '#00d0ff');
+      }
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-freeze-aura');
+    } else if (data.effect === 'monster_acid_spit') {
+      logWorld(`🧪 ${data.attacker.name}'s acid corroded ${data.unit.name}'s armor! Stacks: ${data.stacks}`, 'warn-message');
+      spawnFloatyText(data.unit.row, data.unit.col, `🧪 CORRODED (x${data.stacks})`, '#4CAF50');
+      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-acid-corrode');
     }
   }
   else if (event === 'COMBAT_BREACH') {

@@ -311,17 +311,32 @@ export function tickRoamingBands() {
     let nextStep = null;
     const isNaval = (band.type === 'naval');
 
-    if (dist <= 5) {
+    // Check if player is currently in a town tile
+    const playerTileKey = `${px},${py}`;
+    const playerLocation = STATE.worldMap.locations?.[playerTileKey];
+    const isPlayerInTown = playerLocation && playerLocation.type === 'town';
+
+    // Check if a tile has a town or raid location
+    const isProtectedTile = (x, y) => {
+      const loc = STATE.worldMap.locations?.[`${x},${y}`];
+      return loc && (loc.type === 'town' || loc.type === 'raid');
+    };
+
+    if (dist <= 5 && !isPlayerInTown) {
       nextStep = findNextStepTowards(band.x, band.y, px, py, isNaval, size, tiles);
+      // If the target step lands on a town or raid, discard it
+      if (nextStep && isProtectedTile(nextStep.x, nextStep.y)) {
+        nextStep = null;
+      }
     }
 
     if (!nextStep) {
       const adjs = getAdjacentCoords(band.x, band.y);
       let validMoves = adjs;
       if (isNaval) {
-        validMoves = adjs.filter(a => tiles[a.y][a.x] === 'water' || tiles[a.y][a.x] === 'river');
+        validMoves = adjs.filter(a => (tiles[a.y][a.x] === 'water' || tiles[a.y][a.x] === 'river') && !isProtectedTile(a.x, a.y));
       } else {
-        validMoves = adjs.filter(a => tiles[a.y][a.x] !== 'water');
+        validMoves = adjs.filter(a => tiles[a.y][a.x] !== 'water' && !isProtectedTile(a.x, a.y));
       }
       if (validMoves.length > 0) {
         nextStep = validMoves[Math.floor(Math.random() * validMoves.length)];
@@ -333,7 +348,8 @@ export function tickRoamingBands() {
       band.y = nextStep.y;
     }
 
-    if (band.x === STATE.party.worldX && band.y === STATE.party.worldY) {
+    // Intercept check: Only triggers if the player is NOT in a town
+    if (band.x === STATE.party.worldX && band.y === STATE.party.worldY && !isPlayerInTown) {
       logs.push({
         text: `WARBAND ENCOUNTER: The mobile enemy group '${band.name}' intercepted your party! Prepare for battle!`,
         band: band

@@ -134,8 +134,16 @@ function spawnMonsterGroup(group, groupIndex) {
         confusedTicksLeft: isConfused ? (lokiM3?.confuseDurationTicks ?? 2) : 0,
         row: spawnRow,
         col: spawnCol,
-        enemyRef: enemyRef
+        enemyRef: enemyRef,
+        abilityCooldowns: {}
       };
+      if (stats.abilities) {
+        stats.abilities.forEach(ab => {
+          if (ab.type !== 'freeze_aura') {
+            mUnit.abilityCooldowns[ab.type] = 0;
+          }
+        });
+      }
       
       STATE.combat.waveMonsters.push(mUnit);
       grid[spawnRow][spawnCol] = mUnit;
@@ -222,8 +230,16 @@ function spawnMonsterGroup(group, groupIndex) {
         isConfused: false,
         confusedTicksLeft: 0,
         row: spawnLane,
-        col: spawnCol
+        col: spawnCol,
+        abilityCooldowns: {}
       };
+      if (charmedMonsterData.stats.abilities) {
+        charmedMonsterData.stats.abilities.forEach(ab => {
+          if (ab.type !== 'freeze_aura') {
+            mUnit.abilityCooldowns[ab.type] = 0;
+          }
+        });
+      }
       STATE.combat.waveMonsters.push(mUnit);
       grid[spawnLane][spawnCol] = mUnit;
       notify('COMBAT_SPAWN', mUnit);
@@ -455,6 +471,11 @@ function combatTick() {
         notify('COMBAT_EFFECT_TRIGGER', { effect: 'loki_charm_wearoff', unit: unit });
         notify('COMBAT_UPDATE');
       }
+    }
+
+    if (unit.alliance === 'enemy') {
+      const consumedTurn = processMonsterAbilities(unit, grid, gridSnapshot, sizeR, sizeC);
+      if (consumedTurn) continue;
     }
 
     const target = unit.isFleeing ? null : findTargetInLane(unit, gridSnapshot);
@@ -752,6 +773,18 @@ function combatTick() {
     // ---- END RUNECASTER ----
 
     if (target && target.hp > 0) {
+      if (unit.frozenSlowLeft > 0) {
+        unit.frozenSlowLeft--;
+        unit.frozenSkipThisTick = !unit.frozenSkipThisTick;
+        if (unit.frozenSkipThisTick) {
+          const skipProb = unit.frozenAttackSkipProbability !== undefined ? unit.frozenAttackSkipProbability : 1.0;
+          if (Math.random() < skipProb) {
+            notify('COMBAT_EFFECT_TRIGGER', { effect: 'monster_freeze_aura_slowed', unit: unit });
+            continue; // Skip attack this tick
+          }
+        }
+      }
+
       // Loki Milestone 2: Enemy attack speed reduced by 10% (10% miss chance)
       if (unit.alliance === 'enemy' && STATE.godQuests.loki?.[1]) {
         const lokiM2 = GC.modifiers.milestones.loki.find(m => m.index === 1);
@@ -789,6 +822,10 @@ function combatTick() {
 
         let dmgTaken = getEffectiveStats(unit).dmg.total;
 
+        // Apply armorDebuff stacks (each stack permanently increases incoming damage by configured amount)
+        const acidDebuff = currentTarget.armorDebuff || 0;
+        const acidMultiplier = currentTarget.acidDmgIncreasePerStack !== undefined ? currentTarget.acidDmgIncreasePerStack : 1;
+        dmgTaken = dmgTaken + (acidDebuff * acidMultiplier);
 
         // Heavy armor: reduces incoming damage by 1
         if (currentTarget.type === 'huskarl') {
@@ -809,6 +846,20 @@ function combatTick() {
           if (currentTarget.alliance === 'player') {
             updateSoldierStat(currentTarget.id, 'blockedHits', 1);
             updateSoldierStat(currentTarget.id, 'damageBlocked', blockAmount);
+          }
+        }
+
+        // Apply acid_spit debuff if attacker has the ability
+        if (unit.alliance === 'enemy') {
+          const attackerStats = getMonsterStats(unit.type);
+          const acidAbility = attackerStats.abilities?.find(a => a.type === 'acid_spit');
+          if (acidAbility) {
+            const currentStacks = currentTarget.armorDebuff || 0;
+            if (currentStacks < acidAbility.maxStacks) {
+              currentTarget.armorDebuff = currentStacks + 1;
+              currentTarget.acidDmgIncreasePerStack = acidAbility.dmgIncreasePerStack !== undefined ? acidAbility.dmgIncreasePerStack : 1;
+              notify('COMBAT_EFFECT_TRIGGER', { effect: 'monster_acid_spit', unit: currentTarget, attacker: unit, stacks: currentTarget.armorDebuff });
+            }
           }
         }
 
@@ -915,6 +966,11 @@ function combatTick() {
         if (stance === 'attack') dir = 1;
         else if (stance === 'retreat' || stance === 'defend') dir = -1;
         else shouldMove = false;
+      }
+
+      if (unit.rootedTicksLeft > 0) {
+        unit.rootedTicksLeft--;
+        shouldMove = false;
       }
 
       if (shouldMove) {
@@ -1546,6 +1602,127 @@ export function fleeCombat() {
 
 function getMonsterStats(mClass) {
   return CFG.monsters[mClass] || CFG.monsterFallback;
+}
+
+function processMonsterAbilities(unit, grid, gridSnapshot, sizeR, sizeC) {
+  const stats = getMonsterStats(unit.type);
+  if (!stats || !stats.abilities) return false;
+
+  let consumedAction = false;
+
+  for (const ab of stats.abilities) {
+    // Handle passive or pre-attack ticks
+    if (ab.type === 'freeze_aura') {
+      // Passive freeze aura check (runs every tick)
+      for (let r = 0; r < sizeR; r++) {
+        for (let c = 0; c < sizeC; c++) {
+          const cell = grid[r][c];
+          if (cell && cell.alliance === 'player' && cell.hp > 0) {
+            // Manhattan distance
+            const dist = Math.abs(unit.row - r) + Math.abs(unit.col - c);
+            if (dist <= ab.radius) {
+              cell.frozenSlowLeft = 2;
+              cell.frozenAttackSkipProbability = ab.attackSkipProbability !== undefined ? ab.attackSkipProbability : 1.0;
+            }
+          }
+        }
+      }
+      continue;
+    }
+
+    // Initialize or tick down cooldowns
+    if (unit.abilityCooldowns[ab.type] === undefined) {
+      unit.abilityCooldowns[ab.type] = 0;
+    }
+    if (unit.abilityCooldowns[ab.type] > 0) {
+      unit.abilityCooldowns[ab.type]--;
+      continue;
+    }
+
+    // Ability handlers
+    if (ab.type === 'web_spit') {
+      const target = findTargetInLane(unit, gridSnapshot);
+      if (target && target.hp > 0 && Math.abs(target.col - unit.col) >= 2) {
+        // Spit web
+        target.rootedTicksLeft = ab.durationTicks;
+        unit.abilityCooldowns[ab.type] = ab.cooldownTicks;
+        notify('COMBAT_EFFECT_TRIGGER', { effect: 'monster_web_spit', unit: unit, target: target });
+        consumedAction = true;
+        break; // Consumed action
+      }
+    }
+
+    if (ab.type === 'lane_hop') {
+      const dir = unit.alliance === 'enemy' ? -1 : 1;
+      const nextCol = unit.col + dir;
+      if (nextCol >= 0 && nextCol < sizeC) {
+        const blocker = grid[unit.row][nextCol];
+        if (blocker && blocker.alliance !== unit.alliance) {
+          // Lane is blocked! Choose adjacent lane with fewest player units
+          const potentialRows = [unit.row - 1, unit.row + 1].filter(r => r >= 0 && r < sizeR);
+          let bestRow = -1;
+          let minCount = Infinity;
+
+          potentialRows.forEach(r => {
+            // Count player units in this lane
+            let count = 0;
+            for (let c = 0; c < sizeC; c++) {
+              const cell = grid[r][c];
+              if (cell && cell.alliance === 'player') {
+                count++;
+              }
+            }
+            if (count < minCount && !grid[r][unit.col]) {
+              minCount = count;
+              bestRow = r;
+            }
+          });
+
+          if (bestRow !== -1) {
+            grid[unit.row][unit.col] = null;
+            const oldRow = unit.row;
+            unit.row = bestRow;
+            grid[bestRow][unit.col] = unit;
+            unit.abilityCooldowns[ab.type] = ab.cooldownTicks;
+            notify('COMBAT_EFFECT_TRIGGER', { effect: 'monster_lane_hop', unit: unit, oldRow: oldRow });
+            consumedAction = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (ab.type === 'ground_slam') {
+      const target = findTargetInLane(unit, gridSnapshot);
+      if (target && target.hp > 0) {
+        const splashTargetRowMin = Math.max(0, unit.row - ab.splashRows);
+        const splashTargetRowMax = Math.min(sizeR - 1, unit.row + ab.splashRows);
+        const hitTargets = [];
+
+        for (let r = splashTargetRowMin; r <= splashTargetRowMax; r++) {
+          const cell = grid[r][target.col];
+          if (cell && cell.alliance === 'player' && cell.hp > 0) {
+            const slamDmg = Math.max(1, Math.floor(unit.dmg * ab.dmgMultiplier));
+            cell.hp = Math.max(0, cell.hp - slamDmg);
+            hitTargets.push({ row: cell.row, col: cell.col, unitName: cell.name });
+
+            if (cell.hp <= 0) {
+              grid[cell.row][cell.col] = null;
+              removeUnitFromRegistry(cell);
+              notify('COMBAT_DEATH', cell);
+            }
+          }
+        }
+
+        unit.abilityCooldowns[ab.type] = ab.cooldownTicks;
+        notify('COMBAT_EFFECT_TRIGGER', { effect: 'monster_ground_slam', unit: unit, targets: hitTargets });
+        consumedAction = true;
+        break;
+      }
+    }
+  }
+
+  return consumedAction;
 }
 
 function shuffleArray(arr) {
