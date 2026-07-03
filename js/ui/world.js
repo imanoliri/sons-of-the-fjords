@@ -327,7 +327,7 @@ export function movePartyOnWorld(x, y) {
 
   // Check if player moved onto an active roaming band
   if (STATE.worldMap.roamingBands && STATE.worldMap.roamingBands.length > 0) {
-    const bandOnTile = STATE.worldMap.roamingBands.find(b => b.x === x && b.y === y && !b.isDefeated);
+    const bandOnTile = STATE.worldMap.roamingBands.find(b => b.x === x && b.y === y && !b.isDefeated && !b.cooldownTicks);
     if (bandOnTile) {
       logWorld(`WARBAND ENCOUNTER: You intercepted the enemy group '${bandOnTile.name}'! Prepare for battle!`, 'warn-message');
       triggerRoamingCombat(bandOnTile);
