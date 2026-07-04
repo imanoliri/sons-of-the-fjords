@@ -167,6 +167,35 @@ export function setupHotkeys(mapSelectionController) {
         document.getElementById('btn-leave-town')?.click();
         return;
       }
+      if (STATE.activeScreen === 'combat') {
+        // Escape acts as Backspace to undo/undeploy the last deployed unit
+        e.preventDefault();
+        if (STATE.combat.deployHistory && STATE.combat.deployHistory.length > 0) {
+          const grid = STATE.combat.grid;
+          for (let i = STATE.combat.deployHistory.length - 1; i >= 0; i--) {
+            const unitId = STATE.combat.deployHistory[i];
+            let unitR = -1;
+            let unitC = -1;
+            let found = false;
+            for (let r = 0; r < grid.length; r++) {
+              for (let c = 0; c < grid[r].length; c++) {
+                if (grid[r][c] && grid[r][c].id === unitId) {
+                  unitR = r;
+                  unitC = c;
+                  found = true;
+                  break;
+                }
+              }
+              if (found) break;
+            }
+            if (found) {
+              import('../combat.js').then(({ undeployUnit }) => undeployUnit(unitR, unitC));
+              break;
+            }
+          }
+        }
+        return;
+      }
     }
 
     if (STATE.activeScreen === 'world') {
