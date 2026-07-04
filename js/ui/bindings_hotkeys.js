@@ -195,16 +195,16 @@ export function setupHotkeys(mapSelectionController) {
     } else if (STATE.activeScreen === 'location') {
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
         e.preventDefault();
-        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(0, -1));
+        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(STATE.party.localX, STATE.party.localY - 1));
       } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
         e.preventDefault();
-        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(0, 1));
+        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(STATE.party.localX, STATE.party.localY + 1));
       } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         e.preventDefault();
-        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(-1, 0));
+        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(STATE.party.localX - 1, STATE.party.localY));
       } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
         e.preventDefault();
-        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(1, 0));
+        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(STATE.party.localX + 1, STATE.party.localY));
       }
     } else if (STATE.activeScreen === 'combat') {
       if (e.key === ' ') {
