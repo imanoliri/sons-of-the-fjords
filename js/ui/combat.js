@@ -15,7 +15,7 @@ import { showToast } from './notifications.js';
 // Import extracted UI modules to expose them correctly to parent files
 export { renderFormationElement, renderOrdersPanel, renderPoolCards } from './combat_deployment.js';
 export { initCombatSelection } from './combat_lifecycle.js';
-export { getCellEl, getCellPosition, spawnFloatyText, spawnCombatParticle, spawnHuntsmanProjectile, flashRuneOnCells, markRunecasterCasting } from './combat_spawner.js';
+export { getCellEl, getCellPosition, spawnFloatyText, spawnCombatParticle, spawnHuntsmanProjectile, spawnCombatProjectile, flashRuneOnCells, markRunecasterCasting } from './combat_spawner.js';
 
 import { renderFormationElement, renderOrdersPanel, renderPoolCards } from './combat_deployment.js';
 
@@ -408,6 +408,10 @@ export function renderCombatGrid() {
           stunBadge.title = `Stunned (${unit.stunnedTicksLeft} ticks left)`;
           stunBadge.innerText = unit.stunnedTicksLeft;
           elUnit.appendChild(stunBadge);
+        }
+
+        if (unit.frozenSlowLeft > 0) {
+          elUnit.classList.add('frozen-state');
         }
 
         if (STATE.combat.activeDoTs?.some(d => d.unit?.id === unit.id && d.ticksLeft > 0)) {

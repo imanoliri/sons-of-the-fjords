@@ -5,7 +5,7 @@ import { showToast, logWorld, logLocation } from './ui/notifications.js';
 import { renderWorldMap, renderResourceBar, startWorldHazardTicker, stopWorldHazardTicker } from './ui/world.js';
 import { renderTownScreen } from './ui/town.js';
 import { renderLocationMap, autoDiscoverAdjacent } from './ui/location.js';
-import { renderCombatGrid, spawnHuntsmanProjectile, spawnCombatParticle, spawnFloatyText, flashRuneOnCells, markRunecasterCasting } from './ui/combat.js';
+import { renderCombatGrid, spawnHuntsmanProjectile, spawnCombatProjectile, spawnCombatParticle, spawnFloatyText, flashRuneOnCells, markRunecasterCasting } from './ui/combat.js';
 import { renderQuestsScreen, renderPartyPanel, GOD_LORE } from './ui/party.js';
 import { showOverlay, hideOverlay } from './ui/overlay.js';
 import {
@@ -179,8 +179,11 @@ export function handleStateNotification(event, data) {
       markRunecasterCasting(data.unit);
     } else if (data.effect === 'monster_web_spit') {
       logWorld(`🕸️ ${data.unit.name} spat a web at ${data.target.name}, rooting them!`, 'warn-message');
-      spawnFloatyText(data.target.row, data.target.col, '🕸️ ROOTED!', '#9E9E9E');
-      spawnCombatParticle(data.target.row, data.target.col, 'particle-web-root');
+      spawnCombatProjectile(data.unit.row, data.unit.col, data.target.row, data.target.col, 'monster-web-projectile', '🕸️', 350);
+      setTimeout(() => {
+        spawnFloatyText(data.target.row, data.target.col, '🕸️ ROOTED!', '#9E9E9E');
+        spawnCombatParticle(data.target.row, data.target.col, 'particle-web-root');
+      }, 350);
     } else if (data.effect === 'monster_lane_hop') {
       logWorld(`🐺 ${data.unit.name} leap-flanked from row ${data.oldRow} to row ${data.unit.row}!`, 'warn-message');
       showToast(`Wolf Flanked!`, '🐺');
@@ -201,8 +204,11 @@ export function handleStateNotification(event, data) {
       spawnCombatParticle(data.unit.row, data.unit.col, 'particle-freeze-aura');
     } else if (data.effect === 'monster_acid_spit') {
       logWorld(`🧪 ${data.attacker.name}'s acid corroded ${data.unit.name}'s armor! Stacks: ${data.stacks}`, 'warn-message');
-      spawnFloatyText(data.unit.row, data.unit.col, `🧪 CORRODED (x${data.stacks})`, '#4CAF50');
-      spawnCombatParticle(data.unit.row, data.unit.col, 'particle-acid-corrode');
+      spawnCombatProjectile(data.attacker.row, data.attacker.col, data.unit.row, data.unit.col, 'monster-acid-projectile', '🧪', 350);
+      setTimeout(() => {
+        spawnFloatyText(data.unit.row, data.unit.col, `🧪 CORRODED (x${data.stacks})`, '#4CAF50');
+        spawnCombatParticle(data.unit.row, data.unit.col, 'particle-acid-corrode');
+      }, 350);
     }
   }
   else if (event === 'COMBAT_BREACH') {

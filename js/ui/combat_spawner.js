@@ -60,6 +60,10 @@ export function spawnCombatParticle(row, col, className) {
 }
 
 export function spawnHuntsmanProjectile(attackerRow, attackerCol, defenderRow, defenderCol) {
+  spawnCombatProjectile(attackerRow, attackerCol, defenderRow, defenderCol, 'huntsman-arrow-projectile', '→', 250);
+}
+
+export function spawnCombatProjectile(attackerRow, attackerCol, defenderRow, defenderCol, className, text, durationMs = 300) {
   const overlayContainer = document.getElementById('combat-effects-overlay');
   if (!overlayContainer) return;
 
@@ -67,35 +71,36 @@ export function spawnHuntsmanProjectile(attackerRow, attackerCol, defenderRow, d
   const defenderPos = getCellPosition(defenderRow, defenderCol);
   if (!attackerPos || !defenderPos) return;
 
-  const arrow = document.createElement('div');
-  arrow.className = 'huntsman-arrow-projectile';
-  arrow.innerText = '→';
-  arrow.style.position = 'absolute';
+  const proj = document.createElement('div');
+  proj.className = `combat-projectile ${className}`;
+  proj.innerText = text;
+  proj.style.position = 'absolute';
   
   const startX = attackerPos.left + attackerPos.width / 2;
   const startY = attackerPos.top + attackerPos.height / 2;
   const endX = defenderPos.left + defenderPos.width / 2;
   const endY = defenderPos.top + defenderPos.height / 2;
 
-  arrow.style.left = `${startX}px`;
-  arrow.style.top = `${startY}px`;
-  arrow.style.zIndex = '100';
+  proj.style.left = `${startX}px`;
+  proj.style.top = `${startY}px`;
+  proj.style.zIndex = '100';
 
   const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
-  arrow.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+  proj.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
 
-  overlayContainer.appendChild(arrow);
+  overlayContainer.appendChild(proj);
 
   requestAnimationFrame(() => {
-    arrow.style.transition = 'all 0.25s linear';
-    arrow.style.left = `${endX}px`;
-    arrow.style.top = `${endY}px`;
+    proj.style.transition = `all ${durationMs / 1000}s linear`;
+    proj.style.left = `${endX}px`;
+    proj.style.top = `${endY}px`;
   });
 
   setTimeout(() => {
-    arrow.remove();
-  }, 250);
+    proj.remove();
+  }, durationMs);
 }
+
 
 const RUNE_ICONS = {
   odin:  '⚡',

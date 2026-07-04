@@ -2733,4 +2733,31 @@ body {
 }
 .hof-card:hover {
   border-color: var(--color-odin, #4fc3f7) !important;
-}
+}
+
+/* ── Frozen and Projectile enhancements ── */
+.combat-unit.frozen-state {
+  filter: drop-shadow(0 0 6px #00d0ff) sepia(0.2) hue-rotate(180deg) saturate(1.8) !important;
+  border-color: #00d0ff !important;
+  box-shadow: 0 0 10px rgba(0, 208, 255, 0.6) !important;
+}
+
+.combat-projectile {
+  position: absolute;
+  z-index: 120;
+  font-size: 1.3rem;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.combat-projectile.monster-web-projectile {
+  filter: drop-shadow(0 0 3px #ffffff);
+}
+
+.combat-projectile.monster-acid-projectile {
+  filter: drop-shadow(0 0 3px #4CAF50);
+}
+
