@@ -212,18 +212,31 @@ export function setupHotkeys(mapSelectionController) {
         document.getElementById(btnId)?.click();
       }
     } else if (STATE.activeScreen === 'location') {
-      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+      if (STATE.lootGatheringInProgress) {
         e.preventDefault();
-        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(STATE.party.localX, STATE.party.localY - 1));
-      } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        return;
+      }
+      if (e.key === 'w' || e.key === 'W') {
+        const warhornBtn = document.getElementById('btn-use-warhorn-sidebar');
+        if (warhornBtn && !warhornBtn.classList.contains('hidden')) {
+          e.preventDefault();
+          warhornBtn.click();
+          return;
+        }
+      }
+
+      let dx = 0;
+      let dy = 0;
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') dy = -1;
+      else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') dy = 1;
+      else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') dx = -1;
+      else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') dx = 1;
+
+      if (dx !== 0 || dy !== 0) {
         e.preventDefault();
-        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(STATE.party.localX, STATE.party.localY + 1));
-      } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-        e.preventDefault();
-        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(STATE.party.localX - 1, STATE.party.localY));
-      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-        e.preventDefault();
-        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(STATE.party.localX + 1, STATE.party.localY));
+        const targetX = STATE.party.localX + dx;
+        const targetY = STATE.party.localY + dy;
+        import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(targetX, targetY));
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const btnPortal = document.getElementById('btn-use-portal');
@@ -237,6 +250,22 @@ export function setupHotkeys(mapSelectionController) {
             enterBtn.click();
           }
         }
+      } else {
+        const key = e.key;
+        const promptPanel = document.getElementById('portal-prompt-panel');
+        if (promptPanel && !promptPanel.classList.contains('hidden')) {
+          const btns = promptPanel.querySelectorAll('.btn');
+          if (key === '1') {
+            e.preventDefault();
+            for (let b of btns) if (b.innerText.includes('[1]')) b.click();
+          } else if (key === '2') {
+            e.preventDefault();
+            for (let b of btns) if (b.innerText.includes('[2]')) b.click();
+          } else if (key === '3') {
+            e.preventDefault();
+            for (let b of btns) if (b.innerText.includes('[3]')) b.click();
+          }
+        }
       }
     } else if (STATE.activeScreen === 'combat') {
       if (e.key === ' ') {
@@ -245,6 +274,84 @@ export function setupHotkeys(mapSelectionController) {
       } else if (e.key === 'Enter') {
         e.preventDefault();
         togglePause();
+      }
+
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        const grid = STATE.combat.grid;
+        if (grid) {
+          for (let r = 0; r < grid.length; r++) {
+            for (let c = 0; c < grid[r].length; c++) {
+              const u = grid[r][c];
+              if (u && u.alliance === 'player' && u.selected) {
+                import('../combat.js').then(({ undeployUnit }) => undeployUnit(r, c));
+              }
+            }
+          }
+        }
+        if (STATE.combat.selectedPlans && STATE.combat.selectedPlans.length > 0) {
+          STATE.combat.selectedPlans.forEach(p => {
+            if (STATE.combat.plannedLayout) {
+              STATE.combat.plannedLayout[p.r][p.c] = null;
+            }
+            if (STATE.combat.plansDefinedThisTick) {
+              delete STATE.combat.plansDefinedThisTick[`${p.r},${p.c}`];
+            }
+          });
+          STATE.combat.selectedPlans = [];
+          checkAndAutoDeploy();
+          notify('COMBAT_UPDATE');
+        }
+        return;
+      }
+
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        if (STATE.combat.deployHistory && STATE.combat.deployHistory.length > 0) {
+          const grid = STATE.combat.grid;
+          for (let i = STATE.combat.deployHistory.length - 1; i >= 0; i--) {
+            const unitId = STATE.combat.deployHistory[i];
+            let unitR = -1;
+            let unitC = -1;
+            let found = false;
+            for (let r = 0; r < grid.length; r++) {
+              for (let c = 0; c < grid[r].length; c++) {
+                if (grid[r][c] && grid[r][c].id === unitId) {
+                  unitR = r;
+                  unitC = c;
+                  found = true;
+                  break;
+                }
+              }
+              if (found) break;
+            }
+            if (found) {
+              import('../combat.js').then(({ undeployUnit }) => undeployUnit(unitR, unitC));
+              break;
+            }
+          }
+        }
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+
+      if (key === 'm') {
+        e.preventDefault();
+        document.getElementById('btn-move-plans')?.click();
+        return;
+      }
+
+      if (key === 'n') {
+        e.preventDefault();
+        const btnPlan = document.getElementById('btn-plan-title');
+        const btnWizardStep = document.getElementById('btn-plan-wizard-step');
+        if (btnPlan && !btnPlan.classList.contains('hidden')) {
+          btnPlan.click();
+        } else if (btnWizardStep && !btnWizardStep.classList.contains('hidden')) {
+          btnWizardStep.click();
+        }
+        return;
       }
 
       if (STATE.combat.paused) {
