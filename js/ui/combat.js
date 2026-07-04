@@ -277,7 +277,8 @@ export function renderCombatGrid() {
             
             if (wiz) {
               wiz.placedCount++;
-              if (wiz.placedCount >= wiz.types[wiz.typeIndex].totalCount) {
+              // Ensure we check and advance if the current type has no more units left to plan
+              while (wiz.active && wiz.typeIndex < wiz.types.length && wiz.placedCount >= wiz.types[wiz.typeIndex].totalCount) {
                 wiz.typeIndex++;
                 wiz.placedCount = 0;
                 if (wiz.typeIndex >= wiz.types.length) {
