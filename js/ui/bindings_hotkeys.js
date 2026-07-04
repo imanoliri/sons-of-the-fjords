@@ -157,16 +157,16 @@ export function setupHotkeys(mapSelectionController) {
     if (STATE.activeScreen === 'world') {
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
         e.preventDefault();
-        import('./world.js').then(({ movePartyOnWorld }) => movePartyOnWorld(0, -1));
+        import('./world.js').then(({ movePartyOnWorld }) => movePartyOnWorld(STATE.party.worldX, STATE.party.worldY - 1));
       } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
         e.preventDefault();
-        import('./world.js').then(({ movePartyOnWorld }) => movePartyOnWorld(0, 1));
+        import('./world.js').then(({ movePartyOnWorld }) => movePartyOnWorld(STATE.party.worldX, STATE.party.worldY + 1));
       } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         e.preventDefault();
-        import('./world.js').then(({ movePartyOnWorld }) => movePartyOnWorld(-1, 0));
+        import('./world.js').then(({ movePartyOnWorld }) => movePartyOnWorld(STATE.party.worldX - 1, STATE.party.worldY));
       } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
         e.preventDefault();
-        import('./world.js').then(({ movePartyOnWorld }) => movePartyOnWorld(1, 0));
+        import('./world.js').then(({ movePartyOnWorld }) => movePartyOnWorld(STATE.party.worldX + 1, STATE.party.worldY));
       } else if (e.key === 'Enter') {
         e.preventDefault();
         import('./world.js').then(({ tryEnterCurrentLocation }) => tryEnterCurrentLocation());
