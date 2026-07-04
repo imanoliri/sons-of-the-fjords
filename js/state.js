@@ -121,6 +121,22 @@ export function notify(event, data = null) {
     STATE.band.forEach(s => {
       addSoldierEvent(s.id, '🏆 Achieved Saga Victory! Immortalized in the Saga.');
     });
+  } else if (event === 'COMBAT_START') {
+    STATE.band.forEach(s => {
+      addSoldierEvent(s.id, '⚔️ Deployed into combat');
+    });
+  } else if (event === 'COMBAT_VICTORY') {
+    STATE.band.forEach(s => {
+      addSoldierEvent(s.id, '🎖️ Won the battle');
+    });
+  } else if (event === 'COMBAT_DEFEAT') {
+    STATE.band.forEach(s => {
+      addSoldierEvent(s.id, '💀 Slain in battle (Defeat)');
+    });
+  } else if (event === 'COMBAT_FLEE') {
+    STATE.band.forEach(s => {
+      addSoldierEvent(s.id, '🏃 Retreat/Fled from combat');
+    });
   }
   for (const listener of listeners) listener(event, data);
 }
