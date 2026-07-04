@@ -192,6 +192,19 @@ export function setupHotkeys(mapSelectionController) {
         e.preventDefault();
         import('./world.js').then(({ tryEnterCurrentLocation }) => tryEnterCurrentLocation());
       }
+    } else if (STATE.activeScreen === 'town') {
+      const townKeys = {
+        '1': 'btn-recruit-shieldmaiden',
+        '2': 'btn-recruit-berserker',
+        '3': 'btn-recruit-huntsman',
+        '4': 'btn-recruit-huskarl',
+        '5': 'btn-recruit-runecaster'
+      };
+      const btnId = townKeys[e.key];
+      if (btnId) {
+        e.preventDefault();
+        document.getElementById(btnId)?.click();
+      }
     } else if (STATE.activeScreen === 'location') {
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
         e.preventDefault();
@@ -230,7 +243,12 @@ export function setupHotkeys(mapSelectionController) {
         const target = layoutKeys[e.key];
         if (target) {
           e.preventDefault();
-          if (STATE.combat.grid[target.r][target.c]) return;
+          if (STATE.combat.grid[target.r][target.c]) {
+            import('../combat.js').then(({ undeployUnit }) => {
+              undeployUnit(target.r, target.c);
+            });
+            return;
+          }
 
           let poolIdx = STATE.combat.selectedPoolIndex;
           if (poolIdx === null && STATE.combat.pool.length > 0) {

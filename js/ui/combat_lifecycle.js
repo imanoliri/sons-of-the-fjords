@@ -40,6 +40,20 @@ export function initCombatSelection() {
       notify('COMBAT_UPDATE');
     };
   }
+  
+  const setupStanceBtn = (id, stanceValue) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.onclick = () => {
+        STATE.combat.stance = stanceValue;
+        notify('COMBAT_UPDATE');
+      };
+    }
+  };
+  setupStanceBtn('btn-stance-retreat', 'retreat');
+  setupStanceBtn('btn-stance-defend', 'defend');
+  setupStanceBtn('btn-stance-hold', 'hold');
+  setupStanceBtn('btn-stance-attack', 'attack');
 
   const btnSave = document.getElementById('btn-save-plans');
   if (btnSave) {
