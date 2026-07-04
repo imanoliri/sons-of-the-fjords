@@ -198,7 +198,13 @@ export function setupHotkeys(mapSelectionController) {
         '2': 'btn-recruit-berserker',
         '3': 'btn-recruit-huntsman',
         '4': 'btn-recruit-huskarl',
-        '5': 'btn-recruit-runecaster'
+        '5': 'btn-recruit-runecaster',
+        'f': 'btn-buy-food', 'F': 'btn-buy-food',
+        'w': 'btn-buy-wood', 'W': 'btn-buy-wood',
+        'h': 'btn-sell-wood', 'H': 'btn-sell-wood',
+        's': 'btn-buy-sheep', 'S': 'btn-buy-sheep',
+        'g': 'btn-sell-sheep', 'G': 'btn-sell-sheep',
+        'o': 'btn-buy-warhorn', 'O': 'btn-buy-warhorn'
       };
       const btnId = townKeys[e.key];
       if (btnId) {
