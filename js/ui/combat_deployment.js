@@ -13,7 +13,7 @@ export function renderFormationElement() {
   if (!container) return;
   container.innerHTML = '';
 
-  let order = [...(STATE.combat.formationOrder || ['shieldmaiden', 'huntsman', 'berserker', 'huskarl', 'runecaster'])];
+  let order = [...(STATE.combat.formationOrder || ['huntsman', 'shieldmaiden', 'berserker', 'huskarl', 'runecaster'])];
   const requiredTypes = ['berserker', 'shieldmaiden', 'huntsman', 'huskarl', 'runecaster'];
   requiredTypes.forEach(t => {
     if (!order.includes(t)) {
