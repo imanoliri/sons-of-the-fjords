@@ -2737,9 +2737,10 @@ body {
 
 /* ── Frozen and Projectile enhancements ── */
 .combat-unit.frozen-state {
-  filter: drop-shadow(0 0 6px #00d0ff) sepia(0.2) hue-rotate(180deg) saturate(1.8) !important;
   border-color: #00d0ff !important;
   box-shadow: 0 0 10px rgba(0, 208, 255, 0.6) !important;
+  background-color: rgba(0, 208, 255, 0.3) !important;
+  color: #b3f0ff !important;
 }
 
 .combat-projectile {
