@@ -92,20 +92,44 @@ export function renderOrdersPanel() {
   if (!container) return;
   container.innerHTML = '';
 
+  let poolTypes = [];
+  if (STATE.combat && STATE.combat.pool && STATE.combat.pool.length > 0) {
+    poolTypes = [...new Set(STATE.combat.pool.map(u => u.type))];
+  }
+  const uniqueTypes = poolTypes;
+
   const btnPlanTitle = document.getElementById('btn-plan-title');
   const wiz = STATE.combat.planningWizard;
-  if (wiz && wiz.active && wiz.types && wiz.types.length > 0 && wiz.typeIndex < wiz.types.length) {
-    if (btnPlanTitle) {
-      btnPlanTitle.classList.add('btn-warning');
-      btnPlanTitle.classList.remove('btn-primary');
+  if (wiz && wiz.active && wiz.types && wiz.types.length > 0) {
+    // Advance wiz.typeIndex if the current type is no longer in uniqueTypes (runs out of available pool/grid units)
+    while (wiz.active && wiz.typeIndex < wiz.types.length && !uniqueTypes.includes(wiz.types[wiz.typeIndex].type)) {
+      wiz.typeIndex++;
+      wiz.placedCount = 0;
     }
-    STATE.combat.activePlanningType = wiz.types[wiz.typeIndex].type;
+    if (wiz.typeIndex < wiz.types.length) {
+      if (btnPlanTitle) {
+        btnPlanTitle.classList.add('btn-warning');
+        btnPlanTitle.classList.remove('btn-primary');
+      }
+      STATE.combat.activePlanningType = wiz.types[wiz.typeIndex].type;
+    } else {
+      if (btnPlanTitle) {
+        btnPlanTitle.classList.add('btn-primary');
+        btnPlanTitle.classList.remove('btn-warning');
+      }
+      wiz.active = false;
+      STATE.combat.activePlanningType = null;
+    }
   } else {
     if (btnPlanTitle) {
       btnPlanTitle.classList.add('btn-primary');
       btnPlanTitle.classList.remove('btn-warning');
     }
     if (wiz) wiz.active = false;
+    // Clear active planning type if it's no longer in the uniqueTypes list
+    if (STATE.combat.activePlanningType && !uniqueTypes.includes(STATE.combat.activePlanningType)) {
+      STATE.combat.activePlanningType = null;
+    }
   }
 
   const btnMovePlans = document.getElementById('btn-move-plans');
@@ -118,12 +142,6 @@ export function renderOrdersPanel() {
       btnMovePlans.classList.remove('btn-warning');
     }
   }
-
-  let poolTypes = [];
-  if (STATE.combat && STATE.combat.pool && STATE.combat.pool.length > 0) {
-    poolTypes = [...new Set(STATE.combat.pool.map(u => u.type))];
-  }
-  const uniqueTypes = poolTypes;
 
   uniqueTypes.forEach(type => {
     const card = document.createElement('div');
