@@ -2,7 +2,7 @@
    COMBAT SPAWNER MODULE - SONS OF THE FJORDS
    ========================================================================== */
 
-import { STATE, notify, adjustResource, recordMonsterKill, recordSoldierKill, updateSoldierStat, markSoldierDead } from './state.js';
+import { STATE, notify, adjustResource, recordMonsterKill, recordSoldierKill, updateSoldierStat, markSoldierDead, addSoldierEvent } from './state.js';
 import { COMBAT_CONFIG as CFG } from './config/combat.js';
 import { GODS_CONFIG as GC } from './config/gods.js';
 import { sortPoolByPoints, checkAndAutoDeploy } from './combat_deployment.js';
@@ -304,6 +304,7 @@ export function handleUnitReachEnd(unit) {
     const reward = CFG.playerCrossReward;
     Object.entries(reward).forEach(([res, amt]) => adjustResource(res, amt));
     updateSoldierStat(unit.id, 'timesReachedEnd', 1);
+    addSoldierEvent(unit.id, 'Crossed enemy lines (+1 Gold)');
     const poolUnit = { ...unit, hp: unit.maxHp, row: undefined, col: undefined };
     STATE.combat.pool.push(poolUnit);
     sortPoolByPoints();
