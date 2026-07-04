@@ -18,6 +18,21 @@ export function initCombatSelection() {
   gridEl.addEventListener('contextmenu', (e) => e.preventDefault());
 
   const btnClear = document.getElementById('btn-clear-plans');
+  
+  const btnPause = document.getElementById('btn-combat-pause');
+  if (btnPause) {
+    btnPause.onclick = () => {
+      import('../combat.js').then(({ togglePause }) => togglePause());
+    };
+  }
+
+  const btnFlee = document.getElementById('btn-combat-flee');
+  if (btnFlee) {
+    btnFlee.onclick = () => {
+      import('../combat.js').then(({ fleeCombat }) => fleeCombat());
+    };
+  }
+
   if (btnClear) {
     btnClear.onclick = () => {
       if (STATE.combat.grid && STATE.combat.deployHistory) {
