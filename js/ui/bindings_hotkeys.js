@@ -242,6 +242,20 @@ export function setupHotkeys(mapSelectionController) {
           }
         }
       }
+
+      // Stance shortcuts: y = retreat, x = defend, c = hold, v = attack
+      const stanceKeys = {
+        'y': 'btn-stance-retreat', 'Y': 'btn-stance-retreat',
+        'z': 'btn-stance-retreat', 'Z': 'btn-stance-retreat', // support QWERTZ
+        'x': 'btn-stance-defend',  'X': 'btn-stance-defend',
+        'c': 'btn-stance-hold',    'C': 'btn-stance-hold',
+        'v': 'btn-stance-attack',  'V': 'btn-stance-attack'
+      };
+      const btnId = stanceKeys[e.key];
+      if (btnId) {
+        e.preventDefault();
+        document.getElementById(btnId)?.click();
+      }
     }
   });
 }
