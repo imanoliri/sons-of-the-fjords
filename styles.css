@@ -2760,4 +2760,39 @@ body {
 .combat-projectile.monster-acid-projectile {
   filter: drop-shadow(0 0 3px #4CAF50);
 }
+
+/* ── Combat Status Badges ── */
+.freeze-icon-badge, .web-icon-badge, .acid-icon-badge {
+  position: absolute;
+  font-size: 0.95rem;
+  z-index: 10;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
+}
+
+.freeze-icon-badge {
+  top: -2px;
+  right: -2px;
+}
+
+.web-icon-badge {
+  bottom: -2px;
+  left: -2px;
+}
+
+.acid-icon-badge {
+  top: -2px;
+  left: -2px;
+}
+
+.combat-unit.rooted-state {
+  border-color: #9E9E9E !important;
+  box-shadow: 0 0 8px rgba(158, 158, 158, 0.6) !important;
+}
+
+.combat-unit.corroded-state {
+  border-color: #4CAF50 !important;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.6) !important;
+}
+
 

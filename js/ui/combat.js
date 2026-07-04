@@ -412,6 +412,26 @@ export function renderCombatGrid() {
 
         if (unit.frozenSlowLeft > 0) {
           elUnit.classList.add('frozen-state');
+          const freezeIcon = document.createElement('span');
+          freezeIcon.className = 'freeze-icon-badge';
+          freezeIcon.innerText = '❄️';
+          elUnit.appendChild(freezeIcon);
+        }
+
+        if (unit.rootedTicksLeft > 0) {
+          elUnit.classList.add('rooted-state');
+          const webIcon = document.createElement('span');
+          webIcon.className = 'web-icon-badge';
+          webIcon.innerText = '🕸️';
+          elUnit.appendChild(webIcon);
+        }
+
+        if (unit.armorDebuff > 0) {
+          elUnit.classList.add('corroded-state');
+          const acidIcon = document.createElement('span');
+          acidIcon.className = 'acid-icon-badge';
+          acidIcon.innerText = '🧪';
+          elUnit.appendChild(acidIcon);
         }
 
         if (STATE.combat.activeDoTs?.some(d => d.unit?.id === unit.id && d.ticksLeft > 0)) {
