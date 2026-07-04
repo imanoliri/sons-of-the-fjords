@@ -82,6 +82,11 @@ export function setupHotkeys(mapSelectionController) {
         }
         return;
       }
+      if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        document.getElementById('btn-load-game')?.click();
+        return;
+      }
       if (e.key === 'Enter') {
         e.preventDefault();
         import('../world.js').then(({ setActiveMap, initializeWorld }) => {
