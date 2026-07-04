@@ -267,16 +267,19 @@ export function setupHotkeys(mapSelectionController) {
         const targetY = STATE.party.localY + dy;
         import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(targetX, targetY));
       } else if (e.key === 'Enter') {
-        e.preventDefault();
-        const btnPortal = document.getElementById('btn-use-portal');
-        if (btnPortal && !btnPortal.disabled) {
-          btnPortal.click();
-        } else {
-          // If burial mound explore btn has "[enter]" text
-          const buttons = Array.from(document.querySelectorAll('#portal-prompt-panel button'));
-          const enterBtn = buttons.find(b => b.textContent.includes('[enter]'));
-          if (enterBtn) {
-            enterBtn.click();
+        const promptPanel = document.getElementById('portal-prompt-panel');
+        if (promptPanel && !promptPanel.classList.contains('hidden')) {
+          e.preventDefault();
+          const btnPortal = document.getElementById('btn-use-portal');
+          if (btnPortal && !btnPortal.disabled) {
+            btnPortal.click();
+          } else {
+            // If burial mound explore btn has "[enter]" text
+            const buttons = Array.from(promptPanel.querySelectorAll('button'));
+            const enterBtn = buttons.find(b => b.textContent.includes('[enter]'));
+            if (enterBtn) {
+              enterBtn.click();
+            }
           }
         }
       } else {
