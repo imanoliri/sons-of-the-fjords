@@ -225,7 +225,22 @@ export function fleeCombat() {
 
   const resTypes = ['gold', 'food', 'wood', 'sheep'];
   const stolen = {};
-  for (const monster of STATE.combat.waveMonsters) {
+  
+  // Count all enemies currently on the board
+  const boardEnemies = [];
+  for (let r = 0; r < CFG.gridRows; r++) {
+    for (let c = 0; c < CFG.gridCols; c++) {
+      const cell = STATE.combat.grid[r][c];
+      if (cell && (cell.alliance === 'enemy' || cell.isCharmed || cell.isConfused)) {
+        boardEnemies.push(cell);
+      }
+    }
+  }
+
+  // Combine both spawned enemies still on board and unspawned wave monsters to count total fleeing damage
+  const totalEnemiesToDrain = [...boardEnemies, ...STATE.combat.waveMonsters];
+
+  for (const monster of totalEnemiesToDrain) {
     const rType = resTypes[Math.floor(Math.random() * resTypes.length)];
     adjustResource(rType, -CFG.enemyBreachDrain);
     stolen[rType] = (stolen[rType] || 0) + CFG.enemyBreachDrain;
