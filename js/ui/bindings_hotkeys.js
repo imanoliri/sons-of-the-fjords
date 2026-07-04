@@ -224,6 +224,19 @@ export function setupHotkeys(mapSelectionController) {
       } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
         e.preventDefault();
         import('./location.js').then(({ attemptLocalMove }) => attemptLocalMove(STATE.party.localX + 1, STATE.party.localY));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const btnPortal = document.getElementById('btn-use-portal');
+        if (btnPortal && !btnPortal.disabled) {
+          btnPortal.click();
+        } else {
+          // If burial mound explore btn has "[enter]" text
+          const buttons = Array.from(document.querySelectorAll('#portal-prompt-panel button'));
+          const enterBtn = buttons.find(b => b.textContent.includes('[enter]'));
+          if (enterBtn) {
+            enterBtn.click();
+          }
+        }
       }
     } else if (STATE.activeScreen === 'combat') {
       if (e.key === ' ') {
