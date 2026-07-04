@@ -119,6 +119,21 @@ export function setupHotkeys(mapSelectionController) {
       }
     }
 
+    // Modal overlay shortcut selection (1-9)
+    const visibleOverlay = document.querySelector('.modal-overlay:not(.hidden)');
+    if (visibleOverlay) {
+      if (e.key >= '1' && e.key <= '9') {
+        const index = parseInt(e.key) - 1;
+        const buttons = Array.from(visibleOverlay.querySelectorAll('button, .btn'))
+          .filter(btn => !btn.classList.contains('btn-close-x') && !btn.classList.contains('modal-close-btn') && !btn.classList.contains('btn-no-shortcut'));
+        if (buttons[index] && !buttons[index].disabled) {
+          e.preventDefault();
+          buttons[index].click();
+          return;
+        }
+      }
+    }
+
     if (e.key === 'Escape') {
       if (!elModalEvent.classList.contains('hidden')) {
         if (elModalEventCloseBtn && elModalEventCloseBtn.style.display !== 'none') {
@@ -155,10 +170,16 @@ export function setupHotkeys(mapSelectionController) {
     }
 
     if (STATE.activeScreen === 'world') {
-      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        document.getElementById('btn-save-game')?.click();
+      } else if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        document.getElementById('btn-load-game')?.click();
+      } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
         e.preventDefault();
         import('./world.js').then(({ movePartyOnWorld }) => movePartyOnWorld(STATE.party.worldX, STATE.party.worldY - 1));
-      } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+      } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         import('./world.js').then(({ movePartyOnWorld }) => movePartyOnWorld(STATE.party.worldX, STATE.party.worldY + 1));
       } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
