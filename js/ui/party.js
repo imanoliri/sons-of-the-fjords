@@ -513,25 +513,16 @@ function renderSoldierDetails(container, record) {
     container.innerHTML += killHtml;
   }
 
-  // Event timeline (consolidate repeated events on the same day)
+  // Event timeline (only show the starting and ending events of their career)
   if (record.events && record.events.length > 0) {
-    const grouped = [];
-    const seen = new Map();
-    record.events.forEach(ev => {
-      const key = `${ev.day}|||${ev.text}`;
-      if (seen.has(key)) {
-        seen.get(key).count++;
-      } else {
-        const entry = { day: ev.day, text: ev.text, count: 1 };
-        seen.set(key, entry);
-        grouped.push(entry);
-      }
-    });
-    let eventsHtml = '<div style="font-size: 0.75rem;"><b>\ud83d\udcdc Timeline:</b><br>';
-    grouped.forEach(ev => {
-      const countStr = ev.count > 1 ? ` (${ev.count})` : '';
-      eventsHtml += `  <span style="color:var(--text-muted);">Day ${ev.day}:</span> ${ev.text}${countStr}<br>`;
-    });
+    const startEvent = record.events[0];
+    const endEvent = record.events.length > 1 ? record.events[record.events.length - 1] : null;
+
+    let eventsHtml = '<div style="font-size: 0.75rem;"><b>📜 Timeline:</b><br>';
+    eventsHtml += `  <span style="color:var(--text-muted);">Day ${startEvent.day}:</span> ${startEvent.text}<br>`;
+    if (endEvent && (endEvent.day !== startEvent.day || endEvent.text !== startEvent.text)) {
+      eventsHtml += `  <span style="color:var(--text-muted);">Day ${endEvent.day}:</span> ${endEvent.text}<br>`;
+    }
     eventsHtml += '</div>';
     container.innerHTML += eventsHtml;
   }
