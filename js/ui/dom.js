@@ -25,6 +25,8 @@ export const elTooltip = document.getElementById('game-tooltip');
 export const elDay = document.getElementById('res-day').querySelector('.val');
 export const elWorldDifficultyStatus = document.getElementById('world-difficulty-status');
 export const elLocationDifficultyStatus = document.getElementById('location-difficulty-status');
+export const elMapContainer = document.getElementById('map-cards-container');
+export const elDots = document.getElementById('map-carousel-dots');
 
 // Party Panel Modals
 export const elPartyModal = document.getElementById('modal-party');
