@@ -597,15 +597,7 @@ function buildEntityOfType(locationId, type, terrain, x, y, locationType, raidTy
 
     let selectedMonster = pool[Math.floor(Math.random() * pool.length)];
     if (!selectedMonster) {
-      // Fallback selection if the pool became empty due to remove overrides (e.g. Brood Spider / Wolf removed on snow plains)
-      const activeMap = getActiveWorldMap();
-      if (activeMap?.id === 'jotunheim_peaks' || activeMap?.id === 'frozen_wastes') {
-        selectedMonster = 'Frost Giant (Jotunn)';
-      } else if (activeMap?.id === 'muspelheim_edge') {
-        selectedMonster = 'Lava Beetle';
-      } else {
-        selectedMonster = 'Fenrir Pack Wolf';
-      }
+      return null;
     }
     let countMin = Math.floor(e.countMin * difficulty);
     let countMax = Math.floor(e.countMax * difficulty);
